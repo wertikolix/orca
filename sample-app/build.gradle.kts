@@ -20,6 +20,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            packaging {
+                jniLibs {
+                    keepDebugSymbols += "**/libandroidx.graphics.path.so"
+                }
+            }
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -38,11 +45,6 @@ android {
         compose = true
     }
 
-    packaging {
-        jniLibs {
-            keepDebugSymbols += "**/libandroidx.graphics.path.so"
-        }
-    }
 }
 
 kotlin {
