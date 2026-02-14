@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import ru.wertik.orca.core.OrcaBlock
+import ru.wertik.orca.core.OrcaFootnoteDefinition
 import ru.wertik.orca.core.OrcaInline
 
 class OrcaRenderBlocksTest {
@@ -41,5 +42,41 @@ class OrcaRenderBlocksTest {
 
         assertEquals(firstKeys, secondKeys)
         assertTrue(firstKeys.isNotEmpty())
+    }
+
+    @Test
+    fun `build footnote numbers follows definition order and skips duplicates`() {
+        val blocks = listOf(
+            OrcaBlock.Paragraph(content = listOf(OrcaInline.Text("body"))),
+            OrcaBlock.Footnotes(
+                definitions = listOf(
+                    OrcaFootnoteDefinition(
+                        label = "a",
+                        blocks = listOf(OrcaBlock.Paragraph(content = listOf(OrcaInline.Text("one")))),
+                    ),
+                    OrcaFootnoteDefinition(
+                        label = "b",
+                        blocks = listOf(OrcaBlock.Paragraph(content = listOf(OrcaInline.Text("two")))),
+                    ),
+                ),
+            ),
+            OrcaBlock.Footnotes(
+                definitions = listOf(
+                    OrcaFootnoteDefinition(
+                        label = "a",
+                        blocks = listOf(OrcaBlock.Paragraph(content = listOf(OrcaInline.Text("duplicate")))),
+                    ),
+                    OrcaFootnoteDefinition(
+                        label = "c",
+                        blocks = listOf(OrcaBlock.Paragraph(content = listOf(OrcaInline.Text("three")))),
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(
+            linkedMapOf("a" to 1, "b" to 2, "c" to 3),
+            buildFootnoteNumbers(blocks),
+        )
     }
 }

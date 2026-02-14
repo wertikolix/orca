@@ -2,6 +2,9 @@ package ru.wertik.orca.core
 
 import org.commonmark.Extension
 import org.commonmark.ext.autolink.AutolinkExtension
+import org.commonmark.ext.footnotes.FootnoteDefinition
+import org.commonmark.ext.footnotes.FootnoteReference
+import org.commonmark.ext.footnotes.FootnotesExtension
 import org.commonmark.ext.gfm.strikethrough.Strikethrough
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.gfm.tables.TableBlock
@@ -52,10 +55,22 @@ class CommonmarkOrcaParser(
             maxTreeDepth = maxTreeDepth,
             depthLimitReporter = depthLimitReporter,
         )
+        val rootChildren = root.childSequence().toList()
+        val footnotes = rootChildren
+            .filterIsInstance<FootnoteDefinition>()
+            .map { definition -> mapper.mapFootnoteDefinition(definition, depth = 0) }
+            .toList()
+        val blocks = rootChildren
+            .filterNot { child -> child is FootnoteDefinition }
+            .mapNotNull { child -> mapper.mapBlock(child, depth = 0) }
+            .toMutableList()
+
+        if (footnotes.isNotEmpty()) {
+            blocks += OrcaBlock.Footnotes(definitions = footnotes)
+        }
+
         return OrcaDocument(
-            blocks = root.childSequence()
-                .mapNotNull { child -> mapper.mapBlock(child, depth = 0) }
-                .toList(),
+            blocks = blocks,
         )
     }
 }
@@ -81,6 +96,22 @@ private class CommonmarkTreeMapper(
     private val maxTreeDepth: Int,
     private val depthLimitReporter: DepthLimitReporter,
 ) {
+    fun mapFootnoteDefinition(node: FootnoteDefinition, depth: Int): OrcaFootnoteDefinition {
+        if (isDepthExceeded(depth)) {
+            return OrcaFootnoteDefinition(
+                label = node.label,
+                blocks = emptyList(),
+            )
+        }
+
+        return OrcaFootnoteDefinition(
+            label = node.label,
+            blocks = node.childSequence()
+                .mapNotNull { child -> mapBlock(child, depth + 1) }
+                .toList(),
+        )
+    }
+
     fun mapBlock(node: Node, depth: Int): OrcaBlock? {
         if (isDepthExceeded(depth)) {
             return null
@@ -130,6 +161,8 @@ private class CommonmarkTreeMapper(
             is ThematicBreak -> OrcaBlock.ThematicBreak
 
             is TableBlock -> mapTable(node, depth + 1)
+
+            is FootnoteDefinition -> null
 
             else -> null
         }
@@ -259,6 +292,10 @@ private class CommonmarkTreeMapper(
                 )
             }
 
+            is FootnoteReference -> sequenceOf(
+                OrcaInline.FootnoteReference(label = node.label),
+            )
+
             is SoftLineBreak,
             is HardLineBreak,
                 -> sequenceOf(OrcaInline.Text("\n"))
@@ -302,6 +339,7 @@ private fun List<OrcaInline>.toPlainText(): String {
             is OrcaInline.InlineCode -> inline.code
             is OrcaInline.Link -> inline.content.toPlainText().ifEmpty { inline.destination }
             is OrcaInline.Image -> inline.alt ?: ""
+            is OrcaInline.FootnoteReference -> "[${inline.label}]"
         }
     }
 }
@@ -329,6 +367,7 @@ private fun defaultParser(): Parser {
         TablesExtension.create(),
         StrikethroughExtension.create(),
         TaskListItemsExtension.create(),
+        FootnotesExtension.create(),
     )
     return Parser.builder()
         .extensions(extensions)

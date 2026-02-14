@@ -468,4 +468,45 @@ class CommonmarkOrcaParserTest {
             table.rows[0][1],
         )
     }
+
+    @Test
+    fun `parse footnote references and definitions`() {
+        val markdown = """
+            See note[^note].
+
+            [^note]: Foot **value**
+        """.trimIndent()
+
+        val result = parser.parse(markdown)
+
+        assertEquals(
+            OrcaDocument(
+                blocks = listOf(
+                    OrcaBlock.Paragraph(
+                        content = listOf(
+                            OrcaInline.Text("See note"),
+                            OrcaInline.FootnoteReference(label = "note"),
+                            OrcaInline.Text("."),
+                        ),
+                    ),
+                    OrcaBlock.Footnotes(
+                        definitions = listOf(
+                            OrcaFootnoteDefinition(
+                                label = "note",
+                                blocks = listOf(
+                                    OrcaBlock.Paragraph(
+                                        content = listOf(
+                                            OrcaInline.Text("Foot "),
+                                            OrcaInline.Bold(content = listOf(OrcaInline.Text("value"))),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            result,
+        )
+    }
 }

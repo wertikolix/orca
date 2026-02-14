@@ -84,6 +84,9 @@ fun Orca(
     val renderBlocks = remember(document.blocks) {
         buildRenderBlocks(document.blocks)
     }
+    val footnoteNumbers = remember(document.blocks) {
+        buildFootnoteNumbers(document.blocks)
+    }
 
     when (rootLayout) {
         OrcaRootLayout.LAZY_COLUMN -> {
@@ -99,6 +102,7 @@ fun Orca(
                         block = item.block,
                         style = style,
                         onLinkClick = onLinkClick,
+                        footnoteNumbers = footnoteNumbers,
                     )
                 }
             }
@@ -114,6 +118,7 @@ fun Orca(
                         block = item.block,
                         style = style,
                         onLinkClick = onLinkClick,
+                        footnoteNumbers = footnoteNumbers,
                     )
                 }
             }
@@ -137,4 +142,18 @@ internal fun buildRenderBlocks(blocks: List<OrcaBlock>): List<OrcaRenderBlock> {
             block = block,
         )
     }
+}
+
+internal fun buildFootnoteNumbers(blocks: List<OrcaBlock>): Map<String, Int> {
+    val numbers = linkedMapOf<String, Int>()
+    var nextNumber = 1
+    blocks.asSequence()
+        .filterIsInstance<OrcaBlock.Footnotes>()
+        .flatMap { footnotes -> footnotes.definitions.asSequence() }
+        .forEach { definition ->
+            if (numbers.putIfAbsent(definition.label, nextNumber) == null) {
+                nextNumber += 1
+            }
+        }
+    return numbers
 }

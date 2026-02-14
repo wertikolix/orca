@@ -10,6 +10,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -47,6 +48,11 @@ data class OrcaInlineStyle(
     val link: SpanStyle = SpanStyle(
         color = Color(0xFF1565C0),
         textDecoration = TextDecoration.Underline,
+    ),
+    val footnoteReference: SpanStyle = SpanStyle(
+        baselineShift = BaselineShift.Superscript,
+        fontSize = 12.sp,
+        color = Color(0xFF455A64),
     ),
 )
 
@@ -129,6 +135,7 @@ data class OrcaStyle(
     val inlineCode: SpanStyle get() = inline.inlineCode
     val strikethroughStyle: SpanStyle get() = inline.strikethrough
     val linkStyle: SpanStyle get() = inline.link
+    val footnoteReferenceStyle: SpanStyle get() = inline.footnoteReference
 
     val quoteStripeColor: Color get() = quote.stripeColor
     val quoteStripeWidth: Dp get() = quote.stripeWidth

@@ -77,6 +77,39 @@ class OrcaInlineTextTest {
     }
 
     @Test
+    fun `build annotated string maps footnote reference with resolved number`() {
+        val style = OrcaStyle()
+        val text = buildInlineAnnotatedString(
+            inlines = listOf(
+                OrcaInline.Text("value"),
+                OrcaInline.FootnoteReference(label = "note"),
+            ),
+            style = style,
+            onLinkClick = {},
+            footnoteNumbers = mapOf("note" to 2),
+        )
+
+        assertEquals("value[2]", text.text)
+        assertTrue(
+            text.spanStyles.any { span ->
+                span.item.baselineShift == style.inline.footnoteReference.baselineShift
+            },
+        )
+    }
+
+    @Test
+    fun `build annotated string maps footnote reference with label fallback`() {
+        val text = buildInlineAnnotatedString(
+            inlines = listOf(OrcaInline.FootnoteReference(label = "note")),
+            style = OrcaStyle(),
+            onLinkClick = {},
+            footnoteNumbers = emptyMap(),
+        )
+
+        assertEquals("[note]", text.text)
+    }
+
+    @Test
     fun `build annotated string uses destination when link content is empty`() {
         val style = OrcaStyle()
         val inlines = listOf(
@@ -293,6 +326,12 @@ class OrcaInlineTextTest {
     fun `task list marker uses checkbox symbols`() {
         assertEquals("☑", listMarkerText(ordered = false, startNumber = 1, index = 0, taskState = OrcaTaskState.CHECKED))
         assertEquals("☐", listMarkerText(ordered = false, startNumber = 1, index = 0, taskState = OrcaTaskState.UNCHECKED))
+    }
+
+    @Test
+    fun `footnote list marker uses numeric mapping or label fallback`() {
+        assertEquals("3.", footnoteListMarkerText(label = "a", footnoteNumbers = mapOf("a" to 3)))
+        assertEquals("[b]", footnoteListMarkerText(label = "b", footnoteNumbers = emptyMap()))
     }
 
     @Test

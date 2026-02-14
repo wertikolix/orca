@@ -29,6 +29,7 @@ internal fun TableBlockNode(
     block: OrcaBlock.Table,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
+    footnoteNumbers: Map<String, Int>,
 ) {
     val columnCount = maxOf(
         block.header.size,
@@ -45,6 +46,7 @@ internal fun TableBlockNode(
             isHeader = true,
             style = style,
             onLinkClick = onLinkClick,
+            footnoteNumbers = footnoteNumbers,
         )
         block.rows.forEach { row ->
             TableRowNode(
@@ -53,6 +55,7 @@ internal fun TableBlockNode(
                 isHeader = false,
                 style = style,
                 onLinkClick = onLinkClick,
+                footnoteNumbers = footnoteNumbers,
             )
         }
     }
@@ -79,13 +82,14 @@ private fun TableRowNode(
     isHeader: Boolean,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
+    footnoteNumbers: Map<String, Int>,
 ) {
     Row(
         modifier = Modifier.height(IntrinsicSize.Min),
     ) {
         repeat(columnCount) { index ->
             val cell = cells.getOrNull(index)
-            val text = remember(cell, style, onLinkClick) {
+            val text = remember(cell, style, onLinkClick, footnoteNumbers) {
                 if (cell == null) {
                     AnnotatedString("")
                 } else {
@@ -93,6 +97,7 @@ private fun TableRowNode(
                         inlines = cell.content,
                         style = style,
                         onLinkClick = onLinkClick,
+                        footnoteNumbers = footnoteNumbers,
                     )
                 }
             }

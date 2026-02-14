@@ -6,8 +6,8 @@ Android-first Markdown renderer for Jetpack Compose with architecture prepared f
 
 ## Status
 
-- Current stable minor: `0.2.4`
-- Release notes: [`docs/releases/0.2.4.md`](docs/releases/0.2.4.md)
+- Current stable minor: `0.3.0`
+- Release notes: [`docs/releases/0.3.0.md`](docs/releases/0.3.0.md)
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Why Orca
@@ -94,7 +94,7 @@ CommonmarkOrcaParser(
 )
 ```
 
-## Supported Syntax (`0.2.4`)
+## Supported Syntax (`0.3.0`)
 
 ### Blocks
 
@@ -108,6 +108,7 @@ CommonmarkOrcaParser(
 - thematic break (`---`)
 - standalone image block
 - GFM tables
+- footnote definitions
 
 ### Inlines
 
@@ -118,6 +119,7 @@ CommonmarkOrcaParser(
 - inline code
 - link
 - inline image AST (rendered as fallback text inside inline flow)
+- footnote references
 - soft/hard line breaks (`\n`)
 
 ### GFM extensions enabled
@@ -126,6 +128,7 @@ CommonmarkOrcaParser(
 - `commonmark-ext-gfm-strikethrough`
 - `commonmark-ext-task-list-items`
 - `commonmark-ext-autolink` (bare URLs like `https://example.com`)
+- `commonmark-ext-footnotes`
 
 ## Renderer Behavior
 
@@ -134,6 +137,7 @@ CommonmarkOrcaParser(
 - parsing off main thread (`Dispatchers.Default`)
 - parse failure fallback to previous valid document (UI is not dropped)
 - deterministic block keys for better list state retention
+- footnotes rendered as superscript markers + numbered definitions block
 
 ### Code block rendering
 
@@ -187,7 +191,7 @@ Always keep your own URL-opening policy in `onLinkClick`.
 ## Not Supported Yet
 
 - HTML blocks and inline HTML
-- footnotes / front matter
+- front matter
 - built-in LaTeX math rendering
 - Compose Multiplatform target modules (architecture ready, Android implementation first)
 
@@ -205,7 +209,7 @@ For release-like check:
 
 ## Versioning
 
-- Stable releases use plain semver tags like `0.2.4`, `0.3.0`
+- Stable releases use plain semver tags like `0.3.0`, `0.3.1`
 - Pre-releases use `-alpha`, `-beta`, `-rc`
 - Maven Central artifacts are immutable after publish
 

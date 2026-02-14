@@ -41,6 +41,10 @@ sealed interface OrcaBlock {
         val header: List<OrcaTableCell>,
         val rows: List<List<OrcaTableCell>>,
     ) : OrcaBlock
+
+    data class Footnotes(
+        val definitions: List<OrcaFootnoteDefinition>,
+    ) : OrcaBlock
 }
 
 data class OrcaListItem(
@@ -63,6 +67,11 @@ enum class OrcaTableAlignment {
     CENTER,
     RIGHT,
 }
+
+data class OrcaFootnoteDefinition(
+    val label: String,
+    val blocks: List<OrcaBlock>,
+)
 
 sealed interface OrcaInline {
     data class Text(
@@ -94,5 +103,9 @@ sealed interface OrcaInline {
         val source: String,
         val alt: String?,
         val title: String?,
+    ) : OrcaInline
+
+    data class FootnoteReference(
+        val label: String,
     ) : OrcaInline
 }

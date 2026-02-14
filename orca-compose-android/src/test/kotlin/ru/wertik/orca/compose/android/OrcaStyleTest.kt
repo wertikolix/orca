@@ -22,6 +22,7 @@ class OrcaStyleTest {
 
         assertEquals(style.typography.paragraph, style.paragraph)
         assertEquals(style.inline.inlineCode, style.inlineCode)
+        assertEquals(style.inline.footnoteReference, style.footnoteReferenceStyle)
         assertEquals(style.code.text, style.codeBlock)
         assertEquals(style.code.languageLabel, style.codeBlockLanguageLabel)
         assertEquals(style.code.borderColor, style.codeBlockBorderColor)

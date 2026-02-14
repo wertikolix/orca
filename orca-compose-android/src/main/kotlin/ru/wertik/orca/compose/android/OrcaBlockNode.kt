@@ -30,30 +30,35 @@ internal fun OrcaBlockNode(
     block: OrcaBlock,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
+    footnoteNumbers: Map<String, Int>,
 ) {
     when (block) {
         is OrcaBlock.Heading -> HeadingNode(
             block = block,
             style = style,
             onLinkClick = onLinkClick,
+            footnoteNumbers = footnoteNumbers,
         )
 
         is OrcaBlock.Paragraph -> ParagraphNode(
             block = block,
             style = style,
             onLinkClick = onLinkClick,
+            footnoteNumbers = footnoteNumbers,
         )
 
         is OrcaBlock.ListBlock -> ListBlockNode(
             block = block,
             style = style,
             onLinkClick = onLinkClick,
+            footnoteNumbers = footnoteNumbers,
         )
 
         is OrcaBlock.Quote -> QuoteBlockNode(
             block = block,
             style = style,
             onLinkClick = onLinkClick,
+            footnoteNumbers = footnoteNumbers,
         )
 
         is OrcaBlock.CodeBlock -> CodeBlockNode(
@@ -72,6 +77,14 @@ internal fun OrcaBlockNode(
             block = block,
             style = style,
             onLinkClick = onLinkClick,
+            footnoteNumbers = footnoteNumbers,
+        )
+
+        is OrcaBlock.Footnotes -> FootnotesNode(
+            block = block,
+            style = style,
+            onLinkClick = onLinkClick,
+            footnoteNumbers = footnoteNumbers,
         )
     }
 }
@@ -81,12 +94,14 @@ private fun HeadingNode(
     block: OrcaBlock.Heading,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
+    footnoteNumbers: Map<String, Int>,
 ) {
-    val headingText = remember(block.content, style, onLinkClick) {
+    val headingText = remember(block.content, style, onLinkClick, footnoteNumbers) {
         buildInlineAnnotatedString(
             inlines = block.content,
             style = style,
             onLinkClick = onLinkClick,
+            footnoteNumbers = footnoteNumbers,
         )
     }
     InlineTextNode(
@@ -100,12 +115,14 @@ private fun ParagraphNode(
     block: OrcaBlock.Paragraph,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
+    footnoteNumbers: Map<String, Int>,
 ) {
-    val paragraphText = remember(block.content, style, onLinkClick) {
+    val paragraphText = remember(block.content, style, onLinkClick, footnoteNumbers) {
         buildInlineAnnotatedString(
             inlines = block.content,
             style = style,
             onLinkClick = onLinkClick,
+            footnoteNumbers = footnoteNumbers,
         )
     }
     InlineTextNode(
@@ -119,6 +136,7 @@ private fun ListBlockNode(
     block: OrcaBlock.ListBlock,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
+    footnoteNumbers: Map<String, Int>,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
@@ -145,6 +163,7 @@ private fun ListBlockNode(
                             block = listItemBlock,
                             style = style,
                             onLinkClick = onLinkClick,
+                            footnoteNumbers = footnoteNumbers,
                         )
                     }
                 }
@@ -158,6 +177,7 @@ private fun QuoteBlockNode(
     block: OrcaBlock.Quote,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
+    footnoteNumbers: Map<String, Int>,
 ) {
     Row(
         modifier = Modifier.height(IntrinsicSize.Min),
@@ -179,7 +199,43 @@ private fun QuoteBlockNode(
                     block = nested,
                     style = style,
                     onLinkClick = onLinkClick,
+                    footnoteNumbers = footnoteNumbers,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FootnotesNode(
+    block: OrcaBlock.Footnotes,
+    style: OrcaStyle,
+    onLinkClick: (String) -> Unit,
+    footnoteNumbers: Map<String, Int>,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
+    ) {
+        block.definitions.forEach { definition ->
+            Row {
+                Text(
+                    text = footnoteListMarkerText(definition.label, footnoteNumbers),
+                    style = style.typography.paragraph,
+                    modifier = Modifier.width(style.layout.listMarkerWidth),
+                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
+                ) {
+                    definition.blocks.forEach { blockItem ->
+                        OrcaBlockNode(
+                            block = blockItem,
+                            style = style,
+                            onLinkClick = onLinkClick,
+                            footnoteNumbers = footnoteNumbers,
+                        )
+                    }
+                }
             }
         }
     }
@@ -253,6 +309,18 @@ internal fun listMarkerText(
         } else {
             "•"
         }
+    }
+}
+
+internal fun footnoteListMarkerText(
+    label: String,
+    footnoteNumbers: Map<String, Int>,
+): String {
+    val number = footnoteNumbers[label]
+    return if (number != null) {
+        "$number."
+    } else {
+        "[$label]"
     }
 }
 

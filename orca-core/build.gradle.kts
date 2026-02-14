@@ -21,6 +21,7 @@ dependencies {
     implementation(libs.commonmark.ext.gfm.tables)
     implementation(libs.commonmark.ext.gfm.strikethrough)
     implementation(libs.commonmark.ext.task.list.items)
+    implementation(libs.commonmark.ext.footnotes)
 
     testImplementation(kotlin("test-junit"))
     testImplementation(libs.junit4)
