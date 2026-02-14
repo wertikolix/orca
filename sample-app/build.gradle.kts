@@ -14,8 +14,8 @@ android {
         applicationId = "com.fhmd.sample"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.1.0-alpha02"
+        versionCode = 3
+        versionName = "0.1.0-alpha03"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

@@ -6,9 +6,9 @@ Markdown renderer for Compose (Android-first, multiplatform-ready).
 
 ## Status
 
-`0.1.0-alpha02` (in progress, early alpha, API may change).
+`0.1.0-alpha03` (in progress, early alpha, API may change).
 
-Next draft notes: [`0.1.0-alpha02`](docs/releases/0.1.0-alpha02.md).
+Next draft notes: [`0.1.0-alpha03`](docs/releases/0.1.0-alpha03.md).
 
 ## Goals
 
@@ -23,7 +23,7 @@ Next draft notes: [`0.1.0-alpha02`](docs/releases/0.1.0-alpha02.md).
 - `fhmd-compose-android`: Compose renderer for `FhMdDocument`
 - `sample-app`: Android sample for manual verification
 
-## Supported (`0.1.0-alpha01`)
+## Supported (`0.1.0-alpha03`)
 
 - Parser: `commonmark-java` (`0.27.1`)
 - Public parser API:

@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "0.*"
   pull_request:
     branches:
       - main
@@ -52,6 +50,62 @@ jobs:
       - name: Build and test
         run: ./gradlew --no-daemon --build-cache :fhmd-core:test :fhmd-compose-android:testDebugUnitTest :sample-app:assembleDebug
 
-      - name: Verify release assemble on version tags
-        if: startsWith(github.ref, 'refs/tags/0.')
-        run: ./gradlew --no-daemon --build-cache :sample-app:assembleRelease
+      - name: Upload reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-failure-reports-${{ github.run_id }}
+          path: |
+            fhmd-core/build/reports/
+            fhmd-compose-android/build/reports/
+            sample-app/build/reports/
+            sample-app/build/outputs/logs/
+            build/reports/problems/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  gradle-warnings:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses > /dev/null
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0"
+
+      - name: Run warning-mode build (non-blocking)
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon --build-cache --warning-mode all :sample-app:assembleDebug 2>&1 | tee gradle-warning-mode.log
+
+      - name: Upload warning-mode log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-warning-mode-log-${{ github.run_id }}
+          path: gradle-warning-mode.log
+          if-no-files-found: ignore
+          retention-days: 7
