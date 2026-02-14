@@ -1,11 +1,13 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.jvm.tasks.Jar
 
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     `maven-publish`
+    signing
 }
 
 android {
@@ -33,6 +35,11 @@ android {
     }
 }
 
+signing {
+    useGpgCmd()
+    sign(publishing.publications)
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
@@ -57,6 +64,17 @@ dependencies {
     testImplementation(libs.compose.ui)
 }
 
+val releaseJavadocJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("javadoc")
+    val placeholder = layout.buildDirectory.file("tmp/javadoc/placeholder.txt")
+    from(placeholder)
+    doFirst {
+        val file = placeholder.get().asFile
+        file.parentFile.mkdirs()
+        file.writeText("javadoc placeholder for alpha builds")
+    }
+}
+
 publishing {
     publications {
         register<MavenPublication>("release") {
@@ -65,6 +83,7 @@ publishing {
             afterEvaluate {
                 from(components["release"])
             }
+            artifact(releaseJavadocJar)
 
             pom {
                 name.set("FhMd Compose Android")
@@ -74,6 +93,13 @@ publishing {
                     license {
                         name.set("MIT License")
                         url.set("https://opensource.org/licenses/MIT")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("wertikolix")
+                        name.set("Wertik")
+                        email.set("wertikolix@users.noreply.github.com")
                     }
                 }
                 scm {
@@ -96,6 +122,18 @@ publishing {
             credentials {
                 username = providers.gradleProperty("fhmdMavenUsername").orNull
                 password = providers.gradleProperty("fhmdMavenPassword").orNull
+            }
+        }
+        maven {
+            name = "centralStaging"
+            url = uri(
+                providers.gradleProperty("centralStagingRepoUrl")
+                    .orElse("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
+                    .get(),
+            )
+            credentials {
+                username = providers.gradleProperty("centralTokenUsername").orNull
+                password = providers.gradleProperty("centralTokenPassword").orNull
             }
         }
     }
