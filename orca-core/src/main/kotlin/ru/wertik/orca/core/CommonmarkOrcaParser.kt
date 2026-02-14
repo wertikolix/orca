@@ -5,6 +5,7 @@ import org.commonmark.ext.autolink.AutolinkExtension
 import org.commonmark.ext.footnotes.FootnoteDefinition
 import org.commonmark.ext.footnotes.FootnoteReference
 import org.commonmark.ext.footnotes.FootnotesExtension
+import org.commonmark.ext.footnotes.InlineFootnote
 import org.commonmark.ext.gfm.strikethrough.Strikethrough
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.gfm.tables.TableBlock
@@ -23,6 +24,8 @@ import org.commonmark.node.Emphasis
 import org.commonmark.node.FencedCodeBlock
 import org.commonmark.node.Heading
 import org.commonmark.node.HardLineBreak
+import org.commonmark.node.HtmlBlock
+import org.commonmark.node.HtmlInline
 import org.commonmark.node.Image
 import org.commonmark.node.IndentedCodeBlock
 import org.commonmark.node.Link
@@ -49,14 +52,16 @@ class CommonmarkOrcaParser(
     override fun cacheKey(): Any = ParserCacheKey(parser, maxTreeDepth)
 
     override fun parse(input: String): OrcaDocument {
-        val root = parser.parse(input)
+        val frontMatterExtraction = extractFrontMatter(input)
+        val root = parser.parse(frontMatterExtraction.markdown)
         val depthLimitReporter = DepthLimitReporter(onDepthLimitExceeded)
         val mapper = CommonmarkTreeMapper(
             maxTreeDepth = maxTreeDepth,
             depthLimitReporter = depthLimitReporter,
         )
+
         val rootChildren = root.childSequence().toList()
-        val footnotes = rootChildren
+        val referencedFootnotes = rootChildren
             .filterIsInstance<FootnoteDefinition>()
             .map { definition -> mapper.mapFootnoteDefinition(definition, depth = 0) }
             .toList()
@@ -65,12 +70,14 @@ class CommonmarkOrcaParser(
             .mapNotNull { child -> mapper.mapBlock(child, depth = 0) }
             .toMutableList()
 
-        if (footnotes.isNotEmpty()) {
-            blocks += OrcaBlock.Footnotes(definitions = footnotes)
+        val allFootnotes = referencedFootnotes + mapper.consumeInlineFootnoteDefinitions()
+        if (allFootnotes.isNotEmpty()) {
+            blocks += OrcaBlock.Footnotes(definitions = allFootnotes)
         }
 
         return OrcaDocument(
             blocks = blocks,
+            frontMatter = frontMatterExtraction.frontMatter,
         )
     }
 }
@@ -79,6 +86,16 @@ private data class ParserCacheKey(
     val parser: Parser,
     val maxTreeDepth: Int,
 )
+
+private data class FrontMatterExtraction(
+    val markdown: String,
+    val frontMatter: OrcaFrontMatter?,
+)
+
+private enum class FrontMatterFormat {
+    YAML,
+    TOML,
+}
 
 private class DepthLimitReporter(
     private val callback: ((Int) -> Unit)?,
@@ -96,6 +113,10 @@ private class CommonmarkTreeMapper(
     private val maxTreeDepth: Int,
     private val depthLimitReporter: DepthLimitReporter,
 ) {
+    private val inlineFootnotes = mutableListOf<OrcaFootnoteDefinition>()
+
+    fun consumeInlineFootnoteDefinitions(): List<OrcaFootnoteDefinition> = inlineFootnotes.toList()
+
     fun mapFootnoteDefinition(node: FootnoteDefinition, depth: Int): OrcaFootnoteDefinition {
         if (isDepthExceeded(depth)) {
             return OrcaFootnoteDefinition(
@@ -161,6 +182,10 @@ private class CommonmarkTreeMapper(
             is ThematicBreak -> OrcaBlock.ThematicBreak
 
             is TableBlock -> mapTable(node, depth + 1)
+
+            is HtmlBlock -> OrcaBlock.HtmlBlock(
+                html = node.literal.trimEnd('\n'),
+            )
 
             is FootnoteDefinition -> null
 
@@ -271,11 +296,12 @@ private class CommonmarkTreeMapper(
             is Emphasis -> sequenceOf(OrcaInline.Italic(content = mapInlineContainer(node, depth + 1)))
             is Strikethrough -> sequenceOf(OrcaInline.Strikethrough(content = mapInlineContainer(node, depth + 1)))
             is Code -> sequenceOf(OrcaInline.InlineCode(code = node.literal))
+
             is Link -> sequenceOf(
                 OrcaInline.Link(
                     destination = node.destination,
                     content = mapInlineContainer(node, depth + 1),
-                )
+                ),
             )
 
             is Image -> {
@@ -294,6 +320,24 @@ private class CommonmarkTreeMapper(
 
             is FootnoteReference -> sequenceOf(
                 OrcaInline.FootnoteReference(label = node.label),
+            )
+
+            is InlineFootnote -> {
+                val label = "$INLINE_FOOTNOTE_LABEL_PREFIX${inlineFootnotes.size + 1}"
+                val content = mapInlineContainer(node, depth + 1)
+                inlineFootnotes += OrcaFootnoteDefinition(
+                    label = label,
+                    blocks = if (content.isEmpty()) {
+                        emptyList()
+                    } else {
+                        listOf(OrcaBlock.Paragraph(content = content))
+                    },
+                )
+                sequenceOf(OrcaInline.FootnoteReference(label = label))
+            }
+
+            is HtmlInline -> sequenceOf(
+                OrcaInline.HtmlInline(html = node.literal),
             )
 
             is SoftLineBreak,
@@ -315,6 +359,10 @@ private class CommonmarkTreeMapper(
 }
 
 private const val DEFAULT_MAX_TREE_DEPTH = 64
+private const val INLINE_FOOTNOTE_LABEL_PREFIX = "__inline_footnote_"
+private const val YAML_FRONT_MATTER_DELIMITER = "---"
+private const val YAML_FRONT_MATTER_ALT_END = "..."
+private const val TOML_FRONT_MATTER_DELIMITER = "+++"
 
 private fun Node.childSequence(): Sequence<Node> = sequence {
     var child = firstChild
@@ -340,8 +388,120 @@ private fun List<OrcaInline>.toPlainText(): String {
             is OrcaInline.Link -> inline.content.toPlainText().ifEmpty { inline.destination }
             is OrcaInline.Image -> inline.alt ?: ""
             is OrcaInline.FootnoteReference -> "[${inline.label}]"
+            is OrcaInline.HtmlInline -> htmlInlineToPlainText(inline.html)
         }
     }
+}
+
+private fun htmlInlineToPlainText(html: String): String {
+    return decodeBasicHtmlEntities(
+        html
+            .replace(BR_TAG_REGEX, "\n")
+            .replace(HTML_TAG_REGEX, ""),
+    )
+}
+
+private fun decodeBasicHtmlEntities(text: String): String {
+    return text
+        .replace("&nbsp;", " ")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+}
+
+private fun extractFrontMatter(input: String): FrontMatterExtraction {
+    val normalized = input
+        .replace("\r\n", "\n")
+        .replace('\r', '\n')
+
+    return extractDelimitedFrontMatter(
+        markdown = normalized,
+        openingDelimiter = YAML_FRONT_MATTER_DELIMITER,
+        format = FrontMatterFormat.YAML,
+    ) ?: extractDelimitedFrontMatter(
+        markdown = normalized,
+        openingDelimiter = TOML_FRONT_MATTER_DELIMITER,
+        format = FrontMatterFormat.TOML,
+    ) ?: FrontMatterExtraction(
+        markdown = normalized,
+        frontMatter = null,
+    )
+}
+
+private fun extractDelimitedFrontMatter(
+    markdown: String,
+    openingDelimiter: String,
+    format: FrontMatterFormat,
+): FrontMatterExtraction? {
+    val lines = markdown.split('\n')
+    if (lines.firstOrNull() != openingDelimiter) {
+        return null
+    }
+
+    var closingIndex = -1
+    for (lineIndex in 1 until lines.size) {
+        val line = lines[lineIndex]
+        val isClosing = when (format) {
+            FrontMatterFormat.YAML -> line == YAML_FRONT_MATTER_DELIMITER || line == YAML_FRONT_MATTER_ALT_END
+            FrontMatterFormat.TOML -> line == TOML_FRONT_MATTER_DELIMITER
+        }
+        if (isClosing) {
+            closingIndex = lineIndex
+            break
+        }
+    }
+
+    if (closingIndex == -1) {
+        return null
+    }
+
+    val raw = lines.subList(1, closingIndex).joinToString("\n").trimEnd()
+    val entries = parseFrontMatterEntries(
+        raw = raw,
+        format = format,
+    )
+    val frontMatter = when (format) {
+        FrontMatterFormat.YAML -> OrcaFrontMatter.Yaml(raw = raw, entries = entries)
+        FrontMatterFormat.TOML -> OrcaFrontMatter.Toml(raw = raw, entries = entries)
+    }
+    val markdownBody = lines.drop(closingIndex + 1)
+        .joinToString("\n")
+        .trimStart('\n')
+
+    return FrontMatterExtraction(
+        markdown = markdownBody,
+        frontMatter = frontMatter,
+    )
+}
+
+private fun parseFrontMatterEntries(
+    raw: String,
+    format: FrontMatterFormat,
+): Map<String, String> {
+    val separator = when (format) {
+        FrontMatterFormat.YAML -> ':'
+        FrontMatterFormat.TOML -> '='
+    }
+
+    val entries = linkedMapOf<String, String>()
+    raw.lineSequence().forEach { line ->
+        val trimmed = line.trim()
+        if (trimmed.isEmpty()) return@forEach
+        if (trimmed.startsWith("#")) return@forEach
+        if (format == FrontMatterFormat.YAML && trimmed.startsWith("-")) return@forEach
+
+        val separatorIndex = trimmed.indexOf(separator)
+        if (separatorIndex <= 0) return@forEach
+
+        val key = trimmed.substring(0, separatorIndex).trim().trim('\'', '"')
+        val value = trimmed.substring(separatorIndex + 1).trim().trim('\'', '"')
+        if (key.isNotEmpty()) {
+            entries[key] = value
+        }
+    }
+    return entries
 }
 
 private fun TaskListItemMarker.toTaskState(): OrcaTaskState {
@@ -367,9 +527,14 @@ private fun defaultParser(): Parser {
         TablesExtension.create(),
         StrikethroughExtension.create(),
         TaskListItemsExtension.create(),
-        FootnotesExtension.create(),
+        FootnotesExtension.builder()
+            .inlineFootnotes(true)
+            .build(),
     )
     return Parser.builder()
         .extensions(extensions)
         .build()
 }
+
+private val HTML_TAG_REGEX = Regex("<[^>]+>")
+private val BR_TAG_REGEX = Regex("(?i)<br\\s*/?>")

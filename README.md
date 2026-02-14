@@ -7,8 +7,8 @@ Android-first Markdown renderer for Jetpack Compose with architecture prepared f
 
 ## Status
 
-- Current stable minor: `0.3.1`
-- Release notes: [`docs/releases/0.3.1.md`](docs/releases/0.3.1.md)
+- Current stable minor: `0.4.0`
+- Release notes: [`docs/releases/0.4.0.md`](docs/releases/0.4.0.md)
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Why Orca
@@ -95,7 +95,7 @@ CommonmarkOrcaParser(
 )
 ```
 
-## Supported Syntax (`0.3.1`)
+## Supported Syntax (`0.4.0`)
 
 ### Blocks
 
@@ -109,6 +109,7 @@ CommonmarkOrcaParser(
 - thematic break (`---`)
 - standalone image block
 - GFM tables
+- HTML blocks (safe text fallback rendering)
 - footnote definitions
 
 ### Inlines
@@ -120,7 +121,9 @@ CommonmarkOrcaParser(
 - inline code
 - link
 - inline image AST (rendered as fallback text inside inline flow)
+- inline HTML (safe text fallback rendering)
 - footnote references
+- inline footnotes `^[...]`
 - soft/hard line breaks (`\n`)
 
 ### GFM extensions enabled
@@ -131,6 +134,12 @@ CommonmarkOrcaParser(
 - `commonmark-ext-autolink` (bare URLs like `https://example.com`)
 - `commonmark-ext-footnotes`
 
+### Metadata
+
+- front matter parsing:
+  - YAML (`--- ... ---`)
+  - TOML (`+++ ... +++`)
+
 ## Renderer Behavior
 
 - `LazyColumn` root for long documents
@@ -139,15 +148,25 @@ CommonmarkOrcaParser(
 - parse failure fallback to previous valid document (UI is not dropped)
 - deterministic block keys for better list state retention
 - footnotes rendered as superscript markers + numbered definitions block
+- footnote navigation:
+  - tap reference marker (`[n]`) to jump to definition
+  - tap backlink (`↩`) to return to source block
 
 ### Code block rendering
 
 - monospace typography
 - rounded container + subtle border
 - optional language label (when language exists)
+- syntax highlighting (enabled by default, configurable)
 - selectable code text
 - optional line numbers for multiline blocks
 - horizontal scroll for long lines (no forced wrap)
+
+### Table rendering
+
+- auto layout by content width (default)
+- fallback fixed layout mode available via style
+- horizontal scroll remains for wide tables
 
 ## Styling
 
@@ -193,8 +212,6 @@ Always keep your own URL-opening policy in `onLinkClick`.
 
 ## Not Supported Yet
 
-- HTML blocks and inline HTML
-- front matter
 - built-in LaTeX math rendering
 - Compose Multiplatform target modules (architecture ready, Android implementation first)
 
@@ -212,7 +229,7 @@ For release-like check:
 
 ## Versioning
 
-- Stable releases use plain semver tags like `0.3.1`, `0.3.2`
+- Stable releases use plain semver tags like `0.4.0`, `0.4.1`
 - Pre-releases use `-alpha`, `-beta`, `-rc`
 - Maven Central artifacts are immutable after publish
 

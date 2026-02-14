@@ -96,12 +96,27 @@ data class OrcaCodeBlockStyle(
     val lineNumberMinWidth: Dp = 28.dp,
     val lineNumberEndPadding: Dp = 12.dp,
     val languageLabelPadding: PaddingValues = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+    val syntaxHighlightingEnabled: Boolean = true,
+    val highlightKeyword: SpanStyle = SpanStyle(color = Color(0xFF0B57D0), fontWeight = FontWeight.SemiBold),
+    val highlightString: SpanStyle = SpanStyle(color = Color(0xFF2E7D32)),
+    val highlightComment: SpanStyle = SpanStyle(color = Color(0xFF6D6D6D), fontStyle = FontStyle.Italic),
+    val highlightNumber: SpanStyle = SpanStyle(color = Color(0xFF8E24AA)),
 )
+
+enum class OrcaTableLayoutMode {
+    FIXED,
+    AUTO,
+}
 
 data class OrcaTableStyle(
     val text: TextStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
     val headerText: TextStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
     val columnWidth: Dp = 160.dp,
+    val layoutMode: OrcaTableLayoutMode = OrcaTableLayoutMode.AUTO,
+    val minColumnWidth: Dp = 120.dp,
+    val maxColumnWidth: Dp = 320.dp,
+    val autoColumnCharacterWidth: Dp = 7.dp,
+    val fillAvailableWidth: Boolean = true,
     val cellPadding: PaddingValues = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
     val borderColor: Color = Color(0xFFD0D7DE),
     val borderWidth: Dp = 1.dp,
@@ -167,10 +182,20 @@ data class OrcaStyle(
     val codeBlockLineNumberMinWidth: Dp get() = code.lineNumberMinWidth
     val codeBlockLineNumberEndPadding: Dp get() = code.lineNumberEndPadding
     val codeBlockLanguageLabelPadding: PaddingValues get() = code.languageLabelPadding
+    val codeBlockSyntaxHighlightingEnabled: Boolean get() = code.syntaxHighlightingEnabled
+    val codeBlockHighlightKeyword: SpanStyle get() = code.highlightKeyword
+    val codeBlockHighlightString: SpanStyle get() = code.highlightString
+    val codeBlockHighlightComment: SpanStyle get() = code.highlightComment
+    val codeBlockHighlightNumber: SpanStyle get() = code.highlightNumber
 
     val tableText: TextStyle get() = table.text
     val tableHeaderText: TextStyle get() = table.headerText
     val tableColumnWidth: Dp get() = table.columnWidth
+    val tableLayoutMode: OrcaTableLayoutMode get() = table.layoutMode
+    val tableMinColumnWidth: Dp get() = table.minColumnWidth
+    val tableMaxColumnWidth: Dp get() = table.maxColumnWidth
+    val tableAutoColumnCharacterWidth: Dp get() = table.autoColumnCharacterWidth
+    val tableFillAvailableWidth: Boolean get() = table.fillAvailableWidth
     val tableCellPadding: PaddingValues get() = table.cellPadding
     val tableBorderColor: Color get() = table.borderColor
     val tableBorderWidth: Dp get() = table.borderWidth

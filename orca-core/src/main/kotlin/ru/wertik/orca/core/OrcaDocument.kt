@@ -2,7 +2,23 @@ package ru.wertik.orca.core
 
 data class OrcaDocument(
     val blocks: List<OrcaBlock>,
+    val frontMatter: OrcaFrontMatter? = null,
 )
+
+sealed interface OrcaFrontMatter {
+    val raw: String
+    val entries: Map<String, String>
+
+    data class Yaml(
+        override val raw: String,
+        override val entries: Map<String, String>,
+    ) : OrcaFrontMatter
+
+    data class Toml(
+        override val raw: String,
+        override val entries: Map<String, String>,
+    ) : OrcaFrontMatter
+}
 
 sealed interface OrcaBlock {
     data class Heading(
@@ -44,6 +60,10 @@ sealed interface OrcaBlock {
 
     data class Footnotes(
         val definitions: List<OrcaFootnoteDefinition>,
+    ) : OrcaBlock
+
+    data class HtmlBlock(
+        val html: String,
     ) : OrcaBlock
 }
 
@@ -107,5 +127,9 @@ sealed interface OrcaInline {
 
     data class FootnoteReference(
         val label: String,
+    ) : OrcaInline
+
+    data class HtmlInline(
+        val html: String,
     ) : OrcaInline
 }

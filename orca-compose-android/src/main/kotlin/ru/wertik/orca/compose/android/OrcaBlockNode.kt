@@ -2,6 +2,7 @@ package ru.wertik.orca.compose.android
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,16 +14,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import ru.wertik.orca.core.OrcaBlock
 import ru.wertik.orca.core.OrcaTaskState
 
@@ -32,6 +37,10 @@ internal fun OrcaBlockNode(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     footnoteNumbers: Map<String, Int>,
+    sourceBlockKey: String,
+    activeFootnoteLabel: String?,
+    onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
+    onFootnoteBackClick: (label: String) -> Unit,
 ) {
     when (block) {
         is OrcaBlock.Heading -> HeadingNode(
@@ -39,6 +48,8 @@ internal fun OrcaBlockNode(
             style = style,
             onLinkClick = onLinkClick,
             footnoteNumbers = footnoteNumbers,
+            onFootnoteReferenceClick = onFootnoteReferenceClick,
+            sourceBlockKey = sourceBlockKey,
         )
 
         is OrcaBlock.Paragraph -> ParagraphNode(
@@ -46,6 +57,8 @@ internal fun OrcaBlockNode(
             style = style,
             onLinkClick = onLinkClick,
             footnoteNumbers = footnoteNumbers,
+            onFootnoteReferenceClick = onFootnoteReferenceClick,
+            sourceBlockKey = sourceBlockKey,
         )
 
         is OrcaBlock.ListBlock -> ListBlockNode(
@@ -53,6 +66,10 @@ internal fun OrcaBlockNode(
             style = style,
             onLinkClick = onLinkClick,
             footnoteNumbers = footnoteNumbers,
+            sourceBlockKey = sourceBlockKey,
+            activeFootnoteLabel = activeFootnoteLabel,
+            onFootnoteReferenceClick = onFootnoteReferenceClick,
+            onFootnoteBackClick = onFootnoteBackClick,
         )
 
         is OrcaBlock.Quote -> QuoteBlockNode(
@@ -60,6 +77,10 @@ internal fun OrcaBlockNode(
             style = style,
             onLinkClick = onLinkClick,
             footnoteNumbers = footnoteNumbers,
+            sourceBlockKey = sourceBlockKey,
+            activeFootnoteLabel = activeFootnoteLabel,
+            onFootnoteReferenceClick = onFootnoteReferenceClick,
+            onFootnoteBackClick = onFootnoteBackClick,
         )
 
         is OrcaBlock.CodeBlock -> CodeBlockNode(
@@ -79,6 +100,8 @@ internal fun OrcaBlockNode(
             style = style,
             onLinkClick = onLinkClick,
             footnoteNumbers = footnoteNumbers,
+            onFootnoteReferenceClick = onFootnoteReferenceClick,
+            sourceBlockKey = sourceBlockKey,
         )
 
         is OrcaBlock.Footnotes -> FootnotesNode(
@@ -86,6 +109,15 @@ internal fun OrcaBlockNode(
             style = style,
             onLinkClick = onLinkClick,
             footnoteNumbers = footnoteNumbers,
+            sourceBlockKey = sourceBlockKey,
+            activeFootnoteLabel = activeFootnoteLabel,
+            onFootnoteReferenceClick = onFootnoteReferenceClick,
+            onFootnoteBackClick = onFootnoteBackClick,
+        )
+
+        is OrcaBlock.HtmlBlock -> HtmlBlockNode(
+            block = block,
+            style = style,
         )
     }
 }
@@ -96,13 +128,23 @@ private fun HeadingNode(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     footnoteNumbers: Map<String, Int>,
+    sourceBlockKey: String,
+    onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
 ) {
-    val headingText = remember(block.content, style, onLinkClick, footnoteNumbers) {
+    val headingText = remember(
+        block.content,
+        style,
+        onLinkClick,
+        footnoteNumbers,
+        sourceBlockKey,
+        onFootnoteReferenceClick,
+    ) {
         buildInlineAnnotatedString(
             inlines = block.content,
             style = style,
             onLinkClick = onLinkClick,
             footnoteNumbers = footnoteNumbers,
+            onFootnoteClick = { label -> onFootnoteReferenceClick(label, sourceBlockKey) },
         )
     }
     InlineTextNode(
@@ -117,13 +159,23 @@ private fun ParagraphNode(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     footnoteNumbers: Map<String, Int>,
+    sourceBlockKey: String,
+    onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
 ) {
-    val paragraphText = remember(block.content, style, onLinkClick, footnoteNumbers) {
+    val paragraphText = remember(
+        block.content,
+        style,
+        onLinkClick,
+        footnoteNumbers,
+        sourceBlockKey,
+        onFootnoteReferenceClick,
+    ) {
         buildInlineAnnotatedString(
             inlines = block.content,
             style = style,
             onLinkClick = onLinkClick,
             footnoteNumbers = footnoteNumbers,
+            onFootnoteClick = { label -> onFootnoteReferenceClick(label, sourceBlockKey) },
         )
     }
     InlineTextNode(
@@ -138,6 +190,10 @@ private fun ListBlockNode(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     footnoteNumbers: Map<String, Int>,
+    sourceBlockKey: String,
+    activeFootnoteLabel: String?,
+    onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
+    onFootnoteBackClick: (label: String) -> Unit,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
@@ -165,6 +221,10 @@ private fun ListBlockNode(
                             style = style,
                             onLinkClick = onLinkClick,
                             footnoteNumbers = footnoteNumbers,
+                            sourceBlockKey = sourceBlockKey,
+                            activeFootnoteLabel = activeFootnoteLabel,
+                            onFootnoteReferenceClick = onFootnoteReferenceClick,
+                            onFootnoteBackClick = onFootnoteBackClick,
                         )
                     }
                 }
@@ -179,6 +239,10 @@ private fun QuoteBlockNode(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     footnoteNumbers: Map<String, Int>,
+    sourceBlockKey: String,
+    activeFootnoteLabel: String?,
+    onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
+    onFootnoteBackClick: (label: String) -> Unit,
 ) {
     Row(
         modifier = Modifier.height(IntrinsicSize.Min),
@@ -201,6 +265,10 @@ private fun QuoteBlockNode(
                     style = style,
                     onLinkClick = onLinkClick,
                     footnoteNumbers = footnoteNumbers,
+                    sourceBlockKey = sourceBlockKey,
+                    activeFootnoteLabel = activeFootnoteLabel,
+                    onFootnoteReferenceClick = onFootnoteReferenceClick,
+                    onFootnoteBackClick = onFootnoteBackClick,
                 )
             }
         }
@@ -213,12 +281,25 @@ private fun FootnotesNode(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     footnoteNumbers: Map<String, Int>,
+    sourceBlockKey: String,
+    activeFootnoteLabel: String?,
+    onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
+    onFootnoteBackClick: (label: String) -> Unit,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
     ) {
         block.definitions.forEach { definition ->
-            Row {
+            val bringIntoViewRequester = remember(definition.label) { BringIntoViewRequester() }
+            LaunchedEffect(activeFootnoteLabel, definition.label) {
+                if (activeFootnoteLabel == definition.label) {
+                    bringIntoViewRequester.bringIntoView()
+                }
+            }
+
+            Row(
+                modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester),
+            ) {
                 Text(
                     text = footnoteListMarkerText(definition.label, footnoteNumbers),
                     style = style.typography.paragraph,
@@ -234,12 +315,40 @@ private fun FootnotesNode(
                             style = style,
                             onLinkClick = onLinkClick,
                             footnoteNumbers = footnoteNumbers,
+                            sourceBlockKey = sourceBlockKey,
+                            activeFootnoteLabel = activeFootnoteLabel,
+                            onFootnoteReferenceClick = onFootnoteReferenceClick,
+                            onFootnoteBackClick = onFootnoteBackClick,
                         )
                     }
+
+                    Text(
+                        text = "↩",
+                        style = style.inline.link.toTextStyle(style.typography.paragraph),
+                        modifier = Modifier
+                            .padding(top = 2.dp)
+                            .clickable {
+                                onFootnoteBackClick(definition.label)
+                            },
+                    )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun HtmlBlockNode(
+    block: OrcaBlock.HtmlBlock,
+    style: OrcaStyle,
+) {
+    val text = remember(block.html) { htmlBlockFallbackText(block.html) }
+    if (text.isBlank()) return
+
+    Text(
+        text = text,
+        style = style.typography.paragraph,
+    )
 }
 
 @Composable
@@ -248,6 +357,21 @@ private fun CodeBlockNode(
     style: OrcaStyle,
 ) {
     val languageLabel = remember(block.language) { codeLanguageLabel(block.language) }
+    val highlightedCode = remember(
+        block.code,
+        block.language,
+        style.code.syntaxHighlightingEnabled,
+        style.code.highlightKeyword,
+        style.code.highlightString,
+        style.code.highlightComment,
+        style.code.highlightNumber,
+    ) {
+        buildCodeAnnotatedString(
+            code = block.code,
+            language = block.language,
+            style = style,
+        )
+    }
     val lineNumbers = remember(block.code, style.code.showLineNumbers) {
         if (style.code.showLineNumbers) {
             codeLineNumbersText(block.code)
@@ -296,7 +420,7 @@ private fun CodeBlockNode(
                         )
                     }
                     Text(
-                        text = block.code,
+                        text = highlightedCode,
                         style = style.code.text,
                         softWrap = false,
                     )
@@ -372,3 +496,30 @@ private fun InlineTextNode(
         style = textStyle,
     )
 }
+
+internal fun htmlBlockFallbackText(html: String): String {
+    return decodeBasicHtmlEntities(
+        html
+            .replace(BLOCK_BREAK_TAG_REGEX, "\n")
+            .replace(BR_TAG_REGEX, "\n")
+            .replace(HTML_TAG_REGEX, ""),
+    ).trim()
+}
+
+private fun decodeBasicHtmlEntities(text: String): String {
+    return text
+        .replace("&nbsp;", " ")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+}
+
+private fun androidx.compose.ui.text.SpanStyle.toTextStyle(base: TextStyle): TextStyle {
+    return base.merge(TextStyle(color = color, textDecoration = textDecoration))
+}
+
+private val HTML_TAG_REGEX = Regex("<[^>]+>")
+private val BR_TAG_REGEX = Regex("(?i)<br\\s*/?>")
+private val BLOCK_BREAK_TAG_REGEX = Regex("(?i)</(p|div|li|h[1-6]|blockquote|tr|table|ul|ol)>")

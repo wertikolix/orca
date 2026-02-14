@@ -4,16 +4,20 @@ import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.wertik.orca.core.CommonmarkOrcaParser
 import ru.wertik.orca.core.OrcaBlock
@@ -87,10 +91,41 @@ fun Orca(
     val footnoteNumbers = remember(document.blocks) {
         buildFootnoteNumbers(document.blocks)
     }
+    val blockIndexByKey = remember(renderBlocks) {
+        renderBlocks.mapIndexed { index, renderBlock ->
+            renderBlock.key to index
+        }.toMap()
+    }
+    val footnoteBlockIndex = remember(renderBlocks, blockIndexByKey) {
+        val footnoteBlockKey = renderBlocks
+            .firstOrNull { renderBlock -> renderBlock.block is OrcaBlock.Footnotes }
+            ?.key
+        footnoteBlockKey?.let { key -> blockIndexByKey[key] }
+    }
+
+    var activeFootnoteLabel by remember(document.blocks) { mutableStateOf<String?>(null) }
+    val referenceBlockByFootnote = remember(document.blocks) {
+        mutableStateMapOf<String, String>()
+    }
+    val scope = rememberCoroutineScope()
+
+    fun onFootnoteReferenceClick(label: String, sourceBlockKey: String, scrollToFootnotes: (() -> Unit)?) {
+        referenceBlockByFootnote[label] = sourceBlockKey
+        activeFootnoteLabel = label
+        scrollToFootnotes?.invoke()
+    }
+
+    fun onFootnoteBackClick(label: String, scrollToSource: ((String) -> Unit)?) {
+        val sourceBlockKey = referenceBlockByFootnote[label] ?: return
+        activeFootnoteLabel = null
+        scrollToSource?.invoke(sourceBlockKey)
+    }
 
     when (rootLayout) {
         OrcaRootLayout.LAZY_COLUMN -> {
+            val listState = rememberLazyListState()
             LazyColumn(
+                state = listState,
                 modifier = modifier,
                 verticalArrangement = Arrangement.spacedBy(style.layout.blockSpacing),
             ) {
@@ -103,6 +138,35 @@ fun Orca(
                         style = style,
                         onLinkClick = onLinkClick,
                         footnoteNumbers = footnoteNumbers,
+                        sourceBlockKey = item.key,
+                        activeFootnoteLabel = activeFootnoteLabel,
+                        onFootnoteReferenceClick = { label, sourceBlockKey ->
+                            onFootnoteReferenceClick(
+                                label = label,
+                                sourceBlockKey = sourceBlockKey,
+                                scrollToFootnotes = {
+                                    val targetIndex = footnoteBlockIndex
+                                    if (targetIndex != null) {
+                                        scope.launch {
+                                            listState.animateScrollToItem(targetIndex)
+                                        }
+                                    }
+                                },
+                            )
+                        },
+                        onFootnoteBackClick = { label ->
+                            onFootnoteBackClick(
+                                label = label,
+                                scrollToSource = { sourceBlockKey ->
+                                    val targetIndex = blockIndexByKey[sourceBlockKey]
+                                    if (targetIndex != null) {
+                                        scope.launch {
+                                            listState.animateScrollToItem(targetIndex)
+                                        }
+                                    }
+                                },
+                            )
+                        },
                     )
                 }
             }
@@ -119,6 +183,21 @@ fun Orca(
                         style = style,
                         onLinkClick = onLinkClick,
                         footnoteNumbers = footnoteNumbers,
+                        sourceBlockKey = item.key,
+                        activeFootnoteLabel = activeFootnoteLabel,
+                        onFootnoteReferenceClick = { label, sourceBlockKey ->
+                            onFootnoteReferenceClick(
+                                label = label,
+                                sourceBlockKey = sourceBlockKey,
+                                scrollToFootnotes = null,
+                            )
+                        },
+                        onFootnoteBackClick = { label ->
+                            onFootnoteBackClick(
+                                label = label,
+                                scrollToSource = null,
+                            )
+                        },
                     )
                 }
             }

@@ -14,6 +14,7 @@ internal fun buildInlineAnnotatedString(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     footnoteNumbers: Map<String, Int> = emptyMap(),
+    onFootnoteClick: ((String) -> Unit)? = null,
 ): AnnotatedString {
     return buildAnnotatedString {
         appendInlines(
@@ -21,6 +22,7 @@ internal fun buildInlineAnnotatedString(
             style = style,
             onLinkClick = onLinkClick,
             footnoteNumbers = footnoteNumbers,
+            onFootnoteClick = onFootnoteClick,
         )
     }
 }
@@ -30,6 +32,7 @@ private fun AnnotatedString.Builder.appendInlines(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     footnoteNumbers: Map<String, Int>,
+    onFootnoteClick: ((String) -> Unit)?,
 ) {
     inlines.forEach { inline ->
         appendInline(
@@ -37,6 +40,7 @@ private fun AnnotatedString.Builder.appendInlines(
             style = style,
             onLinkClick = onLinkClick,
             footnoteNumbers = footnoteNumbers,
+            onFootnoteClick = onFootnoteClick,
         )
     }
 }
@@ -46,6 +50,7 @@ private fun AnnotatedString.Builder.appendInline(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     footnoteNumbers: Map<String, Int>,
+    onFootnoteClick: ((String) -> Unit)?,
 ) {
     when (inline) {
         is OrcaInline.Text -> append(inline.text)
@@ -56,6 +61,7 @@ private fun AnnotatedString.Builder.appendInline(
                 style = style,
                 onLinkClick = onLinkClick,
                 footnoteNumbers = footnoteNumbers,
+                onFootnoteClick = onFootnoteClick,
             )
         }
 
@@ -65,6 +71,7 @@ private fun AnnotatedString.Builder.appendInline(
                 style = style,
                 onLinkClick = onLinkClick,
                 footnoteNumbers = footnoteNumbers,
+                onFootnoteClick = onFootnoteClick,
             )
         }
 
@@ -74,6 +81,7 @@ private fun AnnotatedString.Builder.appendInline(
                 style = style,
                 onLinkClick = onLinkClick,
                 footnoteNumbers = footnoteNumbers,
+                onFootnoteClick = onFootnoteClick,
             )
         }
 
@@ -87,6 +95,7 @@ private fun AnnotatedString.Builder.appendInline(
                 style = style,
                 onLinkClick = onLinkClick,
                 footnoteNumbers = footnoteNumbers,
+                onFootnoteClick = onFootnoteClick,
             )
         } else {
             withLink(
@@ -104,15 +113,36 @@ private fun AnnotatedString.Builder.appendInline(
                     style = style,
                     onLinkClick = onLinkClick,
                     footnoteNumbers = footnoteNumbers,
+                    onFootnoteClick = onFootnoteClick,
                 )
             }
         }
 
         is OrcaInline.Image -> append(imageInlineFallbackText(inline))
 
-        is OrcaInline.FootnoteReference -> withStyle(style.inline.footnoteReference) {
-            append(footnoteReferenceText(inline.label, footnoteNumbers))
+        is OrcaInline.FootnoteReference -> {
+            val text = footnoteReferenceText(inline.label, footnoteNumbers)
+            val handler = onFootnoteClick
+            if (handler == null) {
+                withStyle(style.inline.footnoteReference) {
+                    append(text)
+                }
+            } else {
+                withLink(
+                    LinkAnnotation.Url(
+                        url = "orca-footnote://${inline.label}",
+                        styles = TextLinkStyles(style = style.inline.footnoteReference),
+                        linkInteractionListener = LinkInteractionListener {
+                            handler(inline.label)
+                        },
+                    ),
+                ) {
+                    append(text)
+                }
+            }
         }
+
+        is OrcaInline.HtmlInline -> append(htmlInlineFallbackText(inline.html))
     }
 }
 
@@ -121,6 +151,7 @@ private fun AnnotatedString.Builder.appendLinkContent(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     footnoteNumbers: Map<String, Int>,
+    onFootnoteClick: ((String) -> Unit)?,
 ) {
     if (inline.content.isEmpty()) {
         append(inline.destination)
@@ -130,6 +161,7 @@ private fun AnnotatedString.Builder.appendLinkContent(
             style = style,
             onLinkClick = onLinkClick,
             footnoteNumbers = footnoteNumbers,
+            onFootnoteClick = onFootnoteClick,
         )
     }
 }
@@ -149,3 +181,24 @@ internal fun footnoteReferenceText(
 internal fun imageInlineFallbackText(image: OrcaInline.Image): String {
     return image.alt?.takeIf { it.isNotBlank() } ?: image.source
 }
+
+internal fun htmlInlineFallbackText(html: String): String {
+    return decodeBasicHtmlEntities(
+        html
+            .replace(BR_TAG_REGEX, "\n")
+            .replace(HTML_TAG_REGEX, ""),
+    )
+}
+
+private fun decodeBasicHtmlEntities(text: String): String {
+    return text
+        .replace("&nbsp;", " ")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+}
+
+private val HTML_TAG_REGEX = Regex("<[^>]+>")
+private val BR_TAG_REGEX = Regex("(?i)<br\\s*/?>")

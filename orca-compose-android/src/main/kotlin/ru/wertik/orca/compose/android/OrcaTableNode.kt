@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -20,7 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import ru.wertik.orca.core.OrcaBlock
+import ru.wertik.orca.core.OrcaInline
 import ru.wertik.orca.core.OrcaTableAlignment
 import ru.wertik.orca.core.OrcaTableCell
 
@@ -30,6 +34,8 @@ internal fun TableBlockNode(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     footnoteNumbers: Map<String, Int>,
+    sourceBlockKey: String,
+    onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
 ) {
     val columnCount = maxOf(
         block.header.size,
@@ -37,26 +43,53 @@ internal fun TableBlockNode(
     )
     if (columnCount == 0) return
 
-    ColumnWithHorizontalScroll(
-        style = style,
-    ) {
-        TableRowNode(
-            cells = block.header,
+    val contentLengths = remember(block, columnCount) {
+        tableContentLengths(
+            block = block,
             columnCount = columnCount,
-            isHeader = true,
-            style = style,
-            onLinkClick = onLinkClick,
-            footnoteNumbers = footnoteNumbers,
         )
-        block.rows.forEach { row ->
-            TableRowNode(
-                cells = row,
+    }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val columnWidths = remember(
+            contentLengths,
+            columnCount,
+            style.table,
+            maxWidth,
+        ) {
+            computeTableColumnWidths(
                 columnCount = columnCount,
-                isHeader = false,
+                contentLengths = contentLengths,
+                tableStyle = style.table,
+                availableWidth = maxWidth.takeIf { width -> width > 0.dp },
+            )
+        }
+
+        ColumnWithHorizontalScroll(style = style) {
+            TableRowNode(
+                cells = block.header,
+                columnCount = columnCount,
+                columnWidths = columnWidths,
+                isHeader = true,
                 style = style,
                 onLinkClick = onLinkClick,
                 footnoteNumbers = footnoteNumbers,
+                sourceBlockKey = sourceBlockKey,
+                onFootnoteReferenceClick = onFootnoteReferenceClick,
             )
+            block.rows.forEach { row ->
+                TableRowNode(
+                    cells = row,
+                    columnCount = columnCount,
+                    columnWidths = columnWidths,
+                    isHeader = false,
+                    style = style,
+                    onLinkClick = onLinkClick,
+                    footnoteNumbers = footnoteNumbers,
+                    sourceBlockKey = sourceBlockKey,
+                    onFootnoteReferenceClick = onFootnoteReferenceClick,
+                )
+            }
         }
     }
 }
@@ -79,17 +112,27 @@ private fun ColumnWithHorizontalScroll(
 private fun TableRowNode(
     cells: List<OrcaTableCell>,
     columnCount: Int,
+    columnWidths: List<Dp>,
     isHeader: Boolean,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     footnoteNumbers: Map<String, Int>,
+    sourceBlockKey: String,
+    onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
 ) {
     Row(
         modifier = Modifier.height(IntrinsicSize.Min),
     ) {
         repeat(columnCount) { index ->
             val cell = cells.getOrNull(index)
-            val text = remember(cell, style, onLinkClick, footnoteNumbers) {
+            val text = remember(
+                cell,
+                style,
+                onLinkClick,
+                footnoteNumbers,
+                sourceBlockKey,
+                onFootnoteReferenceClick,
+            ) {
                 if (cell == null) {
                     AnnotatedString("")
                 } else {
@@ -98,6 +141,7 @@ private fun TableRowNode(
                         style = style,
                         onLinkClick = onLinkClick,
                         footnoteNumbers = footnoteNumbers,
+                        onFootnoteClick = { label -> onFootnoteReferenceClick(label, sourceBlockKey) },
                     )
                 }
             }
@@ -105,7 +149,7 @@ private fun TableRowNode(
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(style.table.columnWidth)
+                    .width(columnWidths.getOrElse(index) { style.table.columnWidth })
                     .border(style.table.borderWidth, style.table.borderColor)
                     .background(if (isHeader) style.table.headerBackground else Color.Transparent)
                     .padding(style.table.cellPadding),
@@ -129,3 +173,102 @@ private fun tableCellAlignment(alignment: OrcaTableAlignment?): TextAlign {
         null -> TextAlign.Start
     }
 }
+
+internal fun computeTableColumnWidths(
+    columnCount: Int,
+    contentLengths: List<Int>,
+    tableStyle: OrcaTableStyle,
+    availableWidth: Dp?,
+): List<Dp> {
+    if (columnCount <= 0) return emptyList()
+
+    if (tableStyle.layoutMode == OrcaTableLayoutMode.FIXED) {
+        return List(columnCount) { tableStyle.columnWidth }
+    }
+
+    val widths = (0 until columnCount)
+        .map { index ->
+            val contentLength = contentLengths.getOrElse(index) { 1 }.coerceAtLeast(1)
+            val estimated = tableStyle.autoColumnCharacterWidth * contentLength.toFloat()
+            estimated.coerceIn(
+                minimumValue = tableStyle.minColumnWidth,
+                maximumValue = tableStyle.maxColumnWidth,
+            )
+        }
+        .toMutableList()
+
+    if (availableWidth != null && tableStyle.fillAvailableWidth) {
+        var remaining = availableWidth - widths.sumDp()
+        var expandable = widths.indices
+            .filter { index -> widths[index] < tableStyle.maxColumnWidth }
+            .toMutableList()
+
+        while (remaining > 0.dp && expandable.isNotEmpty()) {
+            val chunk = remaining / expandable.size.toFloat()
+            if (chunk <= 0.dp) break
+
+            var consumed = 0.dp
+            val stillExpandable = mutableListOf<Int>()
+            expandable.forEach { index ->
+                val capacity = tableStyle.maxColumnWidth - widths[index]
+                val delta = minOf(chunk, capacity)
+                widths[index] = widths[index] + delta
+                consumed += delta
+                if (widths[index] < tableStyle.maxColumnWidth) {
+                    stillExpandable += index
+                }
+            }
+            if (consumed <= 0.dp) break
+
+            remaining -= consumed
+            expandable = stillExpandable
+        }
+    }
+
+    return widths
+}
+
+internal fun tableContentLengths(
+    block: OrcaBlock.Table,
+    columnCount: Int,
+): List<Int> {
+    val lengths = MutableList(columnCount) { 1 }
+    fun applyRow(cells: List<OrcaTableCell>) {
+        repeat(columnCount) { index ->
+            val length = estimateCellTextLength(cells.getOrNull(index))
+            if (length > lengths[index]) {
+                lengths[index] = length
+            }
+        }
+    }
+
+    applyRow(block.header)
+    block.rows.forEach(::applyRow)
+    return lengths
+}
+
+private fun estimateCellTextLength(cell: OrcaTableCell?): Int {
+    if (cell == null) return 1
+    val length = cell.content.sumOf(::estimateInlineTextLength)
+    return length.coerceAtLeast(1)
+}
+
+private fun estimateInlineTextLength(inline: OrcaInline): Int {
+    return when (inline) {
+        is OrcaInline.Text -> inline.text.length
+        is OrcaInline.Bold -> inline.content.sumOf(::estimateInlineTextLength)
+        is OrcaInline.Italic -> inline.content.sumOf(::estimateInlineTextLength)
+        is OrcaInline.Strikethrough -> inline.content.sumOf(::estimateInlineTextLength)
+        is OrcaInline.InlineCode -> inline.code.length
+        is OrcaInline.Link -> {
+            val labelLength = inline.content.sumOf(::estimateInlineTextLength)
+            if (labelLength > 0) labelLength else inline.destination.length
+        }
+
+        is OrcaInline.Image -> inline.alt?.length ?: inline.source.length
+        is OrcaInline.FootnoteReference -> 4
+        is OrcaInline.HtmlInline -> htmlInlineFallbackText(inline.html).length
+    }
+}
+
+private fun List<Dp>.sumDp(): Dp = fold(0.dp) { acc, value -> acc + value }

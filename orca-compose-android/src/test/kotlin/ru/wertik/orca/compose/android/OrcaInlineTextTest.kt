@@ -98,6 +98,23 @@ class OrcaInlineTextTest {
     }
 
     @Test
+    fun `footnote reference can emit click callback`() {
+        var clicked: String? = null
+        val text = buildInlineAnnotatedString(
+            inlines = listOf(OrcaInline.FootnoteReference(label = "note")),
+            style = OrcaStyle(),
+            onLinkClick = {},
+            footnoteNumbers = mapOf("note" to 1),
+            onFootnoteClick = { label -> clicked = label },
+        )
+
+        val link = text.getLinkAnnotations(0, text.length).single().item as LinkAnnotation.Url
+        assertEquals("orca-footnote://note", link.url)
+        link.linkInteractionListener?.onClick(link)
+        assertEquals("note", clicked)
+    }
+
+    @Test
     fun `build annotated string maps footnote reference with label fallback`() {
         val text = buildInlineAnnotatedString(
             inlines = listOf(OrcaInline.FootnoteReference(label = "note")),
@@ -274,6 +291,18 @@ class OrcaInlineTextTest {
 
         assertEquals("value deprecated", rendered.text)
         assertTrue(rendered.spanStyles.any { it.item.textDecoration == TextDecoration.LineThrough })
+    }
+
+    @Test
+    fun `html inline fallback strips tags and decodes entities`() {
+        assertEquals(
+            "bold & text",
+            htmlInlineFallbackText("<b>bold</b> &amp; text"),
+        )
+        assertEquals(
+            "a\nb",
+            htmlInlineFallbackText("a<br/>b"),
+        )
     }
 
     @Test

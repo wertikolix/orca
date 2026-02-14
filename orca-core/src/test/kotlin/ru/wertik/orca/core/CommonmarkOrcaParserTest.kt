@@ -509,4 +509,103 @@ class CommonmarkOrcaParserTest {
             result,
         )
     }
+
+    @Test
+    fun `parse inline footnote generates reference and definition`() {
+        val markdown = "Inline ^[alpha *beta*] footnote."
+
+        val result = parser.parse(markdown)
+
+        assertEquals(2, result.blocks.size)
+        val paragraph = result.blocks[0] as OrcaBlock.Paragraph
+        val reference = paragraph.content.filterIsInstance<OrcaInline.FootnoteReference>().single()
+        assertTrue(reference.label.startsWith("__inline_footnote_"))
+
+        val footnotes = result.blocks[1] as OrcaBlock.Footnotes
+        val definition = footnotes.definitions.single()
+        assertEquals(reference.label, definition.label)
+
+        val definitionParagraph = definition.blocks.single() as OrcaBlock.Paragraph
+        assertEquals(
+            listOf(
+                OrcaInline.Text("alpha "),
+                OrcaInline.Italic(content = listOf(OrcaInline.Text("beta"))),
+            ),
+            definitionParagraph.content,
+        )
+    }
+
+    @Test
+    fun `parse html block and inline html nodes`() {
+        val markdown = """
+            <div>hello <b>world</b></div>
+            
+            A <span>small</span> test
+        """.trimIndent()
+
+        val result = parser.parse(markdown)
+
+        assertEquals(
+            OrcaBlock.HtmlBlock("<div>hello <b>world</b></div>"),
+            result.blocks[0],
+        )
+        val paragraph = result.blocks[1] as OrcaBlock.Paragraph
+        assertEquals(
+            listOf(
+                OrcaInline.Text("A "),
+                OrcaInline.HtmlInline("<span>"),
+                OrcaInline.Text("small"),
+                OrcaInline.HtmlInline("</span>"),
+                OrcaInline.Text(" test"),
+            ),
+            paragraph.content,
+        )
+    }
+
+    @Test
+    fun `parse yaml front matter into document metadata`() {
+        val markdown = """
+            ---
+            title: hello
+            tags: kotlin
+            ---
+            
+            # Heading
+        """.trimIndent()
+
+        val result = parser.parse(markdown)
+
+        val frontMatter = result.frontMatter as OrcaFrontMatter.Yaml
+        assertEquals("hello", frontMatter.entries["title"])
+        assertEquals("kotlin", frontMatter.entries["tags"])
+        assertEquals(
+            OrcaBlock.Heading(
+                level = 1,
+                content = listOf(OrcaInline.Text("Heading")),
+            ),
+            result.blocks.single(),
+        )
+    }
+
+    @Test
+    fun `parse toml front matter into document metadata`() {
+        val markdown = """
+            +++
+            title = "hello"
+            draft = "false"
+            +++
+            
+            body
+        """.trimIndent()
+
+        val result = parser.parse(markdown)
+
+        val frontMatter = result.frontMatter as OrcaFrontMatter.Toml
+        assertEquals("hello", frontMatter.entries["title"])
+        assertEquals("false", frontMatter.entries["draft"])
+        assertEquals(
+            OrcaBlock.Paragraph(content = listOf(OrcaInline.Text("body"))),
+            result.blocks.single(),
+        )
+    }
 }
