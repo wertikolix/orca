@@ -16,4 +16,18 @@ class OrcaCodeBlockTest {
         assertNull(codeLanguageLabel("   "))
         assertNull(codeLanguageLabel(null))
     }
+
+    @Test
+    fun `code line numbers are rendered for multiline code`() {
+        assertEquals(
+            "1\n2\n3",
+            codeLineNumbersText("first\nsecond\nthird"),
+        )
+    }
+
+    @Test
+    fun `code line numbers are hidden for single line code`() {
+        assertNull(codeLineNumbersText("single line"))
+        assertNull(codeLineNumbersText(""))
+    }
 }

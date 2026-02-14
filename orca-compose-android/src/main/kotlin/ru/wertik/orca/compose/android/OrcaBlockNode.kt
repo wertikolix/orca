@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -247,6 +248,13 @@ private fun CodeBlockNode(
     style: OrcaStyle,
 ) {
     val languageLabel = remember(block.language) { codeLanguageLabel(block.language) }
+    val lineNumbers = remember(block.code, style.code.showLineNumbers) {
+        if (style.code.showLineNumbers) {
+            codeLineNumbersText(block.code)
+        } else {
+            null
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -276,11 +284,24 @@ private fun CodeBlockNode(
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
         ) {
-            Text(
-                text = block.code,
-                style = style.code.text,
-                softWrap = false,
-            )
+            SelectionContainer {
+                Row {
+                    if (lineNumbers != null) {
+                        Text(
+                            text = lineNumbers,
+                            style = style.code.lineNumber,
+                            modifier = Modifier
+                                .width(style.code.lineNumberMinWidth)
+                                .padding(end = style.code.lineNumberEndPadding),
+                        )
+                    }
+                    Text(
+                        text = block.code,
+                        style = style.code.text,
+                        softWrap = false,
+                    )
+                }
+            }
         }
     }
 }
@@ -328,6 +349,17 @@ internal fun codeLanguageLabel(language: String?): String? {
     return language
         ?.trim()
         ?.takeIf { it.isNotEmpty() }
+}
+
+internal fun codeLineNumbersText(code: String): String? {
+    val lineCount = codeLineCount(code)
+    if (lineCount <= 1) return null
+    return (1..lineCount).joinToString(separator = "\n")
+}
+
+private fun codeLineCount(code: String): Int {
+    if (code.isEmpty()) return 1
+    return code.count { char -> char == '\n' } + 1
 }
 
 @Composable

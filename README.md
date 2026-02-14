@@ -144,6 +144,8 @@ CommonmarkOrcaParser(
 - monospace typography
 - rounded container + subtle border
 - optional language label (when language exists)
+- selectable code text
+- optional line numbers for multiline blocks
 - horizontal scroll for long lines (no forced wrap)
 
 ## Styling

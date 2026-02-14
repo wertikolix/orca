@@ -80,12 +80,21 @@ data class OrcaCodeBlockStyle(
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.Medium,
     ),
+    val lineNumber: TextStyle = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 20.sp,
+        fontFamily = FontFamily.Monospace,
+        color = Color(0xFF7A7A7A),
+    ),
     val background: Color = Color(0xFFF3F3F3),
     val languageLabelBackground: Color = Color(0x12000000),
     val borderColor: Color = Color(0xFFD0D7DE),
     val borderWidth: Dp = 1.dp,
     val shape: Shape = RoundedCornerShape(8.dp),
     val padding: PaddingValues = PaddingValues(12.dp),
+    val showLineNumbers: Boolean = true,
+    val lineNumberMinWidth: Dp = 28.dp,
+    val lineNumberEndPadding: Dp = 12.dp,
     val languageLabelPadding: PaddingValues = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
 )
 
@@ -147,12 +156,16 @@ data class OrcaStyle(
 
     val codeBlock: TextStyle get() = code.text
     val codeBlockLanguageLabel: TextStyle get() = code.languageLabel
+    val codeBlockLineNumber: TextStyle get() = code.lineNumber
     val codeBlockBackground: Color get() = code.background
     val codeBlockLanguageLabelBackground: Color get() = code.languageLabelBackground
     val codeBlockBorderColor: Color get() = code.borderColor
     val codeBlockBorderWidth: Dp get() = code.borderWidth
     val codeBlockShape: Shape get() = code.shape
     val codeBlockPadding: PaddingValues get() = code.padding
+    val codeBlockShowLineNumbers: Boolean get() = code.showLineNumbers
+    val codeBlockLineNumberMinWidth: Dp get() = code.lineNumberMinWidth
+    val codeBlockLineNumberEndPadding: Dp get() = code.lineNumberEndPadding
     val codeBlockLanguageLabelPadding: PaddingValues get() = code.languageLabelPadding
 
     val tableText: TextStyle get() = table.text
