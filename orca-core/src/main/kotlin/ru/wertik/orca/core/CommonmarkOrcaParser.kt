@@ -34,19 +34,54 @@ import org.commonmark.parser.Parser
 
 class CommonmarkOrcaParser(
     private val parser: Parser = defaultParser(),
+    private val maxTreeDepth: Int = DEFAULT_MAX_TREE_DEPTH,
+    private val onDepthLimitExceeded: ((Int) -> Unit)? = null,
 ) : OrcaParser {
+
+    init {
+        require(maxTreeDepth > 0) { "maxTreeDepth must be greater than 0" }
+    }
+
+    override fun cacheKey(): Any = ParserCacheKey(parser, maxTreeDepth)
 
     override fun parse(input: String): OrcaDocument {
         val root = parser.parse(input)
+        val depthLimitReporter = DepthLimitReporter(onDepthLimitExceeded)
+        val mapper = CommonmarkTreeMapper(
+            maxTreeDepth = maxTreeDepth,
+            depthLimitReporter = depthLimitReporter,
+        )
         return OrcaDocument(
             blocks = root.childSequence()
-                .mapNotNull { child -> mapBlock(child, depth = 0) }
+                .mapNotNull { child -> mapper.mapBlock(child, depth = 0) }
                 .toList(),
         )
     }
+}
 
-    private fun mapBlock(node: Node, depth: Int): OrcaBlock? {
-        if (depth > MAX_TREE_DEPTH) {
+private data class ParserCacheKey(
+    val parser: Parser,
+    val maxTreeDepth: Int,
+)
+
+private class DepthLimitReporter(
+    private val callback: ((Int) -> Unit)?,
+) {
+    private var wasReported = false
+
+    fun report(depth: Int) {
+        if (wasReported) return
+        wasReported = true
+        callback?.invoke(depth)
+    }
+}
+
+private class CommonmarkTreeMapper(
+    private val maxTreeDepth: Int,
+    private val depthLimitReporter: DepthLimitReporter,
+) {
+    fun mapBlock(node: Node, depth: Int): OrcaBlock? {
+        if (isDepthExceeded(depth)) {
             return null
         }
 
@@ -114,7 +149,7 @@ class CommonmarkOrcaParser(
     }
 
     private fun mapTable(tableBlock: TableBlock, depth: Int): OrcaBlock.Table? {
-        if (depth > MAX_TREE_DEPTH) {
+        if (isDepthExceeded(depth)) {
             return null
         }
 
@@ -148,7 +183,7 @@ class CommonmarkOrcaParser(
     }
 
     private fun mapTableRow(tableRow: TableRow, depth: Int): List<OrcaTableCell> {
-        if (depth > MAX_TREE_DEPTH) {
+        if (isDepthExceeded(depth)) {
             return emptyList()
         }
 
@@ -182,7 +217,7 @@ class CommonmarkOrcaParser(
     }
 
     private fun mapInlineContainer(container: Node, depth: Int): List<OrcaInline> {
-        if (depth > MAX_TREE_DEPTH) {
+        if (isDepthExceeded(depth)) {
             return emptyList()
         }
 
@@ -192,7 +227,7 @@ class CommonmarkOrcaParser(
     }
 
     private fun mapInline(node: Node, depth: Int): Sequence<OrcaInline> {
-        if (depth > MAX_TREE_DEPTH) {
+        if (isDepthExceeded(depth)) {
             return emptySequence()
         }
 
@@ -231,9 +266,17 @@ class CommonmarkOrcaParser(
             else -> node.childSequence().flatMap { child -> mapInline(child, depth + 1) }
         }
     }
+
+    private fun isDepthExceeded(depth: Int): Boolean {
+        if (depth <= maxTreeDepth) {
+            return false
+        }
+        depthLimitReporter.report(depth)
+        return true
+    }
 }
 
-private const val MAX_TREE_DEPTH = 64
+private const val DEFAULT_MAX_TREE_DEPTH = 64
 
 private fun Node.childSequence(): Sequence<Node> = sequence {
     var child = firstChild

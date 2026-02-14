@@ -16,7 +16,7 @@ import ru.wertik.orca.compose.android.Orca
 class MainActivity : ComponentActivity() {
 
     private val markdown = """
-        # Orca v0.1
+        # Orca v0.2
         
         Android-first markdown renderer for Compose.
         

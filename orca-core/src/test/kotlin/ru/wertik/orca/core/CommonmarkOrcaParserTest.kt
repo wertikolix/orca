@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.commonmark.parser.Parser
 
 class CommonmarkOrcaParserTest {
 
@@ -265,6 +266,46 @@ class CommonmarkOrcaParserTest {
         val result = parser.parse(markdown)
 
         assertTrue(result.blocks.isNotEmpty())
+    }
+
+    @Test
+    fun `very deep nesting reports depth limit once`() {
+        var callbackCount = 0
+        var exceededDepth: Int? = null
+        val parser = CommonmarkOrcaParser(
+            maxTreeDepth = 8,
+            onDepthLimitExceeded = { depth ->
+                callbackCount += 1
+                exceededDepth = depth
+            },
+        )
+        val markdown = buildString {
+            repeat(64) { append("> ") }
+            append("deep")
+        }
+
+        val result = parser.parse(markdown)
+
+        assertTrue(result.blocks.isNotEmpty())
+        assertEquals(1, callbackCount)
+        assertTrue((exceededDepth ?: 0) > 8)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `parser requires positive max tree depth`() {
+        CommonmarkOrcaParser(maxTreeDepth = 0)
+    }
+
+    @Test
+    fun `cache key includes parser identity and max tree depth`() {
+        val parserA = Parser.builder().build()
+        val parserB = Parser.builder().build()
+        val orcaA = CommonmarkOrcaParser(parser = parserA, maxTreeDepth = 64)
+        val orcaB = CommonmarkOrcaParser(parser = parserB, maxTreeDepth = 64)
+        val orcaC = CommonmarkOrcaParser(parser = parserA, maxTreeDepth = 16)
+
+        assertTrue(orcaA.cacheKey() != orcaB.cacheKey())
+        assertTrue(orcaA.cacheKey() != orcaC.cacheKey())
     }
 
     @Test

@@ -6,9 +6,9 @@ Markdown renderer for Compose (Android-first, multiplatform-ready).
 
 ## Status
 
-`0.1.0-alpha09` (in progress, early alpha, API may change).
+`0.2.0` (Android-first minor release).
 
-Next draft notes: [`0.1.0-alpha09`](docs/releases/0.1.0-alpha09.md).
+Release notes: [`0.2.0`](docs/releases/0.2.0.md).
 
 ## Goals
 
@@ -28,7 +28,7 @@ Next draft notes: [`0.1.0-alpha09`](docs/releases/0.1.0-alpha09.md).
 - `ru.wertik:orca-core:<version>`
 - `ru.wertik:orca-compose:<version>`
 
-## Supported (`0.1.0-alpha09`)
+## Supported (`0.2.0`)
 
 - Parser: `commonmark-java` (`0.27.1`)
 - Extensions:
@@ -37,6 +37,7 @@ Next draft notes: [`0.1.0-alpha09`](docs/releases/0.1.0-alpha09.md).
   - `commonmark-ext-task-list-items`
 - Public parser API:
   - `interface OrcaParser { fun parse(input: String): OrcaDocument }`
+  - `CommonmarkOrcaParser(maxTreeDepth = 64, onDepthLimitExceeded = { ... })`
 - Blocks:
   - heading
   - paragraph
@@ -62,6 +63,8 @@ Next draft notes: [`0.1.0-alpha09`](docs/releases/0.1.0-alpha09.md).
   - Compose renderer for `OrcaDocument`
   - root rendering via `LazyColumn` for long documents
   - markdown parsing off main thread (`Dispatchers.Default`)
+  - parser failure fallback to last successful `OrcaDocument` (no UI crash)
+  - renderer split by responsibilities (`Orca.kt`, `OrcaBlockNode`, `OrcaTableNode`, `OrcaImageNode`)
   - grouped style model (`OrcaStyle.typography`, `inline`, `layout`, `quote`, `code`, `table`, `thematicBreak`, `image`)
   - compatibility accessors for v0.1 flat style fields remain available
   - link click callback: `onLinkClick: (String) -> Unit`
