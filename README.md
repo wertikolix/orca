@@ -6,7 +6,7 @@ Markdown renderer for Compose (Android-first, multiplatform-ready).
 
 ## Status
 
-`0.1.0-alpha01` (early alpha, API may change).
+`0.1.0-alpha02` (in progress, early alpha, API may change).
 
 Next draft notes: [`0.1.0-alpha02`](docs/releases/0.1.0-alpha02.md).
 
