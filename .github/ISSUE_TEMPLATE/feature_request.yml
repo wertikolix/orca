@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest an improvement for Orca.
+title: "[feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share the problem first, then the proposed solution.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      placeholder: "What use case is not handled today?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      placeholder: "How should Orca behave?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      placeholder: "Other options or workarounds"
+    validations:
+      required: false
+
+  - type: input
+    id: scope
+    attributes:
+      label: Scope
+      placeholder: "core / compose-android / docs / infra"
+    validations:
+      required: false

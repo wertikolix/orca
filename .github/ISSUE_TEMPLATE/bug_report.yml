@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible bug in Orca.
+title: "[bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please provide a minimal reproducible example.
+
+  - type: input
+    id: version
+    attributes:
+      label: Orca version
+      placeholder: "e.g. 0.2.3"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "Android API, Compose version, device/emulator"
+    validations:
+      required: true
+
+  - type: textarea
+    id: markdown
+    attributes:
+      label: Minimal markdown input
+      render: markdown
+      placeholder: "Paste the smallest markdown that reproduces the issue."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. ... 2. ... 3. ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
