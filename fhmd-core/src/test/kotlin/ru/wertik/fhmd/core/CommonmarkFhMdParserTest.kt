@@ -14,7 +14,7 @@ class CommonmarkFhMdParserTest {
         val markdown = """
             # Title
             
-            This is **bold** and *italic* and `code` and [link](https://example.com).
+            This is **bold** and *italic* and ~~strike~~ and `code` and [link](https://example.com).
         """.trimIndent()
 
         val result = parser.parse(markdown)
@@ -31,6 +31,8 @@ class CommonmarkFhMdParserTest {
                         FhMdInline.Bold(content = listOf(FhMdInline.Text("bold"))),
                         FhMdInline.Text(" and "),
                         FhMdInline.Italic(content = listOf(FhMdInline.Text("italic"))),
+                        FhMdInline.Text(" and "),
+                        FhMdInline.Strikethrough(content = listOf(FhMdInline.Text("strike"))),
                         FhMdInline.Text(" and "),
                         FhMdInline.InlineCode(code = "code"),
                         FhMdInline.Text(" and "),
@@ -154,6 +156,28 @@ class CommonmarkFhMdParserTest {
         assertEquals(true, list.ordered)
         assertEquals(5, list.startNumber)
         assertEquals(2, list.items.size)
+    }
+
+    @Test
+    fun `parse task list items with checked state`() {
+        val markdown = """
+            - [x] done
+            - [ ] todo
+            - plain
+        """.trimIndent()
+
+        val result = parser.parse(markdown)
+        val list = result.blocks.single() as FhMdBlock.ListBlock
+
+        assertEquals(false, list.ordered)
+        assertEquals(3, list.items.size)
+        assertEquals(FhMdTaskState.CHECKED, list.items[0].taskState)
+        assertEquals(FhMdTaskState.UNCHECKED, list.items[1].taskState)
+        assertEquals(null, list.items[2].taskState)
+        assertEquals(
+            FhMdBlock.Paragraph(content = listOf(FhMdInline.Text("done"))),
+            list.items[0].blocks.single(),
+        )
     }
 
     @Test

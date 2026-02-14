@@ -57,6 +57,14 @@ private fun AnnotatedString.Builder.appendInline(
             )
         }
 
+        is FhMdInline.Strikethrough -> withStyle(style = style.strikethroughStyle) {
+            appendInlines(
+                inlines = inline.content,
+                style = style,
+                onLinkClick = onLinkClick,
+            )
+        }
+
         is FhMdInline.InlineCode -> withStyle(style = style.inlineCode) {
             append(inline.code)
         }

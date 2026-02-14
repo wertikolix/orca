@@ -23,12 +23,17 @@ class MainActivity : ComponentActivity() {
         Android-first markdown renderer for Compose.
         
         ## Inline formatting
-        Support for **bold**, *italic*, `inline code`, and [links](https://github.com/commonmark/commonmark-java).
+        Support for **bold**, *italic*, ~~strikethrough~~, `inline code`, and [links](https://github.com/commonmark/commonmark-java).
         
         ## List
         - first bullet
         - second bullet
         - third bullet
+
+        ## Task list
+        - [x] parser extensions wired
+        - [x] compose rendering updated
+        - [ ] html blocks
 
         ## Table
         | module | status | docs |

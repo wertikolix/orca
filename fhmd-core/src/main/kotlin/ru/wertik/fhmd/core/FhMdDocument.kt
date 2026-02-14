@@ -45,7 +45,13 @@ sealed interface FhMdBlock {
 
 data class FhMdListItem(
     val blocks: List<FhMdBlock>,
+    val taskState: FhMdTaskState? = null,
 )
+
+enum class FhMdTaskState {
+    CHECKED,
+    UNCHECKED,
+}
 
 data class FhMdTableCell(
     val content: List<FhMdInline>,
@@ -68,6 +74,10 @@ sealed interface FhMdInline {
     ) : FhMdInline
 
     data class Italic(
+        val content: List<FhMdInline>,
+    ) : FhMdInline
+
+    data class Strikethrough(
         val content: List<FhMdInline>,
     ) : FhMdInline
 

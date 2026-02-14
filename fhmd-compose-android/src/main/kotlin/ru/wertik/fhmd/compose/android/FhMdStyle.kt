@@ -32,6 +32,9 @@ data class FhMdStyle(
         fontFamily = FontFamily.Monospace,
         background = Color(0x16000000),
     ),
+    val strikethroughStyle: SpanStyle = SpanStyle(
+        textDecoration = TextDecoration.LineThrough,
+    ),
     val linkStyle: SpanStyle = SpanStyle(
         color = Color(0xFF1565C0),
         textDecoration = TextDecoration.Underline,

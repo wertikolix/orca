@@ -1,12 +1,16 @@
 package ru.wertik.fhmd.core
 
 import org.commonmark.Extension
+import org.commonmark.ext.gfm.strikethrough.Strikethrough
+import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.gfm.tables.TableBlock
 import org.commonmark.ext.gfm.tables.TableBody
 import org.commonmark.ext.gfm.tables.TableCell
 import org.commonmark.ext.gfm.tables.TableHead
 import org.commonmark.ext.gfm.tables.TableRow
 import org.commonmark.ext.gfm.tables.TablesExtension
+import org.commonmark.ext.task.list.items.TaskListItemMarker
+import org.commonmark.ext.task.list.items.TaskListItemsExtension
 import org.commonmark.node.Block
 import org.commonmark.node.BlockQuote
 import org.commonmark.node.BulletList
@@ -162,10 +166,19 @@ class CommonmarkFhMdParser(
     }
 
     private fun mapListItem(node: ListItem, depth: Int): FhMdListItem {
+        val taskState = node.childSequence()
+            .filterIsInstance<TaskListItemMarker>()
+            .firstOrNull()
+            ?.toTaskState()
+
         val mapped = node.childSequence()
+            .filterNot { child -> child is TaskListItemMarker }
             .mapNotNull { child -> mapBlock(child, depth + 1) }
             .toList()
-        return FhMdListItem(blocks = mapped)
+        return FhMdListItem(
+            blocks = mapped,
+            taskState = taskState,
+        )
     }
 
     private fun mapInlineContainer(container: Node, depth: Int): List<FhMdInline> {
@@ -187,6 +200,7 @@ class CommonmarkFhMdParser(
             is Text -> sequenceOf(FhMdInline.Text(node.literal))
             is StrongEmphasis -> sequenceOf(FhMdInline.Bold(content = mapInlineContainer(node, depth + 1)))
             is Emphasis -> sequenceOf(FhMdInline.Italic(content = mapInlineContainer(node, depth + 1)))
+            is Strikethrough -> sequenceOf(FhMdInline.Strikethrough(content = mapInlineContainer(node, depth + 1)))
             is Code -> sequenceOf(FhMdInline.InlineCode(code = node.literal))
             is Link -> sequenceOf(
                 FhMdInline.Link(
@@ -240,10 +254,19 @@ private fun List<FhMdInline>.toPlainText(): String {
             is FhMdInline.Text -> inline.text
             is FhMdInline.Bold -> inline.content.toPlainText()
             is FhMdInline.Italic -> inline.content.toPlainText()
+            is FhMdInline.Strikethrough -> inline.content.toPlainText()
             is FhMdInline.InlineCode -> inline.code
             is FhMdInline.Link -> inline.content.toPlainText().ifEmpty { inline.destination }
             is FhMdInline.Image -> inline.alt ?: ""
         }
+    }
+}
+
+private fun TaskListItemMarker.toTaskState(): FhMdTaskState {
+    return if (isChecked) {
+        FhMdTaskState.CHECKED
+    } else {
+        FhMdTaskState.UNCHECKED
     }
 }
 
@@ -259,6 +282,8 @@ private fun TableCell.Alignment?.toFhMdAlignmentOrNull(): FhMdTableAlignment? {
 private fun defaultParser(): Parser {
     val extensions: List<Extension> = listOf(
         TablesExtension.create(),
+        StrikethroughExtension.create(),
+        TaskListItemsExtension.create(),
     )
     return Parser.builder()
         .extensions(extensions)

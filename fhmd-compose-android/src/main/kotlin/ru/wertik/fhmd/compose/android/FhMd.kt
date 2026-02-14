@@ -30,6 +30,7 @@ import ru.wertik.fhmd.core.FhMdDocument
 import ru.wertik.fhmd.core.FhMdParser
 import ru.wertik.fhmd.core.FhMdTableAlignment
 import ru.wertik.fhmd.core.FhMdTableCell
+import ru.wertik.fhmd.core.FhMdTaskState
 
 private val defaultParser: FhMdParser = CommonmarkFhMdParser()
 private val defaultStyle: FhMdStyle = FhMdStyle()
@@ -120,6 +121,7 @@ private fun FhMdBlockNode(
                         ordered = block.ordered,
                         startNumber = block.startNumber,
                         index = index,
+                        taskState = item.taskState,
                     )
                     Text(
                         text = marker,
@@ -225,11 +227,16 @@ internal fun listMarkerText(
     ordered: Boolean,
     startNumber: Int,
     index: Int,
+    taskState: FhMdTaskState?,
 ): String {
-    return if (ordered) {
-        "${startNumber + index}."
-    } else {
-        "•"
+    return when (taskState) {
+        FhMdTaskState.CHECKED -> "☑"
+        FhMdTaskState.UNCHECKED -> "☐"
+        null -> if (ordered) {
+            "${startNumber + index}."
+        } else {
+            "•"
+        }
     }
 }
 

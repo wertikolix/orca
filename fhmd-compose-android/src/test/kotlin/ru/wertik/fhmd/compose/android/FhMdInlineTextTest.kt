@@ -3,9 +3,11 @@ package ru.wertik.fhmd.compose.android
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import ru.wertik.fhmd.core.CommonmarkFhMdParser
 import ru.wertik.fhmd.core.FhMdBlock
 import ru.wertik.fhmd.core.FhMdInline
+import ru.wertik.fhmd.core.FhMdTaskState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -43,12 +45,14 @@ class FhMdInlineTextTest {
     }
 
     @Test
-    fun `build annotated string maps bold italic and inline code styles`() {
+    fun `build annotated string maps bold italic strike and inline code styles`() {
         val style = FhMdStyle()
         val inlines = listOf(
             FhMdInline.Bold(content = listOf(FhMdInline.Text("bold"))),
             FhMdInline.Text(" "),
             FhMdInline.Italic(content = listOf(FhMdInline.Text("italic"))),
+            FhMdInline.Text(" "),
+            FhMdInline.Strikethrough(content = listOf(FhMdInline.Text("strike"))),
             FhMdInline.Text(" "),
             FhMdInline.InlineCode(code = "code"),
         )
@@ -59,14 +63,16 @@ class FhMdInlineTextTest {
             onLinkClick = {},
         )
 
-        assertEquals("bold italic code", text.text)
+        assertEquals("bold italic strike code", text.text)
 
         val hasBold = text.spanStyles.any { it.item.fontWeight == FontWeight.Bold }
         val hasItalic = text.spanStyles.any { it.item.fontStyle == FontStyle.Italic }
+        val hasStrike = text.spanStyles.any { it.item.textDecoration == TextDecoration.LineThrough }
         val hasInlineCode = text.spanStyles.any { it.item.fontFamily == style.inlineCode.fontFamily }
 
         assertTrue(hasBold)
         assertTrue(hasItalic)
+        assertTrue(hasStrike)
         assertTrue(hasInlineCode)
     }
 
@@ -203,6 +209,22 @@ class FhMdInlineTextTest {
     }
 
     @Test
+    fun `parser to inline render integration keeps strikethrough`() {
+        val parser = CommonmarkFhMdParser()
+        val document = parser.parse("value ~~deprecated~~")
+        val paragraph = document.blocks.single() as FhMdBlock.Paragraph
+
+        val rendered = buildInlineAnnotatedString(
+            inlines = paragraph.content,
+            style = FhMdStyle(),
+            onLinkClick = {},
+        )
+
+        assertEquals("value deprecated", rendered.text)
+        assertTrue(rendered.spanStyles.any { it.item.textDecoration == TextDecoration.LineThrough })
+    }
+
+    @Test
     fun `inline image fallback uses alt text or source`() {
         assertEquals(
             "logo",
@@ -243,9 +265,15 @@ class FhMdInlineTextTest {
 
     @Test
     fun `ordered list marker respects start number`() {
-        assertEquals("5.", listMarkerText(ordered = true, startNumber = 5, index = 0))
-        assertEquals("6.", listMarkerText(ordered = true, startNumber = 5, index = 1))
-        assertEquals("•", listMarkerText(ordered = false, startNumber = 100, index = 7))
+        assertEquals("5.", listMarkerText(ordered = true, startNumber = 5, index = 0, taskState = null))
+        assertEquals("6.", listMarkerText(ordered = true, startNumber = 5, index = 1, taskState = null))
+        assertEquals("•", listMarkerText(ordered = false, startNumber = 100, index = 7, taskState = null))
+    }
+
+    @Test
+    fun `task list marker uses checkbox symbols`() {
+        assertEquals("☑", listMarkerText(ordered = false, startNumber = 1, index = 0, taskState = FhMdTaskState.CHECKED))
+        assertEquals("☐", listMarkerText(ordered = false, startNumber = 1, index = 0, taskState = FhMdTaskState.UNCHECKED))
     }
 
     @Test
