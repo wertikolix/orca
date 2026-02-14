@@ -6,8 +6,8 @@ Android-first Markdown renderer for Jetpack Compose with architecture prepared f
 
 ## Status
 
-- Current stable minor: `0.2.2`
-- Release notes: [`docs/releases/0.2.2.md`](docs/releases/0.2.2.md)
+- Current stable minor: `0.2.3`
+- Release notes: [`docs/releases/0.2.3.md`](docs/releases/0.2.3.md)
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Why Orca
@@ -94,7 +94,7 @@ CommonmarkOrcaParser(
 )
 ```
 
-## Supported Syntax (`0.2.2`)
+## Supported Syntax (`0.2.3`)
 
 ### Blocks
 
@@ -125,6 +125,7 @@ CommonmarkOrcaParser(
 - `commonmark-ext-gfm-tables`
 - `commonmark-ext-gfm-strikethrough`
 - `commonmark-ext-task-list-items`
+- `commonmark-ext-autolink` (bare URLs like `https://example.com`)
 
 ## Renderer Behavior
 
@@ -204,7 +205,7 @@ For release-like check:
 
 ## Versioning
 
-- Stable releases use plain semver tags like `0.2.2`, `0.3.0`
+- Stable releases use plain semver tags like `0.2.3`, `0.3.0`
 - Pre-releases use `-alpha`, `-beta`, `-rc`
 - Maven Central artifacts are immutable after publish
 

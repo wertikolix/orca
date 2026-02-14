@@ -1,6 +1,7 @@
 package ru.wertik.orca.core
 
 import org.commonmark.Extension
+import org.commonmark.ext.autolink.AutolinkExtension
 import org.commonmark.ext.gfm.strikethrough.Strikethrough
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.gfm.tables.TableBlock
@@ -324,6 +325,7 @@ private fun TableCell.Alignment?.toOrcaAlignmentOrNull(): OrcaTableAlignment? {
 
 private fun defaultParser(): Parser {
     val extensions: List<Extension> = listOf(
+        AutolinkExtension.create(),
         TablesExtension.create(),
         StrikethroughExtension.create(),
         TaskListItemsExtension.create(),

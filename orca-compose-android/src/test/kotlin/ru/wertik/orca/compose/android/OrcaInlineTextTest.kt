@@ -209,6 +209,25 @@ class OrcaInlineTextTest {
     }
 
     @Test
+    fun `parser to inline render integration linkifies bare url`() {
+        val parser = CommonmarkOrcaParser()
+        val document = parser.parse("See https://example.com")
+        val paragraph = document.blocks.single() as OrcaBlock.Paragraph
+
+        val rendered = buildInlineAnnotatedString(
+            inlines = paragraph.content,
+            style = OrcaStyle(),
+            onLinkClick = {},
+        )
+
+        assertEquals("See https://example.com", rendered.text)
+        val links = rendered.getLinkAnnotations(0, rendered.length)
+        assertEquals(1, links.size)
+        val link = links.single().item as LinkAnnotation.Url
+        assertEquals("https://example.com", link.url)
+    }
+
+    @Test
     fun `parser to inline render integration keeps strikethrough`() {
         val parser = CommonmarkOrcaParser()
         val document = parser.parse("value ~~deprecated~~")

@@ -51,6 +51,18 @@ class CommonmarkOrcaParserTest {
     }
 
     @Test
+    fun `parse bare url into link node`() {
+        val markdown = "See https://example.com for docs"
+
+        val result = parser.parse(markdown)
+        val paragraph = result.blocks.single() as OrcaBlock.Paragraph
+        val link = paragraph.content.filterIsInstance<OrcaInline.Link>().single()
+
+        assertEquals("https://example.com", link.destination)
+        assertEquals(listOf(OrcaInline.Text("https://example.com")), link.content)
+    }
+
+    @Test
     fun `parse quote list and code block`() {
         val markdown = """
             > quoted **text**
