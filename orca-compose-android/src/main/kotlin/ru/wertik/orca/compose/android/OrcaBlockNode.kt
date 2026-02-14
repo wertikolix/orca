@@ -1,6 +1,8 @@
 package ru.wertik.orca.compose.android
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,12 +13,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import ru.wertik.orca.core.OrcaBlock
 import ru.wertik.orca.core.OrcaTaskState
 
@@ -185,14 +190,43 @@ private fun CodeBlockNode(
     block: OrcaBlock.CodeBlock,
     style: OrcaStyle,
 ) {
-    Text(
-        text = block.code,
-        style = style.code.text,
+    val languageLabel = remember(block.language) { codeLanguageLabel(block.language) }
+    Column(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(style.code.shape)
             .background(style.code.background, style.code.shape)
+            .border(style.code.borderWidth, style.code.borderColor, style.code.shape)
             .padding(style.code.padding),
-    )
+        verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
+    ) {
+        if (languageLabel != null) {
+            Text(
+                text = languageLabel,
+                style = style.code.languageLabel,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .background(
+                        color = style.code.languageLabelBackground,
+                        shape = style.code.shape,
+                    )
+                    .padding(style.code.languageLabelPadding),
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+        ) {
+            Text(
+                text = block.code,
+                style = style.code.text,
+                softWrap = false,
+            )
+        }
+    }
 }
 
 @Composable
@@ -220,6 +254,12 @@ internal fun listMarkerText(
             "•"
         }
     }
+}
+
+internal fun codeLanguageLabel(language: String?): String? {
+    return language
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
 }
 
 @Composable

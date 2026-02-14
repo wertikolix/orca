@@ -68,9 +68,19 @@ data class OrcaCodeBlockStyle(
         lineHeight = 20.sp,
         fontFamily = FontFamily.Monospace,
     ),
+    val languageLabel: TextStyle = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.Medium,
+    ),
     val background: Color = Color(0xFFF3F3F3),
+    val languageLabelBackground: Color = Color(0x12000000),
+    val borderColor: Color = Color(0xFFD0D7DE),
+    val borderWidth: Dp = 1.dp,
     val shape: Shape = RoundedCornerShape(8.dp),
     val padding: PaddingValues = PaddingValues(12.dp),
+    val languageLabelPadding: PaddingValues = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
 )
 
 data class OrcaTableStyle(
@@ -129,9 +139,14 @@ data class OrcaStyle(
     val listMarkerWidth: Dp get() = layout.listMarkerWidth
 
     val codeBlock: TextStyle get() = code.text
+    val codeBlockLanguageLabel: TextStyle get() = code.languageLabel
     val codeBlockBackground: Color get() = code.background
+    val codeBlockLanguageLabelBackground: Color get() = code.languageLabelBackground
+    val codeBlockBorderColor: Color get() = code.borderColor
+    val codeBlockBorderWidth: Dp get() = code.borderWidth
     val codeBlockShape: Shape get() = code.shape
     val codeBlockPadding: PaddingValues get() = code.padding
+    val codeBlockLanguageLabelPadding: PaddingValues get() = code.languageLabelPadding
 
     val tableText: TextStyle get() = table.text
     val tableHeaderText: TextStyle get() = table.headerText
