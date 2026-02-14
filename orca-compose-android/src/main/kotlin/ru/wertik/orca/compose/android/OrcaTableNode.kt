@@ -5,8 +5,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -77,7 +80,9 @@ private fun TableRowNode(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
 ) {
-    Row {
+    Row(
+        modifier = Modifier.height(IntrinsicSize.Min),
+    ) {
         repeat(columnCount) { index ->
             val cell = cells.getOrNull(index)
             val text = remember(cell, style, onLinkClick) {
@@ -94,6 +99,7 @@ private fun TableRowNode(
             val align = tableCellAlignment(cell?.alignment)
             Box(
                 modifier = Modifier
+                    .fillMaxHeight()
                     .width(style.table.columnWidth)
                     .border(style.table.borderWidth, style.table.borderColor)
                     .background(if (isHeader) style.table.headerBackground else Color.Transparent)
