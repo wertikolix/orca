@@ -8,5 +8,5 @@ plugins {
 
 allprojects {
     group = "ru.wertik"
-    version = providers.gradleProperty("fhmdVersion").orElse("0.1.0-alpha07").get()
+    version = providers.gradleProperty("fhmdVersion").orElse("0.1.0-alpha08").get()
 }

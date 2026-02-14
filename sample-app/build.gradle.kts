@@ -14,8 +14,8 @@ android {
         applicationId = "ru.wertik.fhmd.sample"
         minSdk = 24
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.1.0-alpha07"
+        versionCode = 8
+        versionName = "0.1.0-alpha08"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

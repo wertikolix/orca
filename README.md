@@ -6,9 +6,9 @@ Markdown renderer for Compose (Android-first, multiplatform-ready).
 
 ## Status
 
-`0.1.0-alpha07` (in progress, early alpha, API may change).
+`0.1.0-alpha08` (in progress, early alpha, API may change).
 
-Next draft notes: [`0.1.0-alpha07`](docs/releases/0.1.0-alpha07.md).
+Next draft notes: [`0.1.0-alpha08`](docs/releases/0.1.0-alpha08.md).
 
 ## Goals
 
@@ -29,7 +29,7 @@ Next draft notes: [`0.1.0-alpha07`](docs/releases/0.1.0-alpha07.md).
 - `ru.wertik:fhmd-compose-android:<version>` (current published coordinate)
 - `ru.wertik:fhmd-compose:<version>` (short alias configured in publishing from `0.1.0-alpha07`)
 
-## Supported (`0.1.0-alpha07`)
+## Supported (`0.1.0-alpha08`)
 
 - Parser: `commonmark-java` (`0.27.1`)
 - Extensions:
