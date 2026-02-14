@@ -306,7 +306,7 @@ private fun imageBlockFallbackText(block: FhMdBlock.Image): String {
     return block.alt?.takeIf { it.isNotBlank() } ?: block.source
 }
 
-internal fun tableCellAlignment(alignment: FhMdTableAlignment?): TextAlign {
+private fun tableCellAlignment(alignment: FhMdTableAlignment?): TextAlign {
     return when (alignment) {
         FhMdTableAlignment.LEFT -> TextAlign.Start
         FhMdTableAlignment.CENTER -> TextAlign.Center

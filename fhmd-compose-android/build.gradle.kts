@@ -1,9 +1,11 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.api.publish.maven.MavenPublication
 
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    `maven-publish`
 }
 
 android {
@@ -22,6 +24,12 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
     }
 }
 
@@ -47,4 +55,48 @@ dependencies {
     testImplementation(libs.junit4)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui)
+}
+
+publishing {
+    publications {
+        register<MavenPublication>("release") {
+            artifactId = "fhmd-compose-android"
+
+            afterEvaluate {
+                from(components["release"])
+            }
+
+            pom {
+                name.set("FhMd Compose Android")
+                description.set("Android Compose renderer for FhMd")
+                url.set("https://github.com/wertikolix/FhMd")
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/licenses/MIT")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:https://github.com/wertikolix/FhMd.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/wertikolix/FhMd.git")
+                    url.set("https://github.com/wertikolix/FhMd")
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = "github"
+            url = uri(
+                providers.gradleProperty("fhmdMavenRepoUrl")
+                    .orElse("https://maven.pkg.github.com/wertikolix/FhMd")
+                    .get(),
+            )
+            credentials {
+                username = providers.gradleProperty("fhmdMavenUsername").orNull
+                password = providers.gradleProperty("fhmdMavenPassword").orNull
+            }
+        }
+    }
 }

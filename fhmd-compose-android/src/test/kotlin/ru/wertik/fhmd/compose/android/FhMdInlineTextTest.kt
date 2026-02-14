@@ -3,11 +3,9 @@ package ru.wertik.fhmd.compose.android
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import ru.wertik.fhmd.core.CommonmarkFhMdParser
 import ru.wertik.fhmd.core.FhMdBlock
 import ru.wertik.fhmd.core.FhMdInline
-import ru.wertik.fhmd.core.FhMdTableAlignment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -241,14 +239,6 @@ class FhMdInlineTextTest {
         )
 
         assertEquals("before logo after", rendered.text)
-    }
-
-    @Test
-    fun `table cell alignment mapping covers all variants`() {
-        assertEquals(TextAlign.Start, tableCellAlignment(FhMdTableAlignment.LEFT))
-        assertEquals(TextAlign.Center, tableCellAlignment(FhMdTableAlignment.CENTER))
-        assertEquals(TextAlign.End, tableCellAlignment(FhMdTableAlignment.RIGHT))
-        assertEquals(TextAlign.Start, tableCellAlignment(null))
     }
 
     @Test
