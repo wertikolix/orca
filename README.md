@@ -6,8 +6,8 @@ Android-first Markdown renderer for Jetpack Compose with architecture prepared f
 
 ## Status
 
-- Current stable minor: `0.2.1`
-- Release notes: [`docs/releases/0.2.1.md`](docs/releases/0.2.1.md)
+- Current stable minor: `0.2.2`
+- Release notes: [`docs/releases/0.2.2.md`](docs/releases/0.2.2.md)
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Why Orca
@@ -54,9 +54,11 @@ val document = parser.parse(markdown)
 
 ```kotlin
 import ru.wertik.orca.compose.android.Orca
+import ru.wertik.orca.compose.android.OrcaRootLayout
 
 Orca(
     markdown = markdown,
+    rootLayout = OrcaRootLayout.COLUMN, // use when parent already controls scrolling
     onLinkClick = { url ->
         // open via your app policy
     },
@@ -92,7 +94,7 @@ CommonmarkOrcaParser(
 )
 ```
 
-## Supported Syntax (`0.2.1`)
+## Supported Syntax (`0.2.2`)
 
 ### Blocks
 
@@ -127,6 +129,7 @@ CommonmarkOrcaParser(
 ## Renderer Behavior
 
 - `LazyColumn` root for long documents
+- optional root layout switch: `OrcaRootLayout.LAZY_COLUMN` or `OrcaRootLayout.COLUMN`
 - parsing off main thread (`Dispatchers.Default`)
 - parse failure fallback to previous valid document (UI is not dropped)
 - deterministic block keys for better list state retention
@@ -201,7 +204,7 @@ For release-like check:
 
 ## Versioning
 
-- Stable releases use plain semver tags like `0.2.1`, `0.3.0`
+- Stable releases use plain semver tags like `0.2.2`, `0.3.0`
 - Pre-releases use `-alpha`, `-beta`, `-rc`
 - Maven Central artifacts are immutable after publish
 

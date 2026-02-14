@@ -2,6 +2,7 @@ package ru.wertik.orca.compose.android
 
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -25,12 +26,18 @@ private val defaultParser: OrcaParser = CommonmarkOrcaParser()
 private val defaultStyle: OrcaStyle = OrcaStyle()
 private val noOpLinkClick: (String) -> Unit = {}
 
+enum class OrcaRootLayout {
+    LAZY_COLUMN,
+    COLUMN,
+}
+
 @Composable
 fun Orca(
     markdown: String,
     modifier: Modifier = Modifier,
     parser: OrcaParser = defaultParser,
     style: OrcaStyle = defaultStyle,
+    rootLayout: OrcaRootLayout = OrcaRootLayout.LAZY_COLUMN,
     onLinkClick: (String) -> Unit = noOpLinkClick,
 ) {
     val parserKey = remember(parser) { parser.cacheKey() }
@@ -61,6 +68,7 @@ fun Orca(
         document = document,
         modifier = modifier,
         style = style,
+        rootLayout = rootLayout,
         onLinkClick = onLinkClick,
     )
 }
@@ -70,25 +78,45 @@ fun Orca(
     document: OrcaDocument,
     modifier: Modifier = Modifier,
     style: OrcaStyle = defaultStyle,
+    rootLayout: OrcaRootLayout = OrcaRootLayout.LAZY_COLUMN,
     onLinkClick: (String) -> Unit = noOpLinkClick,
 ) {
     val renderBlocks = remember(document.blocks) {
         buildRenderBlocks(document.blocks)
     }
 
-    LazyColumn(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(style.layout.blockSpacing),
-    ) {
-        items(
-            items = renderBlocks,
-            key = { item -> item.key },
-        ) { item ->
-            OrcaBlockNode(
-                block = item.block,
-                style = style,
-                onLinkClick = onLinkClick,
-            )
+    when (rootLayout) {
+        OrcaRootLayout.LAZY_COLUMN -> {
+            LazyColumn(
+                modifier = modifier,
+                verticalArrangement = Arrangement.spacedBy(style.layout.blockSpacing),
+            ) {
+                items(
+                    items = renderBlocks,
+                    key = { item -> item.key },
+                ) { item ->
+                    OrcaBlockNode(
+                        block = item.block,
+                        style = style,
+                        onLinkClick = onLinkClick,
+                    )
+                }
+            }
+        }
+
+        OrcaRootLayout.COLUMN -> {
+            Column(
+                modifier = modifier,
+                verticalArrangement = Arrangement.spacedBy(style.layout.blockSpacing),
+            ) {
+                renderBlocks.forEach { item ->
+                    OrcaBlockNode(
+                        block = item.block,
+                        style = style,
+                        onLinkClick = onLinkClick,
+                    )
+                }
+            }
         }
     }
 }
