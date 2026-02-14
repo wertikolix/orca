@@ -3,6 +3,7 @@
 Android-first Markdown renderer for Jetpack Compose with architecture prepared for future Compose Multiplatform split.
 
 [![CI](https://github.com/wertikolix/Orca/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/wertikolix/Orca/actions/workflows/ci.yml?query=branch%3Amain)
+[![Maven Central](https://img.shields.io/maven-central/v/ru.wertik/orca-core)](https://central.sonatype.com/artifact/ru.wertik/orca-core)
 
 ## Status
 
