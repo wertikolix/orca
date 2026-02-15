@@ -60,7 +60,7 @@ jobs:
           echo "Resolved release version: ${VERSION}"
 
       - name: Build tests and release artifacts
-        run: ./gradlew --no-daemon --build-cache :orca-core:test :orca-compose-android:testDebugUnitTest :orca-compose-android:assembleRelease :orca-core:jar :sample-app:assembleRelease :sample-app:bundleRelease -PorcaVersion=${{ steps.release-version.outputs.version }}
+        run: ./gradlew --no-daemon --build-cache :orca-core:test :orca-compose:testDebugUnitTest :orca-compose:assembleRelease :orca-core:jar :sample-app:assembleRelease :sample-app:bundleRelease -PorcaVersion=${{ steps.release-version.outputs.version }}
 
       - name: Import GPG signing key (optional)
         if: startsWith(github.ref, 'refs/tags/')
@@ -98,8 +98,8 @@ jobs:
           fi
 
           ./gradlew --no-daemon --build-cache \
-            :orca-core:publishMavenPublicationToCentralStagingRepository \
-            :orca-compose-android:publishReleasePublicationToCentralStagingRepository \
+            :orca-core:publishAllPublicationsToCentralStagingRepository \
+            :orca-compose:publishAllPublicationsToCentralStagingRepository \
             -PorcaVersion=${{ steps.release-version.outputs.version }} \
             -PcentralTokenUsername=${CENTRAL_TOKEN_USERNAME} \
             -PcentralTokenPassword=${CENTRAL_TOKEN_PASSWORD}
@@ -114,7 +114,7 @@ jobs:
         with:
           name: release-artifacts-${{ github.ref_name }}
           path: |
-            orca-compose-android/build/outputs/aar/orca-compose-android-release.aar
+            orca-compose/build/outputs/aar/orca-compose-release.aar
             orca-core/build/libs/orca-core*.jar
             sample-app/build/outputs/apk/release/*.apk
             sample-app/build/outputs/bundle/release/*.aab
@@ -151,8 +151,8 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           assets=()
 
-          if [[ -f orca-compose-android/build/outputs/aar/orca-compose-android-release.aar ]]; then
-            assets+=(orca-compose-android/build/outputs/aar/orca-compose-android-release.aar)
+          if [[ -f orca-compose/build/outputs/aar/orca-compose-release.aar ]]; then
+            assets+=(orca-compose/build/outputs/aar/orca-compose-release.aar)
           fi
 
           core_jar_files=(orca-core/build/libs/orca-core*.jar)
@@ -189,7 +189,7 @@ jobs:
           name: release-failure-reports-${{ github.run_id }}
           path: |
             orca-core/build/reports/
-            orca-compose-android/build/reports/
+            orca-compose/build/reports/
             sample-app/build/reports/
             sample-app/build/outputs/logs/
             build/reports/problems/

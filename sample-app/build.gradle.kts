@@ -57,7 +57,7 @@ kotlin {
 
 dependencies {
     implementation(project(":orca-core"))
-    implementation(project(":orca-compose-android"))
+    implementation(project(":orca-compose"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.androidx.core.ktx)

@@ -1,8 +1,12 @@
 import org.gradle.api.publish.maven.MavenPublication
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.android.library)
     `maven-publish`
     signing
 }
@@ -10,48 +14,93 @@ plugins {
 kotlin {
     jvmToolchain(17)
 
-    jvm()
+    androidTarget {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
+        publishLibraryVariants("release")
+    }
+
+    jvm("desktop")
+
     iosX64()
     iosArm64()
     iosSimulatorArm64()
+
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
     }
 
+    applyDefaultHierarchyTemplate()
+
     sourceSets {
         commonMain.dependencies {
-            // pure Kotlin — no platform deps
+            api(project(":orca-core"))
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
+            implementation(libs.coil3.compose)
+            implementation(libs.coil3.network.ktor3)
+            implementation(libs.ktor.client.core)
+            implementation(libs.kotlinx.coroutines.core)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
-        jvmMain.dependencies {
-            implementation(libs.commonmark)
-            implementation(libs.commonmark.ext.autolink)
-            implementation(libs.commonmark.ext.gfm.tables)
-            implementation(libs.commonmark.ext.gfm.strikethrough)
-            implementation(libs.commonmark.ext.task.list.items)
-            implementation(libs.commonmark.ext.footnotes)
+        androidMain.dependencies {
+            implementation(libs.androidx.core.ktx)
+            implementation(libs.ktor.client.android)
         }
-        jvmTest.dependencies {
-            implementation(kotlin("test-junit"))
-            implementation(libs.junit4)
+        val desktopMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.java)
+            }
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
+        }
+        wasmJsMain.dependencies {
+            implementation(libs.ktor.client.js)
         }
     }
+}
+
+android {
+    namespace = "ru.wertik.orca.compose"
+    compileSdk = 36
+
+    defaultConfig {
+        minSdk = 24
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        compose = true
+    }
+}
+
+signing {
+    useGpgCmd()
+    sign(publishing.publications)
 }
 
 publishing {
     publications.withType<MavenPublication>().configureEach {
         artifactId = if (name == "kotlinMultiplatform") {
-            "orca-core"
+            "orca-compose"
         } else {
-            "orca-core-$name"
+            "orca-compose-$name"
         }
 
         pom {
-            name.set("Orca Core")
-            description.set("Core AST and parser mapping for Orca")
+            name.set("Orca Compose")
+            description.set("Compose Multiplatform renderer for Orca")
             url.set("https://github.com/wertikolix/Orca")
             licenses {
                 license {
@@ -100,9 +149,4 @@ publishing {
             }
         }
     }
-}
-
-signing {
-    useGpgCmd()
-    sign(publishing.publications)
 }

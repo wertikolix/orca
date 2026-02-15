@@ -11,18 +11,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import ru.wertik.orca.compose.android.Orca
+import ru.wertik.orca.compose.Orca
+import ru.wertik.orca.core.CommonmarkOrcaParser
 
 class MainActivity : ComponentActivity() {
 
     private val markdown = """
         # Orca v0.2
-        
+
         Android-first markdown renderer for Compose.
-        
+
         ## Inline formatting
         Support for **bold**, *italic*, ~~strikethrough~~, `inline code`, and [links](https://github.com/commonmark/commonmark-java).
-        
+
         ## List
         - first bullet
         - second bullet
@@ -43,10 +44,10 @@ class MainActivity : ComponentActivity() {
         ![markdown logo](https://raw.githubusercontent.com/github/explore/main/topics/markdown/markdown.png)
 
         ---
-        
+
         ## Quote
         > Keep architecture simple and stable first.
-        
+
         ## Code block
         ```kotlin
         fun greet(name: String) {
@@ -65,6 +66,7 @@ class MainActivity : ComponentActivity() {
                     val context = LocalContext.current
                     Orca(
                         markdown = markdown,
+                        parser = CommonmarkOrcaParser(),
                         modifier = Modifier.padding(16.dp),
                         onLinkClick = { link ->
                             Toast.makeText(context, "link clicked: $link", Toast.LENGTH_SHORT).show()
