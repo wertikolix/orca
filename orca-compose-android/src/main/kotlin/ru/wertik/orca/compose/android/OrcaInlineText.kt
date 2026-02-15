@@ -192,13 +192,13 @@ internal fun htmlInlineFallbackText(html: String): String {
 
 private fun decodeBasicHtmlEntities(text: String): String {
     return text
+        .replace("&amp;", "&")
         .replace("&nbsp;", " ")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
-        .replace("&amp;", "&")
         .replace("&quot;", "\"")
         .replace("&#39;", "'")
 }
 
-private val HTML_TAG_REGEX = Regex("<[^>]+>")
+private val HTML_TAG_REGEX = Regex("</?[a-zA-Z][^>]*>")
 private val BR_TAG_REGEX = Regex("(?i)<br\\s*/?>")

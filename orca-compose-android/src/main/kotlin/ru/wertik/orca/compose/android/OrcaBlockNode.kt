@@ -510,10 +510,10 @@ internal fun htmlBlockFallbackText(html: String): String {
 
 private fun decodeBasicHtmlEntities(text: String): String {
     return text
+        .replace("&amp;", "&")
         .replace("&nbsp;", " ")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
-        .replace("&amp;", "&")
         .replace("&quot;", "\"")
         .replace("&#39;", "'")
 }
@@ -522,6 +522,6 @@ private fun androidx.compose.ui.text.SpanStyle.toTextStyle(base: TextStyle): Tex
     return base.merge(TextStyle(color = color, textDecoration = textDecoration))
 }
 
-private val HTML_TAG_REGEX = Regex("<[^>]+>")
+private val HTML_TAG_REGEX = Regex("</?[a-zA-Z][^>]*>")
 private val BR_TAG_REGEX = Regex("(?i)<br\\s*/?>")
 private val BLOCK_BREAK_TAG_REGEX = Regex("(?i)</(p|div|li|h[1-6]|blockquote|tr|table|ul|ol)>")

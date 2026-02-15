@@ -403,10 +403,10 @@ private fun htmlInlineToPlainText(html: String): String {
 
 private fun decodeBasicHtmlEntities(text: String): String {
     return text
+        .replace("&amp;", "&")
         .replace("&nbsp;", " ")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
-        .replace("&amp;", "&")
         .replace("&quot;", "\"")
         .replace("&#39;", "'")
 }
@@ -495,13 +495,24 @@ private fun parseFrontMatterEntries(
         val separatorIndex = trimmed.indexOf(separator)
         if (separatorIndex <= 0) return@forEach
 
-        val key = trimmed.substring(0, separatorIndex).trim().trim('\'', '"')
-        val value = trimmed.substring(separatorIndex + 1).trim().trim('\'', '"')
+        val key = trimmed.substring(0, separatorIndex).trim().stripMatchingQuotes()
+        val value = trimmed.substring(separatorIndex + 1).trim().stripMatchingQuotes()
         if (key.isNotEmpty()) {
             entries[key] = value
         }
     }
     return entries
+}
+
+private fun String.stripMatchingQuotes(): String {
+    if (length >= 2) {
+        val first = first()
+        val last = last()
+        if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+            return substring(1, length - 1)
+        }
+    }
+    return this
 }
 
 private fun TaskListItemMarker.toTaskState(): OrcaTaskState {
@@ -536,5 +547,5 @@ private fun defaultParser(): Parser {
         .build()
 }
 
-private val HTML_TAG_REGEX = Regex("<[^>]+>")
+private val HTML_TAG_REGEX = Regex("</?[a-zA-Z][^>]*>")
 private val BR_TAG_REGEX = Regex("(?i)<br\\s*/?>")
