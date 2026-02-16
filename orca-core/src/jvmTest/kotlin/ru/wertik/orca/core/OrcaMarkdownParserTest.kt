@@ -1,7 +1,9 @@
 package ru.wertik.orca.core
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
@@ -304,6 +306,23 @@ class OrcaMarkdownParserTest {
         assertTrue((exceededDepth ?: 0) > 8)
     }
 
+    @Test
+    fun `parseWithDiagnostics reports depth limit warning`() {
+        val parser = OrcaMarkdownParser(maxTreeDepth = 8)
+        val markdown = buildString {
+            repeat(64) { append("> ") }
+            append("deep")
+        }
+
+        val result = parser.parseWithDiagnostics(markdown)
+
+        assertTrue(result.document.blocks.isNotEmpty())
+        val warning = result.diagnostics.warnings.single() as OrcaParseWarning.DepthLimitExceeded
+        assertEquals(8, warning.maxTreeDepth)
+        assertTrue(warning.exceededDepth > 8)
+        assertTrue(result.diagnostics.errors.isEmpty())
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun `parser requires positive max tree depth`() {
         OrcaMarkdownParser(maxTreeDepth = 0)
@@ -319,6 +338,48 @@ class OrcaMarkdownParserTest {
 
         assertTrue(orcaA.cacheKey() != orcaB.cacheKey())
         assertTrue(orcaA.cacheKey() != orcaC.cacheKey())
+    }
+
+    @Test
+    fun `parseCached reuses document for same key and input`() {
+        val parser = OrcaMarkdownParser()
+        val key = "message-1"
+        val markdown = "# Title"
+
+        val first = parser.parseCached(
+            key = key,
+            input = markdown,
+        )
+        val second = parser.parseCached(
+            key = key,
+            input = markdown,
+        )
+
+        assertSame(first, second)
+    }
+
+    @Test
+    fun `parseCached invalidates entry when input changes`() {
+        val parser = OrcaMarkdownParser()
+        val key = "message-1"
+
+        val first = parser.parseCached(
+            key = key,
+            input = "# First",
+        )
+        val second = parser.parseCached(
+            key = key,
+            input = "# Second",
+        )
+
+        assertFalse(first === second)
+        assertEquals(
+            OrcaBlock.Heading(
+                level = 1,
+                content = listOf(OrcaInline.Text("Second")),
+            ),
+            second.blocks.single(),
+        )
     }
 
     @Test

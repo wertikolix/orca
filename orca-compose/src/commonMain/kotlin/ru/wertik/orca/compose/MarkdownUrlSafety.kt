@@ -1,23 +1,23 @@
 package ru.wertik.orca.compose
 
-private val safeLinkSchemes = setOf("http", "https", "mailto")
-private val safeImageSchemes = setOf("http", "https")
+internal val DEFAULT_SAFE_LINK_SCHEMES = setOf("http", "https", "mailto")
+internal val DEFAULT_SAFE_IMAGE_SCHEMES = setOf("http", "https")
 
 internal fun isSafeLinkDestination(destination: String): Boolean {
-    return hasAllowedScheme(
+    return OrcaSecurityPolicies.Default.isAllowed(
+        type = OrcaUrlType.LINK,
         value = destination,
-        allowedSchemes = safeLinkSchemes,
     )
 }
 
 internal fun isSafeImageSource(source: String): Boolean {
-    return hasAllowedScheme(
+    return OrcaSecurityPolicies.Default.isAllowed(
+        type = OrcaUrlType.IMAGE,
         value = source,
-        allowedSchemes = safeImageSchemes,
     )
 }
 
-private fun hasAllowedScheme(
+internal fun hasAllowedScheme(
     value: String,
     allowedSchemes: Set<String>,
 ): Boolean {

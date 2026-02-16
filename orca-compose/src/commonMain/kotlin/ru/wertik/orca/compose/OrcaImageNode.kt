@@ -15,9 +15,15 @@ import ru.wertik.orca.core.OrcaBlock
 internal fun MarkdownImageNode(
     block: OrcaBlock.Image,
     style: OrcaStyle,
+    securityPolicy: OrcaSecurityPolicy,
 ) {
-    val safeSource = remember(block.source) {
-        block.source.takeIf(::isSafeImageSource)
+    val safeSource = remember(block.source, securityPolicy) {
+        block.source.takeIf { source ->
+            securityPolicy.isAllowed(
+                type = OrcaUrlType.IMAGE,
+                value = source,
+            )
+        }
     }
     if (safeSource == null) {
         Text(

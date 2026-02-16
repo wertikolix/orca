@@ -305,4 +305,24 @@ class OrcaInlineTextTest {
         assertFalse(isSafeImageSource("file:///sdcard/image.png"))
         assertFalse(isSafeImageSource("content://media/external/images/media/1"))
     }
+
+    @Test
+    fun customSecurityPolicyCanDisableSafeDefaultLinks() {
+        val text = buildInlineAnnotatedString(
+            inlines = listOf(
+                OrcaInline.Link(
+                    destination = "https://example.com",
+                    content = listOf(OrcaInline.Text("docs")),
+                ),
+            ),
+            style = OrcaStyle(),
+            onLinkClick = {},
+            securityPolicy = OrcaSecurityPolicies.byAllowedSchemes(
+                linkSchemes = setOf("mailto"),
+            ),
+        )
+
+        assertEquals("docs", text.text)
+        assertTrue(text.getLinkAnnotations(0, text.length).isEmpty())
+    }
 }

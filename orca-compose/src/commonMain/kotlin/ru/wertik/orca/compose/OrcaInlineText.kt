@@ -13,6 +13,7 @@ internal fun buildInlineAnnotatedString(
     inlines: List<OrcaInline>,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
+    securityPolicy: OrcaSecurityPolicy = OrcaSecurityPolicies.Default,
     footnoteNumbers: Map<String, Int> = emptyMap(),
     onFootnoteClick: ((String) -> Unit)? = null,
 ): AnnotatedString {
@@ -21,6 +22,7 @@ internal fun buildInlineAnnotatedString(
             inlines = inlines,
             style = style,
             onLinkClick = onLinkClick,
+            securityPolicy = securityPolicy,
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = onFootnoteClick,
         )
@@ -31,6 +33,7 @@ private fun AnnotatedString.Builder.appendInlines(
     inlines: List<OrcaInline>,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
+    securityPolicy: OrcaSecurityPolicy,
     footnoteNumbers: Map<String, Int>,
     onFootnoteClick: ((String) -> Unit)?,
 ) {
@@ -39,6 +42,7 @@ private fun AnnotatedString.Builder.appendInlines(
             inline = inline,
             style = style,
             onLinkClick = onLinkClick,
+            securityPolicy = securityPolicy,
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = onFootnoteClick,
         )
@@ -49,6 +53,7 @@ private fun AnnotatedString.Builder.appendInline(
     inline: OrcaInline,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
+    securityPolicy: OrcaSecurityPolicy,
     footnoteNumbers: Map<String, Int>,
     onFootnoteClick: ((String) -> Unit)?,
 ) {
@@ -60,6 +65,7 @@ private fun AnnotatedString.Builder.appendInline(
                 inlines = inline.content,
                 style = style,
                 onLinkClick = onLinkClick,
+                securityPolicy = securityPolicy,
                 footnoteNumbers = footnoteNumbers,
                 onFootnoteClick = onFootnoteClick,
             )
@@ -70,6 +76,7 @@ private fun AnnotatedString.Builder.appendInline(
                 inlines = inline.content,
                 style = style,
                 onLinkClick = onLinkClick,
+                securityPolicy = securityPolicy,
                 footnoteNumbers = footnoteNumbers,
                 onFootnoteClick = onFootnoteClick,
             )
@@ -80,6 +87,7 @@ private fun AnnotatedString.Builder.appendInline(
                 inlines = inline.content,
                 style = style,
                 onLinkClick = onLinkClick,
+                securityPolicy = securityPolicy,
                 footnoteNumbers = footnoteNumbers,
                 onFootnoteClick = onFootnoteClick,
             )
@@ -89,11 +97,12 @@ private fun AnnotatedString.Builder.appendInline(
             append(inline.code)
         }
 
-        is OrcaInline.Link -> if (!isSafeLinkDestination(inline.destination)) {
+        is OrcaInline.Link -> if (!securityPolicy.isAllowed(OrcaUrlType.LINK, inline.destination)) {
             appendLinkContent(
                 inline = inline,
                 style = style,
                 onLinkClick = onLinkClick,
+                securityPolicy = securityPolicy,
                 footnoteNumbers = footnoteNumbers,
                 onFootnoteClick = onFootnoteClick,
             )
@@ -112,6 +121,7 @@ private fun AnnotatedString.Builder.appendInline(
                     inline = inline,
                     style = style,
                     onLinkClick = onLinkClick,
+                    securityPolicy = securityPolicy,
                     footnoteNumbers = footnoteNumbers,
                     onFootnoteClick = onFootnoteClick,
                 )
@@ -150,6 +160,7 @@ private fun AnnotatedString.Builder.appendLinkContent(
     inline: OrcaInline.Link,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
+    securityPolicy: OrcaSecurityPolicy,
     footnoteNumbers: Map<String, Int>,
     onFootnoteClick: ((String) -> Unit)?,
 ) {
@@ -160,6 +171,7 @@ private fun AnnotatedString.Builder.appendLinkContent(
             inlines = inline.content,
             style = style,
             onLinkClick = onLinkClick,
+            securityPolicy = securityPolicy,
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = onFootnoteClick,
         )

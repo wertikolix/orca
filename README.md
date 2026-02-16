@@ -7,8 +7,8 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.6.3`
-- Release notes: [`docs/releases/0.6.3.md`](docs/releases/0.6.3.md)
+- Current stable minor: `0.6.4`
+- Release notes: [`docs/releases/0.6.4.md`](docs/releases/0.6.4.md)
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Why Orca
@@ -38,8 +38,8 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.6.3")
-implementation("ru.wertik:orca-compose:0.6.3")
+implementation("ru.wertik:orca-core:0.6.4")
+implementation("ru.wertik:orca-compose:0.6.4")
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -58,6 +58,29 @@ val document = parser.parse(markdown)
 
 > `OrcaMarkdownParser` uses `org.jetbrains:markdown` and is available in `commonMain` (Android, iOS, Desktop, wasmJs).
 
+### Parse markdown with cache key
+
+```kotlin
+val parser = OrcaMarkdownParser()
+val document = parser.parseCached(
+    key = "message-42",
+    input = markdown,
+)
+```
+
+Use a stable key per message/item to avoid repeated AST rebuilds across recompositions and list reuse.
+
+### Parse markdown with diagnostics
+
+```kotlin
+val parser = OrcaMarkdownParser(maxTreeDepth = 32)
+val result = parser.parseWithDiagnostics(markdown)
+
+val document = result.document
+val warnings = result.diagnostics.warnings
+val errors = result.diagnostics.errors
+```
+
 ### Render from markdown
 
 ```kotlin
@@ -68,9 +91,14 @@ import ru.wertik.orca.core.OrcaMarkdownParser
 Orca(
     markdown = markdown,
     parser = OrcaMarkdownParser(),
+    parseCacheKey = "message-42",
     rootLayout = OrcaRootLayout.COLUMN, // use when parent already controls scrolling
+    securityPolicy = OrcaSecurityPolicies.Default,
     onLinkClick = { url ->
         // open via your app policy
+    },
+    onParseDiagnostics = { diagnostics ->
+        // observe warnings/errors if needed
     },
 )
 ```
@@ -90,6 +118,9 @@ Orca(
 ```kotlin
 fun interface OrcaParser {
     fun parse(input: String): OrcaDocument
+    fun parseWithDiagnostics(input: String): OrcaParseResult
+    fun parseCached(key: Any, input: String): OrcaDocument
+    fun parseCachedWithDiagnostics(key: Any, input: String): OrcaParseResult
 }
 ```
 
@@ -98,13 +129,23 @@ fun interface OrcaParser {
 ```kotlin
 OrcaMarkdownParser(
     maxTreeDepth = 64,
+    cacheSize = 64,
     onDepthLimitExceeded = { depth ->
         // observe depth truncation if needed
     },
 )
 ```
 
-## Supported Syntax (`0.6.3`)
+Diagnostics model:
+
+```kotlin
+data class OrcaParseResult(
+    val document: OrcaDocument,
+    val diagnostics: OrcaParseDiagnostics,
+)
+```
+
+## Supported Syntax (`0.6.4`)
 
 ### Blocks
 
@@ -216,9 +257,26 @@ Orca(
 
 ## Security Defaults
 
-- Links are treated safe only for: `http`, `https`, `mailto`
-- Images are treated safe only for: `http`, `https`
-- Unsafe URLs are rendered as plain text/fallback instead of clickable/loaded targets
+- Default policy allows:
+  - links: `http`, `https`, `mailto`
+  - images: `http`, `https`
+- Unsafe URLs are rendered as plain text/fallback instead of clickable/loaded targets.
+- You can fully override checks via `OrcaSecurityPolicy`.
+
+Custom policy example:
+
+```kotlin
+val policy = OrcaSecurityPolicies.byAllowedSchemes(
+    linkSchemes = setOf("https", "myapp"),
+    imageSchemes = setOf("https"),
+)
+
+Orca(
+    markdown = markdown,
+    parser = OrcaMarkdownParser(),
+    securityPolicy = policy,
+)
+```
 
 Always keep your own URL-opening policy in `onLinkClick`.
 
@@ -299,14 +357,14 @@ For release-like check:
 
 ```diff
 - implementation("ru.wertik:orca-compose:0.4.5")
-+ implementation("ru.wertik:orca-compose:0.6.3")
++ implementation("ru.wertik:orca-compose:0.6.4")
 ```
 
 Gradle resolves the correct platform artifact automatically.
 
 ## Versioning
 
-- Stable releases use plain semver tags like `0.6.3`
+- Stable releases use plain semver tags like `0.6.4`
 - Pre-releases use `-alpha`, `-beta`, `-rc`
 - Maven Central artifacts are immutable after publish
 

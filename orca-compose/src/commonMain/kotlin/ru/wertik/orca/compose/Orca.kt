@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.wertik.orca.core.OrcaBlock
 import ru.wertik.orca.core.OrcaDocument
+import ru.wertik.orca.core.OrcaParseDiagnostics
 import ru.wertik.orca.core.OrcaParser
 
 private const val PARSE_LOG_TAG = "Orca"
@@ -37,9 +38,12 @@ fun Orca(
     markdown: String,
     modifier: Modifier = Modifier,
     parser: OrcaParser,
+    parseCacheKey: Any? = null,
     style: OrcaStyle = defaultStyle,
     rootLayout: OrcaRootLayout = OrcaRootLayout.LAZY_COLUMN,
+    securityPolicy: OrcaSecurityPolicy = OrcaSecurityPolicies.Default,
     onLinkClick: (String) -> Unit = noOpLinkClick,
+    onParseDiagnostics: ((OrcaParseDiagnostics) -> Unit)? = null,
 ) {
     val parserKey = remember(parser) { parser.cacheKey() }
     val emptyDocument = remember { OrcaDocument(emptyList()) }
@@ -49,17 +53,35 @@ fun Orca(
         initialValue = latestDocument,
         markdown,
         parserKey,
+        parseCacheKey,
     ) {
-        val parsed = try {
+        val parsedResult = try {
             withContext(Dispatchers.Default) {
-                parser.parse(markdown)
+                if (parseCacheKey == null) {
+                    parser.parseWithDiagnostics(markdown)
+                } else {
+                    parser.parseCachedWithDiagnostics(
+                        key = parseCacheKey,
+                        input = markdown,
+                    )
+                }
             }
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (error: Throwable) {
             println("W/$PARSE_LOG_TAG: failed to parse markdown, using previous document: ${error.message}")
-            latestDocument
+            null
         }
+
+        val parsed = if (parsedResult == null || parsedResult.diagnostics.hasErrors) {
+            if (parsedResult?.diagnostics?.hasErrors == true) {
+                println("W/$PARSE_LOG_TAG: parser reported errors, using previous document")
+            }
+            latestDocument
+        } else {
+            parsedResult.document
+        }
+        onParseDiagnostics?.invoke(parsedResult?.diagnostics ?: OrcaParseDiagnostics())
 
         latestDocument = parsed
         value = parsed
@@ -70,6 +92,7 @@ fun Orca(
         modifier = modifier,
         style = style,
         rootLayout = rootLayout,
+        securityPolicy = securityPolicy,
         onLinkClick = onLinkClick,
     )
 }
@@ -80,6 +103,7 @@ fun Orca(
     modifier: Modifier = Modifier,
     style: OrcaStyle = defaultStyle,
     rootLayout: OrcaRootLayout = OrcaRootLayout.LAZY_COLUMN,
+    securityPolicy: OrcaSecurityPolicy = OrcaSecurityPolicies.Default,
     onLinkClick: (String) -> Unit = noOpLinkClick,
 ) {
     val renderBlocks = remember(document.blocks) {
@@ -134,6 +158,7 @@ fun Orca(
                         block = item.block,
                         style = style,
                         onLinkClick = onLinkClick,
+                        securityPolicy = securityPolicy,
                         footnoteNumbers = footnoteNumbers,
                         sourceBlockKey = item.key,
                         activeFootnoteLabel = activeFootnoteLabel,
@@ -179,6 +204,7 @@ fun Orca(
                         block = item.block,
                         style = style,
                         onLinkClick = onLinkClick,
+                        securityPolicy = securityPolicy,
                         footnoteNumbers = footnoteNumbers,
                         sourceBlockKey = item.key,
                         activeFootnoteLabel = activeFootnoteLabel,
