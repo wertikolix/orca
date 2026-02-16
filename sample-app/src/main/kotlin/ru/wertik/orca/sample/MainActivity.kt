@@ -12,17 +12,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import ru.wertik.orca.compose.Orca
-import ru.wertik.orca.core.CommonmarkOrcaParser
+import ru.wertik.orca.core.IntellijMarkdownOrcaParser
 
 class MainActivity : ComponentActivity() {
 
     private val markdown = """
-        # Orca v0.2
+        # Orca v0.6
 
         Android-first markdown renderer for Compose.
 
         ## Inline formatting
-        Support for **bold**, *italic*, ~~strikethrough~~, `inline code`, and [links](https://github.com/commonmark/commonmark-java).
+        Support for **bold**, *italic*, ~~strikethrough~~, `inline code`, and [links](https://github.com/JetBrains/markdown).
 
         ## List
         - first bullet
@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
         ## Table
         | module | status | docs |
         |:-------|:------:|-----:|
-        | **core** | ready | [api](https://github.com/commonmark/commonmark-java) |
+        | **core** | ready | [api](https://github.com/JetBrains/markdown) |
         | compose | ready | `android` |
 
         ## Image
@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
                     val context = LocalContext.current
                     Orca(
                         markdown = markdown,
-                        parser = CommonmarkOrcaParser(),
+                        parser = IntellijMarkdownOrcaParser(),
                         modifier = Modifier.padding(16.dp),
                         onLinkClick = { link ->
                             Toast.makeText(context, "link clicked: $link", Toast.LENGTH_SHORT).show()

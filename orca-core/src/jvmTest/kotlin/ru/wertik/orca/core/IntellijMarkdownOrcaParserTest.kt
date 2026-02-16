@@ -4,11 +4,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.commonmark.parser.Parser
+import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
+import org.intellij.markdown.parser.MarkdownParser
 
-class CommonmarkOrcaParserTest {
+class IntellijMarkdownOrcaParserTest {
 
-    private val parser: OrcaParser = CommonmarkOrcaParser()
+    private val parser: OrcaParser = IntellijMarkdownOrcaParser()
 
     @Test
     fun `parse heading and inline formatting`() {
@@ -284,7 +285,7 @@ class CommonmarkOrcaParserTest {
     fun `very deep nesting reports depth limit once`() {
         var callbackCount = 0
         var exceededDepth: Int? = null
-        val parser = CommonmarkOrcaParser(
+        val parser = IntellijMarkdownOrcaParser(
             maxTreeDepth = 8,
             onDepthLimitExceeded = { depth ->
                 callbackCount += 1
@@ -305,16 +306,16 @@ class CommonmarkOrcaParserTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun `parser requires positive max tree depth`() {
-        CommonmarkOrcaParser(maxTreeDepth = 0)
+        IntellijMarkdownOrcaParser(maxTreeDepth = 0)
     }
 
     @Test
     fun `cache key includes parser identity and max tree depth`() {
-        val parserA = Parser.builder().build()
-        val parserB = Parser.builder().build()
-        val orcaA = CommonmarkOrcaParser(parser = parserA, maxTreeDepth = 64)
-        val orcaB = CommonmarkOrcaParser(parser = parserB, maxTreeDepth = 64)
-        val orcaC = CommonmarkOrcaParser(parser = parserA, maxTreeDepth = 16)
+        val parserA = MarkdownParser(GFMFlavourDescriptor())
+        val parserB = MarkdownParser(GFMFlavourDescriptor())
+        val orcaA = IntellijMarkdownOrcaParser(parser = parserA, maxTreeDepth = 64)
+        val orcaB = IntellijMarkdownOrcaParser(parser = parserB, maxTreeDepth = 64)
+        val orcaC = IntellijMarkdownOrcaParser(parser = parserA, maxTreeDepth = 16)
 
         assertTrue(orcaA.cacheKey() != orcaB.cacheKey())
         assertTrue(orcaA.cacheKey() != orcaC.cacheKey())

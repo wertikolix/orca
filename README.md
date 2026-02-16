@@ -7,8 +7,8 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.5.0`
-- Release notes: [`docs/releases/0.5.0.md`](docs/releases/0.5.0.md)
+- Current stable minor: `0.6.0`
+- Release notes: [`docs/releases/0.6.0.md`](docs/releases/0.6.0.md)
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Why Orca
@@ -22,10 +22,10 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 ## Modules
 
 - `orca-core`
-  - Kotlin Multiplatform (commonMain + jvmMain)
+  - Kotlin Multiplatform
   - AST model (common)
-  - parser interface (common)
-  - `commonmark-java` mapping (JVM)
+  - parser interface + built-in parser (common)
+  - backend: `org.jetbrains:markdown` (`intellij-markdown`, GFM flavour)
 - `orca-compose`
   - Compose Multiplatform renderer for `OrcaDocument`
   - Targets: Android, iOS, Desktop (JVM), wasmJs
@@ -38,37 +38,36 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.5.0")
-implementation("ru.wertik:orca-compose:0.5.0")
+implementation("ru.wertik:orca-core:0.6.0")
+implementation("ru.wertik:orca-compose:0.6.0")
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
 
 ## Quick Start
 
-### Parse markdown (JVM only)
+### Parse markdown
 
 ```kotlin
-import ru.wertik.orca.core.CommonmarkOrcaParser
+import ru.wertik.orca.core.IntellijMarkdownOrcaParser
 import ru.wertik.orca.core.OrcaParser
 
-val parser: OrcaParser = CommonmarkOrcaParser()
+val parser: OrcaParser = IntellijMarkdownOrcaParser()
 val document = parser.parse(markdown)
 ```
 
-> `CommonmarkOrcaParser` uses `commonmark-java` and is available on JVM targets only (Android, Desktop).
-> On iOS/wasmJs there is no built-in parser yet. Use the `Orca(document = ...)` overload with a pre-parsed `OrcaDocument`, or implement `OrcaParser` with a multiplatform Markdown library.
+> `IntellijMarkdownOrcaParser` uses `org.jetbrains:markdown` and is available in `commonMain` (Android, iOS, Desktop, wasmJs).
 
 ### Render from markdown
 
 ```kotlin
 import ru.wertik.orca.compose.Orca
 import ru.wertik.orca.compose.OrcaRootLayout
-import ru.wertik.orca.core.CommonmarkOrcaParser
+import ru.wertik.orca.core.IntellijMarkdownOrcaParser
 
 Orca(
     markdown = markdown,
-    parser = CommonmarkOrcaParser(),
+    parser = IntellijMarkdownOrcaParser(),
     rootLayout = OrcaRootLayout.COLUMN, // use when parent already controls scrolling
     onLinkClick = { url ->
         // open via your app policy
@@ -94,10 +93,10 @@ fun interface OrcaParser {
 }
 ```
 
-`CommonmarkOrcaParser` options:
+`IntellijMarkdownOrcaParser` options:
 
 ```kotlin
-CommonmarkOrcaParser(
+IntellijMarkdownOrcaParser(
     maxTreeDepth = 64,
     onDepthLimitExceeded = { depth ->
         // observe depth truncation if needed
@@ -105,7 +104,7 @@ CommonmarkOrcaParser(
 )
 ```
 
-## Supported Syntax (`0.5.0`)
+## Supported Syntax (`0.6.0`)
 
 ### Blocks
 
@@ -138,11 +137,12 @@ CommonmarkOrcaParser(
 
 ### GFM extensions enabled
 
-- `commonmark-ext-gfm-tables`
-- `commonmark-ext-gfm-strikethrough`
-- `commonmark-ext-task-list-items`
-- `commonmark-ext-autolink` (bare URLs like `https://example.com`)
-- `commonmark-ext-footnotes`
+- `GFMFlavourDescriptor` from `org.jetbrains:markdown`
+- GFM tables
+- strikethrough
+- task list markers
+- autolinks (including bare URLs like `https://example.com`)
+- footnotes layer in Orca (`[^label]` and inline `^[...]`)
 
 ### Metadata
 
@@ -203,7 +203,7 @@ import ru.wertik.orca.compose.OrcaStyle
 
 Orca(
     markdown = markdown,
-    parser = CommonmarkOrcaParser(),
+    parser = IntellijMarkdownOrcaParser(),
     style = OrcaStyle(
         code = OrcaCodeBlockStyle(
             background = Color(0xFFF8F9FB),
@@ -226,18 +226,14 @@ Always keep your own URL-opening policy in `onLinkClick`.
 
 | Platform | orca-core | orca-compose | Parser |
 |---|---|---|---|
-| Android | commonMain + jvmMain | full | `CommonmarkOrcaParser` |
-| Desktop (JVM) | commonMain + jvmMain | full | `CommonmarkOrcaParser` |
-| iOS | commonMain | full | bring your own |
-| wasmJs (Web) | commonMain | full | bring your own |
-
-> On non-JVM targets, `orca-core` provides the AST model and parser interface.
-> You need to supply your own `OrcaParser` implementation or pass pre-parsed `OrcaDocument` objects.
+| Android | commonMain + jvmMain | full | `IntellijMarkdownOrcaParser` |
+| Desktop (JVM) | commonMain + jvmMain | full | `IntellijMarkdownOrcaParser` |
+| iOS | commonMain | full | `IntellijMarkdownOrcaParser` |
+| wasmJs (Web) | commonMain | full | `IntellijMarkdownOrcaParser` |
 
 ## Not Supported Yet
 
 - built-in LaTeX math rendering
-- native parser for non-JVM targets (iOS, wasmJs)
 
 ## Verification
 
@@ -250,6 +246,20 @@ For release-like check:
 ```bash
 ./gradlew --no-daemon --build-cache :sample-app:assembleRelease :sample-app:bundleRelease
 ```
+
+## Migration from 0.5.x
+
+### Parser rename and backend switch
+
+```diff
+- import ru.wertik.orca.core.CommonmarkOrcaParser
++ import ru.wertik.orca.core.IntellijMarkdownOrcaParser
+
+- val parser: OrcaParser = CommonmarkOrcaParser()
++ val parser: OrcaParser = IntellijMarkdownOrcaParser()
+```
+
+`orca-core` parser backend moved from `commonmark-java` to `org.jetbrains:markdown` (`GFMFlavourDescriptor`).
 
 ## Migration from 0.4.x
 
@@ -267,7 +277,7 @@ For release-like check:
 ```diff
   Orca(
       markdown = markdown,
-+     parser = CommonmarkOrcaParser(),
++     parser = IntellijMarkdownOrcaParser(),
   )
 ```
 
@@ -275,14 +285,14 @@ For release-like check:
 
 ```diff
 - implementation("ru.wertik:orca-compose:0.4.5")
-+ implementation("ru.wertik:orca-compose:0.5.0")
++ implementation("ru.wertik:orca-compose:0.6.0")
 ```
 
 Gradle resolves the correct platform artifact automatically.
 
 ## Versioning
 
-- Stable releases use plain semver tags like `0.5.0`
+- Stable releases use plain semver tags like `0.6.0`
 - Pre-releases use `-alpha`, `-beta`, `-rc`
 - Maven Central artifacts are immutable after publish
 
