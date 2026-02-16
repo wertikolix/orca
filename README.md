@@ -7,8 +7,8 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.6.2`
-- Release notes: [`docs/releases/0.6.2.md`](docs/releases/0.6.2.md)
+- Current stable minor: `0.6.3`
+- Release notes: [`docs/releases/0.6.3.md`](docs/releases/0.6.3.md)
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Why Orca
@@ -38,8 +38,8 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.6.2")
-implementation("ru.wertik:orca-compose:0.6.2")
+implementation("ru.wertik:orca-core:0.6.3")
+implementation("ru.wertik:orca-compose:0.6.3")
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -109,7 +109,7 @@ Compatibility alias:
 - `IntellijMarkdownOrcaParser` is still available but deprecated.
 - Prefer `OrcaMarkdownParser` for new code.
 
-## Supported Syntax (`0.6.2`)
+## Supported Syntax (`0.6.3`)
 
 ### Blocks
 
@@ -304,14 +304,14 @@ For release-like check:
 
 ```diff
 - implementation("ru.wertik:orca-compose:0.4.5")
-+ implementation("ru.wertik:orca-compose:0.6.2")
++ implementation("ru.wertik:orca-compose:0.6.3")
 ```
 
 Gradle resolves the correct platform artifact automatically.
 
 ## Versioning
 
-- Stable releases use plain semver tags like `0.6.2`
+- Stable releases use plain semver tags like `0.6.3`
 - Pre-releases use `-alpha`, `-beta`, `-rc`
 - Maven Central artifacts are immutable after publish
 

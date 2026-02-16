@@ -97,7 +97,7 @@ signing {
     if (signingKey.isNullOrBlank()) {
         useGpgCmd()
     } else {
-        useInMemoryPgpKeys(signingKey, signingKeyPassword)
+        useInMemoryPgpKeys(signingKey, signingKeyPassword ?: "")
     }
     sign(publishing.publications)
 }
