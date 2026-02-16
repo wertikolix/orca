@@ -74,19 +74,26 @@ jobs:
             exit 0
           fi
 
-          key_material="${GPG_PRIVATE_KEY}"
-          if [[ "${GPG_PRIVATE_KEY}" != *"BEGIN PGP PRIVATE KEY BLOCK"* ]]; then
-            key_material="$(printf '%s' "${GPG_PRIVATE_KEY}" | base64 --decode)"
+          key_material="${GPG_PRIVATE_KEY//$'\r'/}"
+          if [[ "${key_material}" == *"\\n"* ]]; then
+            key_material="${key_material//\\n/$'\n'}"
+          fi
+          if [[ "${key_material}" != *"BEGIN PGP PRIVATE KEY BLOCK"* ]]; then
+            key_material="$(printf '%s' "${key_material}" | base64 --decode)"
           fi
 
           {
             echo "ORG_GRADLE_PROJECT_signingInMemoryKey<<EOF"
             printf '%s\n' "${key_material}"
             echo "EOF"
+            echo "SIGNING_IN_MEMORY_KEY<<EOF"
+            printf '%s\n' "${key_material}"
+            echo "EOF"
           } >> "$GITHUB_ENV"
 
           if [[ -n "${GPG_PASSPHRASE}" ]]; then
             echo "ORG_GRADLE_PROJECT_signingInMemoryKeyPassword=${GPG_PASSPHRASE}" >> "$GITHUB_ENV"
+            echo "SIGNING_IN_MEMORY_KEY_PASSWORD=${GPG_PASSPHRASE}" >> "$GITHUB_ENV"
           fi
 
       - name: Publish to Maven Central (optional)
@@ -96,7 +103,11 @@ jobs:
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
         run: |
           set -euo pipefail
-          if [[ -z "${CENTRAL_TOKEN_USERNAME}" || -z "${CENTRAL_TOKEN_PASSWORD}" || -z "${ORG_GRADLE_PROJECT_signingInMemoryKey:-}" ]]; then
+          if [[ -z "${CENTRAL_TOKEN_USERNAME}" || -z "${CENTRAL_TOKEN_PASSWORD}" ]]; then
+            echo "Central credentials are missing, skipping publish."
+            exit 0
+          fi
+          if [[ -z "${ORG_GRADLE_PROJECT_signingInMemoryKey:-}" && -z "${SIGNING_IN_MEMORY_KEY:-}" ]]; then
             echo "Central credentials or signing key are missing, skipping publish."
             exit 0
           fi
