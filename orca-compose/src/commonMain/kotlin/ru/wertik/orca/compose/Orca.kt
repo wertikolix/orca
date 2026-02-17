@@ -282,13 +282,9 @@ internal data class OrcaRenderBlock(
 )
 
 internal fun buildRenderBlocks(blocks: List<OrcaBlock>): List<OrcaRenderBlock> {
-    val seenByHash = mutableMapOf<Int, Int>()
-    return blocks.map { block ->
-        val hash = block.hashCode()
-        val occurrence = seenByHash[hash] ?: 0
-        seenByHash[hash] = occurrence + 1
+    return blocks.mapIndexed { index, block ->
         OrcaRenderBlock(
-            key = "${block::class.simpleName}:$hash:$occurrence",
+            key = "${block::class.simpleName}:$index",
             block = block,
         )
     }
