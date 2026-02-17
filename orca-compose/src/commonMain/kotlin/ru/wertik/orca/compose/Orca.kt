@@ -130,11 +130,18 @@ fun Orca(
             renderBlock.key to index
         }.toMap()
     }
-    val footnoteBlockIndex = remember(renderBlocks, blockIndexByKey) {
-        val footnoteBlockKey = renderBlocks
-            .firstOrNull { renderBlock -> renderBlock.block is OrcaBlock.Footnotes }
-            ?.key
-        footnoteBlockKey?.let { key -> blockIndexByKey[key] }
+    val footnoteBlockIndices = remember(renderBlocks, blockIndexByKey) {
+        renderBlocks
+            .filter { renderBlock -> renderBlock.block is OrcaBlock.Footnotes }
+            .mapNotNull { renderBlock -> blockIndexByKey[renderBlock.key]?.let { renderBlock to it } }
+    }
+
+    fun findFootnoteBlockIndex(label: String): Int? {
+        for ((renderBlock, index) in footnoteBlockIndices) {
+            val footnotes = renderBlock.block as OrcaBlock.Footnotes
+            if (footnotes.definitions.any { it.label == label }) return index
+        }
+        return footnoteBlockIndices.firstOrNull()?.second
     }
 
     var activeFootnoteLabel by remember(document.blocks) { mutableStateOf<String?>(null) }
@@ -181,7 +188,7 @@ fun Orca(
                                 label = label,
                                 sourceBlockKey = sourceBlockKey,
                                 scrollToFootnotes = {
-                                    val targetIndex = footnoteBlockIndex
+                                    val targetIndex = findFootnoteBlockIndex(label)
                                     if (targetIndex != null) {
                                         scope.launch {
                                             listState.animateScrollToItem(targetIndex)
@@ -239,10 +246,11 @@ fun Orca(
                                     label = label,
                                     sourceBlockKey = sourceBlockKey,
                                     scrollToFootnotes = {
-                                        val footnoteBlockKey = renderBlocks
-                                            .firstOrNull { rb -> rb.block is OrcaBlock.Footnotes }
-                                            ?.key
-                                        val targetRequester = footnoteBlockKey?.let { blockRequesters[it] }
+                                        val footnoteBlock = renderBlocks.firstOrNull { rb ->
+                                            val block = rb.block
+                                            block is OrcaBlock.Footnotes && block.definitions.any { it.label == label }
+                                        } ?: renderBlocks.firstOrNull { rb -> rb.block is OrcaBlock.Footnotes }
+                                        val targetRequester = footnoteBlock?.key?.let { blockRequesters[it] }
                                         if (targetRequester != null) {
                                             scope.launch { targetRequester.bringIntoView() }
                                         }
