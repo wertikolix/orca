@@ -283,11 +283,53 @@ internal data class OrcaRenderBlock(
 )
 
 internal fun buildRenderBlocks(blocks: List<OrcaBlock>): List<OrcaRenderBlock> {
-    return blocks.mapIndexed { index, block ->
-        OrcaRenderBlock(
-            key = "${block::class.simpleName}:$index",
-            block = block,
-        )
+    val seenKeys = mutableMapOf<String, Int>()
+    return blocks.map { block ->
+        val base = blockContentKey(block)
+        val occurrence = seenKeys[base] ?: 0
+        seenKeys[base] = occurrence + 1
+        val key = if (occurrence == 0) base else "$base#$occurrence"
+        OrcaRenderBlock(key = key, block = block)
+    }
+}
+
+private fun blockContentKey(block: OrcaBlock): String {
+    return when (block) {
+        is OrcaBlock.Heading -> "H${block.level}:${inlineContentDigest(block.content)}"
+        is OrcaBlock.Paragraph -> "P:${inlineContentDigest(block.content)}"
+        is OrcaBlock.CodeBlock -> "Code:${block.language.orEmpty()}:${block.code.take(64).hashCode()}"
+        is OrcaBlock.ListBlock -> "List:${if (block.ordered) "ol" else "ul"}:${block.items.size}"
+        is OrcaBlock.Quote -> "Quote:${block.blocks.size}"
+        is OrcaBlock.Table -> "Table:${block.header.size}x${block.rows.size}"
+        is OrcaBlock.Image -> "Img:${block.source.take(64)}"
+        is OrcaBlock.ThematicBreak -> "HR"
+        is OrcaBlock.Footnotes -> "FN:${block.definitions.size}"
+        is OrcaBlock.HtmlBlock -> "Html:${block.html.take(32).hashCode()}"
+    }
+}
+
+private fun inlineContentDigest(inlines: List<ru.wertik.orca.core.OrcaInline>): String {
+    if (inlines.isEmpty()) return ""
+    val text = buildString {
+        for (inline in inlines) {
+            appendInlineText(inline)
+            if (length > 64) break
+        }
+    }
+    return text.take(64).hashCode().toUInt().toString(36)
+}
+
+private fun StringBuilder.appendInlineText(inline: ru.wertik.orca.core.OrcaInline) {
+    when (inline) {
+        is ru.wertik.orca.core.OrcaInline.Text -> append(inline.text)
+        is ru.wertik.orca.core.OrcaInline.Bold -> inline.content.forEach { appendInlineText(it) }
+        is ru.wertik.orca.core.OrcaInline.Italic -> inline.content.forEach { appendInlineText(it) }
+        is ru.wertik.orca.core.OrcaInline.Strikethrough -> inline.content.forEach { appendInlineText(it) }
+        is ru.wertik.orca.core.OrcaInline.InlineCode -> append(inline.code)
+        is ru.wertik.orca.core.OrcaInline.Link -> inline.content.forEach { appendInlineText(it) }
+        is ru.wertik.orca.core.OrcaInline.Image -> append(inline.alt.orEmpty())
+        is ru.wertik.orca.core.OrcaInline.FootnoteReference -> append("[^${inline.label}]")
+        is ru.wertik.orca.core.OrcaInline.HtmlInline -> append(inline.html)
     }
 }
 
