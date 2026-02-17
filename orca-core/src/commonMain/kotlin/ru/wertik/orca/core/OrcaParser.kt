@@ -9,6 +9,11 @@ fun interface OrcaParser {
         )
     }
 
+    /**
+     * Parse with caching by [key]. The default implementation does NOT cache
+     * and delegates to [parseWithDiagnostics]. Override to provide actual caching.
+     * [OrcaMarkdownParser] provides a full LRU cache implementation.
+     */
     fun parseCached(
         key: Any,
         input: String,
@@ -19,6 +24,11 @@ fun interface OrcaParser {
         ).document
     }
 
+    /**
+     * Parse with diagnostics and caching by [key]. The default implementation
+     * does NOT cache and delegates to [parseWithDiagnostics]. Override to provide
+     * actual caching. [OrcaMarkdownParser] provides a full LRU cache implementation.
+     */
     fun parseCachedWithDiagnostics(
         key: Any,
         input: String,
