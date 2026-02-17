@@ -18,6 +18,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
@@ -102,10 +104,28 @@ private fun ColumnWithHorizontalScroll(
     style: OrcaStyle,
     content: @Composable () -> Unit,
 ) {
+    val borderWidth = style.table.borderWidth
+    val borderColor = style.table.borderColor
     Column(
         modifier = Modifier
             .horizontalScroll(rememberScrollState())
-            .border(style.table.borderWidth, style.table.borderColor),
+            .drawBehind {
+                val strokePx = borderWidth.toPx()
+                // Draw bottom border
+                drawLine(
+                    color = borderColor,
+                    start = Offset(0f, size.height - strokePx / 2),
+                    end = Offset(size.width, size.height - strokePx / 2),
+                    strokeWidth = strokePx,
+                )
+                // Draw end (right) border
+                drawLine(
+                    color = borderColor,
+                    start = Offset(size.width - strokePx / 2, 0f),
+                    end = Offset(size.width - strokePx / 2, size.height),
+                    strokeWidth = strokePx,
+                )
+            },
     ) {
         content()
     }
@@ -152,11 +172,29 @@ private fun TableRowNode(
                 }
             }
             val align = tableCellAlignment(cell?.alignment)
+            val cellBorderWidth = style.table.borderWidth
+            val cellBorderColor = style.table.borderColor
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .width(columnWidths.getOrElse(index) { style.table.columnWidth })
-                    .border(style.table.borderWidth, style.table.borderColor)
+                    .drawBehind {
+                        val strokePx = cellBorderWidth.toPx()
+                        // Draw top border
+                        drawLine(
+                            color = cellBorderColor,
+                            start = Offset(0f, strokePx / 2),
+                            end = Offset(size.width, strokePx / 2),
+                            strokeWidth = strokePx,
+                        )
+                        // Draw start (left) border
+                        drawLine(
+                            color = cellBorderColor,
+                            start = Offset(strokePx / 2, 0f),
+                            end = Offset(strokePx / 2, size.height),
+                            strokeWidth = strokePx,
+                        )
+                    }
                     .background(if (isHeader) style.table.headerBackground else Color.Transparent)
                     .padding(style.table.cellPadding),
             ) {

@@ -453,21 +453,23 @@ private fun CodeBlockNode(
         }
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            SelectionContainer {
-                Row {
-                    if (lineNumbers != null) {
-                        Text(
-                            text = lineNumbers,
-                            style = style.code.lineNumber,
-                            modifier = Modifier
-                                .width(style.code.lineNumberMinWidth)
-                                .padding(end = style.code.lineNumberEndPadding),
-                        )
-                    }
+            if (lineNumbers != null) {
+                Text(
+                    text = lineNumbers,
+                    style = style.code.lineNumber,
+                    modifier = Modifier
+                        .width(style.code.lineNumberMinWidth)
+                        .padding(end = style.code.lineNumberEndPadding),
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .horizontalScroll(rememberScrollState()),
+            ) {
+                SelectionContainer {
                     Text(
                         text = highlightedCode,
                         style = style.code.text,
