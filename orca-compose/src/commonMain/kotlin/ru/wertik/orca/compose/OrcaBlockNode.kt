@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -147,22 +148,23 @@ private fun HeadingNode(
     sourceBlockKey: String,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
 ) {
+    val currentOnLinkClick by rememberUpdatedState(onLinkClick)
+    val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
+
     val headingText = remember(
         block.content,
         style,
-        onLinkClick,
         securityPolicy,
         footnoteNumbers,
         sourceBlockKey,
-        onFootnoteReferenceClick,
     ) {
         buildInlineAnnotatedString(
             inlines = block.content,
             style = style,
-            onLinkClick = onLinkClick,
+            onLinkClick = { url -> currentOnLinkClick(url) },
             securityPolicy = securityPolicy,
             footnoteNumbers = footnoteNumbers,
-            onFootnoteClick = { label -> onFootnoteReferenceClick(label, sourceBlockKey) },
+            onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
         )
     }
     InlineTextNode(
@@ -181,22 +183,23 @@ private fun ParagraphNode(
     sourceBlockKey: String,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
 ) {
+    val currentOnLinkClick by rememberUpdatedState(onLinkClick)
+    val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
+
     val paragraphText = remember(
         block.content,
         style,
-        onLinkClick,
         securityPolicy,
         footnoteNumbers,
         sourceBlockKey,
-        onFootnoteReferenceClick,
     ) {
         buildInlineAnnotatedString(
             inlines = block.content,
             style = style,
-            onLinkClick = onLinkClick,
+            onLinkClick = { url -> currentOnLinkClick(url) },
             securityPolicy = securityPolicy,
             footnoteNumbers = footnoteNumbers,
-            onFootnoteClick = { label -> onFootnoteReferenceClick(label, sourceBlockKey) },
+            onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
         )
     }
     InlineTextNode(
