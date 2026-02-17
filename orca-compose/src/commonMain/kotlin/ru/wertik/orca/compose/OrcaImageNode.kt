@@ -8,7 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
 import ru.wertik.orca.core.OrcaBlock
 
 @Composable
@@ -33,7 +35,9 @@ internal fun MarkdownImageNode(
         return
     }
 
-    AsyncImage(
+    val fallbackText = remember(block) { imageBlockFallbackText(block) }
+
+    SubcomposeAsyncImage(
         model = safeSource,
         contentDescription = block.alt,
         contentScale = style.image.contentScale,
@@ -42,7 +46,26 @@ internal fun MarkdownImageNode(
             .heightIn(max = style.image.maxHeight)
             .clip(style.image.shape)
             .background(style.image.background),
-    )
+    ) {
+        when (painter.state) {
+            is AsyncImagePainter.State.Error -> {
+                Text(
+                    text = fallbackText,
+                    style = style.typography.paragraph,
+                )
+            }
+            is AsyncImagePainter.State.Loading,
+            is AsyncImagePainter.State.Empty -> {
+                Text(
+                    text = fallbackText,
+                    style = style.typography.paragraph,
+                )
+            }
+            is AsyncImagePainter.State.Success -> {
+                SubcomposeAsyncImageContent()
+            }
+        }
+    }
 }
 
 internal fun imageBlockFallbackText(block: OrcaBlock.Image): String {
