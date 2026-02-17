@@ -5,7 +5,7 @@ import kotlin.concurrent.AtomicInt
 internal actual class OrcaLock {
     private val locked = AtomicInt(0)
 
-    actual inline fun <T> withLock(block: () -> T): T {
+    actual fun <T> withLock(block: () -> T): T {
         while (!locked.compareAndSet(0, 1)) {
             // spin
         }
