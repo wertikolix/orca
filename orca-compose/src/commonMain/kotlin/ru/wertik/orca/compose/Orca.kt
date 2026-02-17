@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -195,33 +197,59 @@ fun Orca(
         }
 
         OrcaRootLayout.COLUMN -> {
+            val blockRequesters = remember(renderBlocks) {
+                renderBlocks.associate { item -> item.key to BringIntoViewRequester() }
+            }
+
             Column(
                 modifier = modifier,
                 verticalArrangement = Arrangement.spacedBy(style.layout.blockSpacing),
             ) {
                 renderBlocks.forEach { item ->
-                    OrcaBlockNode(
-                        block = item.block,
-                        style = style,
-                        onLinkClick = onLinkClick,
-                        securityPolicy = securityPolicy,
-                        footnoteNumbers = footnoteNumbers,
-                        sourceBlockKey = item.key,
-                        activeFootnoteLabel = activeFootnoteLabel,
-                        onFootnoteReferenceClick = { label, sourceBlockKey ->
-                            onFootnoteReferenceClick(
-                                label = label,
-                                sourceBlockKey = sourceBlockKey,
-                                scrollToFootnotes = null,
-                            )
-                        },
-                        onFootnoteBackClick = { label ->
-                            onFootnoteBackClick(
-                                label = label,
-                                scrollToSource = null,
-                            )
-                        },
-                    )
+                    val requester = blockRequesters[item.key]
+                    val itemModifier = if (requester != null) {
+                        Modifier.bringIntoViewRequester(requester)
+                    } else {
+                        Modifier
+                    }
+
+                    androidx.compose.foundation.layout.Box(modifier = itemModifier) {
+                        OrcaBlockNode(
+                            block = item.block,
+                            style = style,
+                            onLinkClick = onLinkClick,
+                            securityPolicy = securityPolicy,
+                            footnoteNumbers = footnoteNumbers,
+                            sourceBlockKey = item.key,
+                            activeFootnoteLabel = activeFootnoteLabel,
+                            onFootnoteReferenceClick = { label, sourceBlockKey ->
+                                onFootnoteReferenceClick(
+                                    label = label,
+                                    sourceBlockKey = sourceBlockKey,
+                                    scrollToFootnotes = {
+                                        val footnoteBlockKey = renderBlocks
+                                            .firstOrNull { rb -> rb.block is OrcaBlock.Footnotes }
+                                            ?.key
+                                        val targetRequester = footnoteBlockKey?.let { blockRequesters[it] }
+                                        if (targetRequester != null) {
+                                            scope.launch { targetRequester.bringIntoView() }
+                                        }
+                                    },
+                                )
+                            },
+                            onFootnoteBackClick = { label ->
+                                onFootnoteBackClick(
+                                    label = label,
+                                    scrollToSource = { sourceBlockKey ->
+                                        val targetRequester = blockRequesters[sourceBlockKey]
+                                        if (targetRequester != null) {
+                                            scope.launch { targetRequester.bringIntoView() }
+                                        }
+                                    },
+                                )
+                            },
+                        )
+                    }
                 }
             }
         }
