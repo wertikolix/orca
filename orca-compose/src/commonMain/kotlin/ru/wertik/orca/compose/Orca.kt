@@ -138,19 +138,20 @@ fun Orca(
     }
 
     var activeFootnoteLabel by remember(document.blocks) { mutableStateOf<String?>(null) }
-    val referenceBlockByFootnote = remember(document.blocks) {
-        mutableStateMapOf<String, String>()
+    val footnoteSourceStack = remember(document.blocks) {
+        mutableStateMapOf<String, MutableList<String>>()
     }
     val scope = rememberCoroutineScope()
 
     fun onFootnoteReferenceClick(label: String, sourceBlockKey: String, scrollToFootnotes: (() -> Unit)?) {
-        referenceBlockByFootnote[label] = sourceBlockKey
+        footnoteSourceStack.getOrPut(label) { mutableListOf() }.add(sourceBlockKey)
         activeFootnoteLabel = label
         scrollToFootnotes?.invoke()
     }
 
     fun onFootnoteBackClick(label: String, scrollToSource: ((String) -> Unit)?) {
-        val sourceBlockKey = referenceBlockByFootnote[label] ?: return
+        val stack = footnoteSourceStack[label]
+        val sourceBlockKey = stack?.removeLastOrNull() ?: return
         activeFootnoteLabel = null
         scrollToSource?.invoke(sourceBlockKey)
     }
