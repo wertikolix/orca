@@ -216,6 +216,15 @@ object OrcaDefaults {
     fun lightStyle(): OrcaStyle = OrcaStyle()
 
     fun darkStyle(): OrcaStyle = OrcaStyle(
+        typography = OrcaTypographyStyle(
+            heading1 = TextStyle(fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE0E0E0)),
+            heading2 = TextStyle(fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE0E0E0)),
+            heading3 = TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE0E0E0)),
+            heading4 = TextStyle(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE0E0E0)),
+            heading5 = TextStyle(fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE0E0E0)),
+            heading6 = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE0E0E0)),
+            paragraph = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, color = Color(0xFFD0D0D0)),
+        ),
         inline = OrcaInlineStyle(
             inlineCode = SpanStyle(
                 fontFamily = FontFamily.Monospace,
