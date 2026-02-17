@@ -5,31 +5,39 @@ internal class OrcaParserCache(
 ) {
     private val maxEntries = maxEntries.coerceAtLeast(1)
     private val entries = linkedMapOf<Any, CachedParseEntry>()
+    private val lock = OrcaLock()
 
     fun getOrPut(
         key: Any,
         input: String,
         parse: () -> OrcaParseResult,
     ): OrcaParseResult {
-        val cached = entries[key]
-        if (cached != null && cached.input == input) {
-            entries.remove(key)
-            entries[key] = cached
-            return cached.result
+        lock.withLock {
+            val cached = entries[key]
+            if (cached != null && cached.input == input) {
+                entries.remove(key)
+                entries[key] = cached
+                return cached.result
+            }
         }
 
         val parsed = parse()
-        entries.remove(key)
-        entries[key] = CachedParseEntry(
-            input = input,
-            result = parsed,
-        )
-        trimToLimit()
+
+        lock.withLock {
+            entries.remove(key)
+            entries[key] = CachedParseEntry(
+                input = input,
+                result = parsed,
+            )
+            trimToLimit()
+        }
         return parsed
     }
 
     fun clear() {
-        entries.clear()
+        lock.withLock {
+            entries.clear()
+        }
     }
 
     private fun trimToLimit() {
@@ -39,6 +47,11 @@ internal class OrcaParserCache(
         }
     }
 }
+
+private data class CachedParseEntry(
+    val input: String,
+    val result: OrcaParseResult,
+)
 
 private data class CachedParseEntry(
     val input: String,
