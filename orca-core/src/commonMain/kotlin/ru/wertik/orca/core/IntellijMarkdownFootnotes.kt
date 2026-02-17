@@ -36,19 +36,15 @@ internal fun extractFootnoteDefinitions(markdown: String): FootnoteDefinitionsEx
 
         while (index < lines.size) {
             val continuation = lines[index]
-            if (continuation.startsWith("    ")) {
-                contentLines += continuation.removePrefix("    ")
-                index += 1
-                continue
-            }
-            if (continuation.startsWith("\t")) {
-                contentLines += continuation.removePrefix("\t")
+            val stripped = stripFootnoteContinuationIndent(continuation)
+            if (stripped != null) {
+                contentLines += stripped
                 index += 1
                 continue
             }
             if (continuation.isBlank() && index + 1 < lines.size) {
                 val next = lines[index + 1]
-                if (next.startsWith("    ") || next.startsWith("\t")) {
+                if (stripFootnoteContinuationIndent(next) != null) {
                     contentLines += ""
                     index += 1
                     continue
@@ -94,4 +90,14 @@ internal fun mapFootnoteDefinition(
         label = definition.label,
         blocks = root.children.mapNotNull { child -> mapper.mapBlock(child, depth = 0) },
     )
+}
+
+/**
+ * Strip one level of continuation indent (tab, 4+ spaces, or tab+spaces).
+ * Returns the unindented line, or null if the line is not indented.
+ */
+private fun stripFootnoteContinuationIndent(line: String): String? {
+    if (line.startsWith("\t")) return line.removePrefix("\t")
+    if (line.startsWith("    ")) return line.substring(4)
+    return null
 }
