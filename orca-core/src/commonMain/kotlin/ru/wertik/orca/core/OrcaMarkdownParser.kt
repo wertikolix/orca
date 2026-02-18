@@ -43,15 +43,10 @@ class OrcaMarkdownParser(
         key: Any,
         input: String,
     ): OrcaDocument {
-        return try {
-            cache.getOrPut(
-                key = key,
-                input = input,
-                parse = { parseInternal(input) },
-            ).document
-        } catch (error: Exception) {
-            OrcaDocument(emptyList())
-        }
+        return parseCachedWithDiagnostics(
+            key = key,
+            input = input,
+        ).document
     }
 
     override fun parseCachedWithDiagnostics(
