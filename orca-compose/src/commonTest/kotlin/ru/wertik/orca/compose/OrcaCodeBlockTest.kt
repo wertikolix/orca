@@ -187,4 +187,112 @@ class OrcaCodeBlockTest {
             )
         }
     }
+
+    @Test
+    fun syntaxHighlightPythonKeywordsAreMarked() {
+        val style = OrcaStyle()
+        val highlighted = buildCodeAnnotatedString(
+            code = "def greet(name): return None",
+            language = "python",
+            style = style,
+        )
+
+        assertTrue(highlighted.spanStyles.any { span -> span.item.color == style.code.highlightKeyword.color })
+    }
+
+    @Test
+    fun syntaxHighlightPythonHashCommentIsMarked() {
+        val style = OrcaStyle()
+        val highlighted = buildCodeAnnotatedString(
+            code = "x = 1 # set x",
+            language = "python",
+            style = style,
+        )
+
+        assertTrue(highlighted.spanStyles.any { span -> span.item.color == style.code.highlightComment.color })
+    }
+
+    @Test
+    fun syntaxHighlightGoKeywordsAreMarked() {
+        val style = OrcaStyle()
+        val highlighted = buildCodeAnnotatedString(
+            code = "func main() { var x = nil }",
+            language = "go",
+            style = style,
+        )
+
+        assertTrue(highlighted.spanStyles.any { span -> span.item.color == style.code.highlightKeyword.color })
+    }
+
+    @Test
+    fun syntaxHighlightRustKeywordsAreMarked() {
+        val style = OrcaStyle()
+        val highlighted = buildCodeAnnotatedString(
+            code = "fn main() { let mut x = None; }",
+            language = "rust",
+            style = style,
+        )
+
+        assertTrue(highlighted.spanStyles.any { span -> span.item.color == style.code.highlightKeyword.color })
+    }
+
+    @Test
+    fun syntaxHighlightCKeywordsAreMarked() {
+        val style = OrcaStyle()
+        val highlighted = buildCodeAnnotatedString(
+            code = "int main() { return 0; }",
+            language = "c",
+            style = style,
+        )
+
+        assertTrue(highlighted.spanStyles.any { span -> span.item.color == style.code.highlightKeyword.color })
+    }
+
+    @Test
+    fun syntaxHighlightSwiftKeywordsAreMarked() {
+        val style = OrcaStyle()
+        val highlighted = buildCodeAnnotatedString(
+            code = "func greet() { let name = nil }",
+            language = "swift",
+            style = style,
+        )
+
+        assertTrue(highlighted.spanStyles.any { span -> span.item.color == style.code.highlightKeyword.color })
+    }
+
+    @Test
+    fun syntaxHighlightCsharpKeywordsAreMarked() {
+        val style = OrcaStyle()
+        val highlighted = buildCodeAnnotatedString(
+            code = "public class Foo { void Bar() { return; } }",
+            language = "csharp",
+            style = style,
+        )
+
+        assertTrue(highlighted.spanStyles.any { span -> span.item.color == style.code.highlightKeyword.color })
+    }
+
+    @Test
+    fun syntaxHighlightTypescriptKeywordsAreMarked() {
+        val style = OrcaStyle()
+        val highlighted = buildCodeAnnotatedString(
+            code = "const x: number = async function() { return null; }",
+            language = "typescript",
+            style = style,
+        )
+
+        assertTrue(highlighted.spanStyles.any { span -> span.item.color == style.code.highlightKeyword.color })
+    }
+
+    @Test
+    fun syntaxHighlightJavaKeywordsAreMarked() {
+        val style = OrcaStyle()
+        val highlighted = buildCodeAnnotatedString(
+            code = "public class Foo extends Bar { void run() { return; } }",
+            language = "java",
+            style = style,
+        )
+
+        assertTrue(highlighted.spanStyles.any { span -> span.item.color == style.code.highlightKeyword.color })
+    }
 }
