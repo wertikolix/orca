@@ -169,6 +169,43 @@ private fun keywordsFor(language: String): Set<String> {
             "if", "then", "else", "fi", "for", "in", "do", "done", "case", "esac", "function", "local", "export",
         )
 
+        "python" -> setOf(
+            "def", "class", "import", "from", "as", "if", "elif", "else", "for", "while", "break", "continue",
+            "return", "yield", "try", "except", "finally", "raise", "with", "lambda", "pass", "del",
+            "None", "True", "False", "and", "or", "not", "in", "is",
+        )
+
+        "go" -> setOf(
+            "func", "var", "const", "type", "struct", "interface", "map", "chan", "package", "import",
+            "if", "else", "for", "range", "switch", "case", "default", "return", "break", "continue",
+            "goto", "defer", "go", "select", "nil", "true", "false",
+        )
+
+        "rust" -> setOf(
+            "fn", "let", "mut", "const", "struct", "enum", "trait", "impl", "use", "pub", "mod",
+            "if", "else", "match", "for", "while", "loop", "return", "break", "continue",
+            "true", "false", "None", "Some", "Ok", "Err", "self", "Self", "super",
+        )
+
+        "c", "cpp" -> setOf(
+            "int", "float", "double", "char", "bool", "void", "long", "short", "unsigned", "signed",
+            "if", "else", "for", "while", "do", "switch", "case", "default", "return", "break", "continue",
+            "struct", "union", "enum", "typedef", "const", "static", "extern", "inline",
+            "true", "false", "null", "NULL",
+        )
+
+        "swift" -> setOf(
+            "func", "var", "let", "class", "struct", "enum", "protocol", "extension", "import",
+            "if", "else", "for", "while", "switch", "case", "return", "break", "continue",
+            "true", "false", "nil", "self", "super", "guard", "defer", "throw", "try", "catch",
+        )
+
+        "csharp" -> setOf(
+            "class", "interface", "struct", "enum", "namespace", "using", "public", "private", "protected",
+            "static", "readonly", "const", "void", "if", "else", "for", "foreach", "while", "switch",
+            "case", "return", "break", "continue", "new", "null", "true", "false", "var", "async", "await",
+        )
+
         else -> emptySet()
     }
 }
