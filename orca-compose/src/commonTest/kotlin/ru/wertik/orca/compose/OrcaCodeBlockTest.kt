@@ -53,7 +53,6 @@ class OrcaCodeBlockTest {
             htmlBlockFallbackText("<p>hello</p><div>world</div>"),
         )
     }
-}
 
     @Test
     fun syntaxHighlightMarksStringLiteral() {
@@ -188,3 +187,4 @@ class OrcaCodeBlockTest {
             )
         }
     }
+}
