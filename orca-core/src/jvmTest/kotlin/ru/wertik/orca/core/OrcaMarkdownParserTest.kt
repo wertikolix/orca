@@ -670,4 +670,165 @@ class OrcaMarkdownParserTest {
             result.blocks.single(),
         )
     }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun parserRequiresPositiveCacheSize() {
+        OrcaMarkdownParser(cacheSize = 0)
+    }
+
+    @Test
+    fun clearCacheInvalidatesStoredEntries() {
+        val parser = OrcaMarkdownParser()
+        val key = "clear-test"
+        val markdown = "# Hello"
+
+        val first = parser.parseCached(key = key, input = markdown)
+        parser.clearCache()
+        val second = parser.parseCached(key = key, input = markdown)
+
+        // After clearing, the second call re-parses — result is equal but not the same instance
+        assertEquals(first, second)
+        assertFalse(first === second)
+    }
+
+    @Test
+    fun parseCachedWithDiagnosticsReturnsSameResultForSameKeyAndInput() {
+        val parser = OrcaMarkdownParser()
+        val key = "diag-cache-key"
+        val markdown = "# Cached heading"
+
+        val first = parser.parseCachedWithDiagnostics(key = key, input = markdown)
+        val second = parser.parseCachedWithDiagnostics(key = key, input = markdown)
+
+        assertSame(first, second)
+    }
+
+    @Test
+    fun parseCachedWithDiagnosticsInvalidatesOnInputChange() {
+        val parser = OrcaMarkdownParser()
+        val key = "diag-change-key"
+
+        val first = parser.parseCachedWithDiagnostics(key = key, input = "# First")
+        val second = parser.parseCachedWithDiagnostics(key = key, input = "# Second")
+
+        assertFalse(first === second)
+        assertEquals(
+            OrcaBlock.Heading(level = 1, content = listOf(OrcaInline.Text("Second"))),
+            second.document.blocks.single(),
+        )
+    }
+
+    @Test
+    fun parseWhitespaceOnlyInputProducesEmptyDocument() {
+        val result = parser.parse("   \n\n   ")
+        assertTrue(result.blocks.isEmpty())
+    }
+
+    @Test
+    fun parseSetextHeading() {
+        val markdown = """
+            Title
+            =====
+            
+            Subtitle
+            --------
+        """.trimIndent()
+
+        val result = parser.parse(markdown)
+
+        assertEquals(2, result.blocks.size)
+        assertEquals(
+            OrcaBlock.Heading(level = 1, content = listOf(OrcaInline.Text("Title"))),
+            result.blocks[0],
+        )
+        assertEquals(
+            OrcaBlock.Heading(level = 2, content = listOf(OrcaInline.Text("Subtitle"))),
+            result.blocks[1],
+        )
+    }
+
+    @Test
+    fun parseIndentedCodeBlock() {
+        val markdown = "    val x = 1\n    val y = 2"
+
+        val result = parser.parse(markdown)
+        val code = result.blocks.single() as OrcaBlock.CodeBlock
+
+        assertNull(code.language)
+        assertEquals("val x = 1\nval y = 2", code.code)
+    }
+
+    @Test
+    fun parseAutolinkAngleBracketSyntax() {
+        val markdown = "Visit <https://example.com> now."
+
+        val result = parser.parse(markdown)
+        val paragraph = result.blocks.single() as OrcaBlock.Paragraph
+        val link = paragraph.content.filterIsInstance<OrcaInline.Link>().single()
+
+        assertEquals("https://example.com", link.destination)
+        assertEquals(listOf(OrcaInline.Text("https://example.com")), link.content)
+    }
+
+    @Test
+    fun parseFullReferenceLinkResolvesDestination() {
+        val markdown = """
+            See [docs][ref].
+            
+            [ref]: https://example.com "Title"
+        """.trimIndent()
+
+        val result = parser.parse(markdown)
+        val paragraph = result.blocks.first() as OrcaBlock.Paragraph
+        val link = paragraph.content.filterIsInstance<OrcaInline.Link>().single()
+
+        assertEquals("https://example.com", link.destination)
+        assertEquals(listOf(OrcaInline.Text("docs")), link.content)
+    }
+
+    @Test
+    fun parseNestedOrderedList() {
+        val markdown = """
+            1. first
+               1. nested one
+               2. nested two
+            2. second
+        """.trimIndent()
+
+        val result = parser.parse(markdown)
+        val outer = result.blocks.single() as OrcaBlock.ListBlock
+
+        assertTrue(outer.ordered)
+        assertEquals(2, outer.items.size)
+
+        val firstItemBlocks = outer.items[0].blocks
+        val nestedList = firstItemBlocks.filterIsInstance<OrcaBlock.ListBlock>().single()
+        assertTrue(nestedList.ordered)
+        assertEquals(2, nestedList.items.size)
+    }
+
+    @Test
+    fun parseImageWithNoAltText() {
+        val markdown = "![](https://example.com/img.png)"
+
+        val result = parser.parse(markdown)
+        val image = result.blocks.single() as OrcaBlock.Image
+
+        assertEquals("https://example.com/img.png", image.source)
+        assertNull(image.alt)
+        assertNull(image.title)
+    }
+
+    @Test
+    fun parseMixedBoldItalicNesting() {
+        val markdown = "***bold and italic***"
+
+        val result = parser.parse(markdown)
+        val paragraph = result.blocks.single() as OrcaBlock.Paragraph
+
+        assertTrue(paragraph.content.isNotEmpty())
+        // Should produce some nesting of Bold/Italic
+        val hasBoldOrItalic = paragraph.content.any { it is OrcaInline.Bold || it is OrcaInline.Italic }
+        assertTrue(hasBoldOrItalic)
+    }
 }
