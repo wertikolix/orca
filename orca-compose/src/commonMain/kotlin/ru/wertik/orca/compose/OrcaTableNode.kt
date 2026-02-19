@@ -312,6 +312,8 @@ private fun estimateInlineTextLength(inline: OrcaInline): Int {
         is OrcaInline.Image -> inline.alt?.length ?: inline.source.length
         is OrcaInline.FootnoteReference -> 4
         is OrcaInline.HtmlInline -> htmlInlineFallbackText(inline.html).length
+        is OrcaInline.Superscript -> inline.content.sumOf(::estimateInlineTextLength)
+        is OrcaInline.Subscript -> inline.content.sumOf(::estimateInlineTextLength)
     }
 }
 
