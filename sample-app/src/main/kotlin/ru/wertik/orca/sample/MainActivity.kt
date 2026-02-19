@@ -17,12 +17,18 @@ import ru.wertik.orca.core.OrcaMarkdownParser
 class MainActivity : ComponentActivity() {
 
     private val markdown = """
-        # Orca v0.6
+        # Orca v0.8
 
-        Android-first markdown renderer for Compose.
+        Compose Multiplatform markdown renderer.
 
         ## Inline formatting
-        Support for **bold**, *italic*, ~~strikethrough~~, `inline code`, and [links](https://github.com/JetBrains/markdown).
+        Support for **bold**, *italic*, ~~strikethrough~~, `inline code`, and [links](https://github.com/JetBrains/markdown "JetBrains Markdown").
+
+        ## Superscript and subscript
+        E = mc^2^ and H~2~O are now rendered properly.
+
+        ## Emoji shortcodes
+        :rocket: Launch ready! :fire: Hot feature :sparkles: Looking good :thumbsup:
 
         ## List
         - first bullet
@@ -32,7 +38,23 @@ class MainActivity : ComponentActivity() {
         ## Task list
         - [x] parser extensions wired
         - [x] compose rendering updated
-        - [ ] html blocks
+        - [x] admonition support
+        - [x] inline image rendering
+        - [ ] latex math rendering
+
+        ## Admonitions
+
+        > [!NOTE]
+        > Orca now supports GitHub-style admonitions.
+
+        > [!TIP]
+        > Use admonitions to highlight important information in your docs.
+
+        > [!WARNING]
+        > Breaking changes may occur in future major versions.
+
+        > [!CAUTION]
+        > Do not use in production without testing first.
 
         ## Table
         | module | status | docs |
@@ -47,6 +69,9 @@ class MainActivity : ComponentActivity() {
 
         ## Quote
         > Keep architecture simple and stable first.
+
+        ## HTML block
+        <p>This is a <b>bold</b> and <i>italic</i> HTML paragraph with a <a href="https://example.com">link</a>.</p>
 
         ## Code block
         ```kotlin
