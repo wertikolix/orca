@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -180,9 +181,17 @@ private fun HeadingNode(
             onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
         )
     }
+    val inlineImages = remember(block.content, style, securityPolicy) {
+        buildInlineImageMap(
+            inlines = block.content,
+            style = style,
+            securityPolicy = securityPolicy,
+        )
+    }
     InlineTextNode(
         text = headingText,
         textStyle = style.heading(block.level),
+        inlineContent = inlineImages,
     )
 }
 
@@ -215,9 +224,17 @@ private fun ParagraphNode(
             onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
         )
     }
+    val inlineImages = remember(block.content, style, securityPolicy) {
+        buildInlineImageMap(
+            inlines = block.content,
+            style = style,
+            securityPolicy = securityPolicy,
+        )
+    }
     InlineTextNode(
         text = paragraphText,
         textStyle = style.typography.paragraph,
+        inlineContent = inlineImages,
     )
 }
 
@@ -669,11 +686,20 @@ private fun codeLineCount(code: String): Int {
 private fun InlineTextNode(
     text: AnnotatedString,
     textStyle: TextStyle,
+    inlineContent: Map<String, InlineTextContent> = emptyMap(),
 ) {
-    Text(
-        text = text,
-        style = textStyle,
-    )
+    if (inlineContent.isEmpty()) {
+        Text(
+            text = text,
+            style = textStyle,
+        )
+    } else {
+        Text(
+            text = text,
+            style = textStyle,
+            inlineContent = inlineContent,
+        )
+    }
 }
 
 internal fun htmlBlockFallbackText(html: String): String {

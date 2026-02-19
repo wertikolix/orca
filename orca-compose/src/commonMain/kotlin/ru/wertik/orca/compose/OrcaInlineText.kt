@@ -7,6 +7,7 @@ import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
+import androidx.compose.foundation.text.appendInlineContent
 import ru.wertik.orca.core.OrcaInline
 
 internal fun buildInlineAnnotatedString(
@@ -128,7 +129,7 @@ private fun AnnotatedString.Builder.appendInline(
             }
         }
 
-        is OrcaInline.Image -> append(imageInlineFallbackText(inline))
+        is OrcaInline.Image -> appendInlineContent(inlineImageId(inline.source), inline.alt ?: inline.source)
 
         is OrcaInline.FootnoteReference -> {
             val text = footnoteReferenceText(inline.label, footnoteNumbers)

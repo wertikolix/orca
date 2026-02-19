@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -160,6 +161,13 @@ data class OrcaAdmonitionStyle(
     val cautionBackground: Color = Color(0x0DC62828),
 )
 
+data class OrcaInlineImageStyle(
+    val size: Dp = 20.dp,
+    val shape: Shape = RoundedCornerShape(2.dp),
+    val widthSp: TextUnit = 18.sp,
+    val heightSp: TextUnit = 18.sp,
+)
+
 data class OrcaStyle(
     val typography: OrcaTypographyStyle = OrcaTypographyStyle(),
     val inline: OrcaInlineStyle = OrcaInlineStyle(),
@@ -170,6 +178,7 @@ data class OrcaStyle(
     val thematicBreak: OrcaThematicBreakStyle = OrcaThematicBreakStyle(),
     val image: OrcaImageStyle = OrcaImageStyle(),
     val admonition: OrcaAdmonitionStyle = OrcaAdmonitionStyle(),
+    val inlineImage: OrcaInlineImageStyle = OrcaInlineImageStyle(),
 ) {
     fun heading(level: Int): TextStyle = typography.heading(level)
 
