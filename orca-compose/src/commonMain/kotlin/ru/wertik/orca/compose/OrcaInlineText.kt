@@ -174,7 +174,12 @@ private fun AnnotatedString.Builder.appendInline(
             )
         }
 
-        is OrcaInline.HtmlInline -> append(htmlInlineFallbackText(inline.html))
+        is OrcaInline.HtmlInline -> {
+            val plainText = htmlInlineFallbackText(inline.html)
+            if (plainText.isNotEmpty()) {
+                append(plainText)
+            }
+        }
     }
 }
 

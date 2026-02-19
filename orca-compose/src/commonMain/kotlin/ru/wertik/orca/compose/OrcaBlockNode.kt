@@ -387,11 +387,16 @@ private fun HtmlBlockNode(
     block: OrcaBlock.HtmlBlock,
     style: OrcaStyle,
 ) {
-    val text = remember(block.html) { htmlBlockFallbackText(block.html) }
-    if (text.isBlank()) return
-
+    val rendered = remember(block.html, style) {
+        renderHtmlToAnnotatedString(
+            html = block.html,
+            style = style,
+            onLinkClick = {},
+            securityPolicy = OrcaSecurityPolicies.Default,
+        )
+    }
     Text(
-        text = text,
+        text = rendered,
         style = style.typography.paragraph,
     )
 }
