@@ -577,13 +577,6 @@ private fun AdmonitionNode(
         OrcaAdmonitionType.WARNING -> admonitionStyle.warningBackground
         OrcaAdmonitionType.CAUTION -> admonitionStyle.cautionBackground
     }
-    val icon = when (block.type) {
-        OrcaAdmonitionType.NOTE -> "\u2139\uFE0F"
-        OrcaAdmonitionType.TIP -> "\uD83D\uDCA1"
-        OrcaAdmonitionType.IMPORTANT -> "\u2757"
-        OrcaAdmonitionType.WARNING -> "\u26A0\uFE0F"
-        OrcaAdmonitionType.CAUTION -> "\uD83D\uDED1"
-    }
     val title = block.title ?: block.type.name.lowercase().replaceFirstChar { it.uppercase() }
 
     Row(
@@ -606,7 +599,7 @@ private fun AdmonitionNode(
             verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
         ) {
             Text(
-                text = "$icon $title",
+                text = title,
                 style = admonitionStyle.titleStyle.copy(color = color),
             )
             block.blocks.forEach { childBlock ->
