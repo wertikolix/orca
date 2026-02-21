@@ -149,6 +149,18 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             onFootnoteBackClick = onFootnoteBackClick,
         )
+
+        is OrcaBlock.DefinitionList -> DefinitionListNode(
+            block = block,
+            style = style,
+            onLinkClick = onLinkClick,
+            securityPolicy = securityPolicy,
+            footnoteNumbers = footnoteNumbers,
+            sourceBlockKey = sourceBlockKey,
+            activeFootnoteLabel = activeFootnoteLabel,
+            onFootnoteReferenceClick = onFootnoteReferenceClick,
+            onFootnoteBackClick = onFootnoteBackClick,
+        )
     }
 }
 
@@ -614,6 +626,72 @@ private fun AdmonitionNode(
                     onFootnoteReferenceClick = onFootnoteReferenceClick,
                     onFootnoteBackClick = onFootnoteBackClick,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DefinitionListNode(
+    block: OrcaBlock.DefinitionList,
+    style: OrcaStyle,
+    onLinkClick: (String) -> Unit,
+    securityPolicy: OrcaSecurityPolicy,
+    footnoteNumbers: Map<String, Int>,
+    sourceBlockKey: String,
+    activeFootnoteLabel: String?,
+    onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
+    onFootnoteBackClick: (label: String) -> Unit,
+) {
+    val dlStyle = style.definitionList
+    Column(
+        verticalArrangement = Arrangement.spacedBy(dlStyle.termSpacing),
+    ) {
+        block.items.forEach { item ->
+            val currentOnLinkClick by rememberUpdatedState(onLinkClick)
+            val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
+
+            val termText = remember(item.term, style, securityPolicy, footnoteNumbers, sourceBlockKey) {
+                buildInlineAnnotatedString(
+                    inlines = item.term,
+                    style = style,
+                    onLinkClick = { url -> currentOnLinkClick(url) },
+                    securityPolicy = securityPolicy,
+                    footnoteNumbers = footnoteNumbers,
+                    onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
+                )
+            }
+            val termInlineImages = remember(item.term, style, securityPolicy) {
+                buildInlineImageMap(
+                    inlines = item.term,
+                    style = style,
+                    securityPolicy = securityPolicy,
+                )
+            }
+            InlineTextNode(
+                text = termText,
+                textStyle = dlStyle.termStyle,
+                inlineContent = termInlineImages,
+            )
+            item.definitions.forEach { definitionBlocks ->
+                Column(
+                    modifier = Modifier.padding(start = dlStyle.definitionIndent),
+                    verticalArrangement = Arrangement.spacedBy(dlStyle.definitionSpacing),
+                ) {
+                    definitionBlocks.forEach { childBlock ->
+                        OrcaBlockNode(
+                            block = childBlock,
+                            style = style,
+                            onLinkClick = onLinkClick,
+                            securityPolicy = securityPolicy,
+                            footnoteNumbers = footnoteNumbers,
+                            sourceBlockKey = sourceBlockKey,
+                            activeFootnoteLabel = activeFootnoteLabel,
+                            onFootnoteReferenceClick = onFootnoteReferenceClick,
+                            onFootnoteBackClick = onFootnoteBackClick,
+                        )
+                    }
+                }
             }
         }
     }

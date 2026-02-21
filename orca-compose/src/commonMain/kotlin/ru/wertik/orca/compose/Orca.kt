@@ -393,6 +393,7 @@ private fun blockContentKey(block: OrcaBlock): String {
         is OrcaBlock.Footnotes -> "FN:${block.definitions.size}:${block.definitions.firstOrNull()?.label.orEmpty()}"
         is OrcaBlock.HtmlBlock -> "Html:${block.html.take(32).hashCode()}"
         is OrcaBlock.Admonition -> "Adm:${block.type.name}:${block.blocks.size}"
+        is OrcaBlock.DefinitionList -> "DL:${block.items.size}:${block.items.firstOrNull()?.let { inlineContentDigest(it.term) }.orEmpty()}"
     }
 }
 

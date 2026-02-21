@@ -127,6 +127,22 @@ sealed interface OrcaBlock {
     data class HtmlBlock(
         val html: String,
     ) : OrcaBlock
+
+    /**
+     * Definition list containing term-definition pairs.
+     *
+     * Syntax (PHP Markdown Extra / Pandoc):
+     * ```
+     * Term
+     * : Definition one
+     * : Definition two
+     * ```
+     *
+     * @property items Ordered list of term-definition entries.
+     */
+    data class DefinitionList(
+        val items: List<OrcaDefinitionListItem>,
+    ) : OrcaBlock
 }
 
 /**
@@ -184,6 +200,17 @@ enum class OrcaAdmonitionType {
 data class OrcaFootnoteDefinition(
     val label: String,
     val blocks: List<OrcaBlock>,
+)
+
+/**
+ * Single entry in a [OrcaBlock.DefinitionList].
+ *
+ * @property term Inline elements forming the term being defined.
+ * @property definitions One or more definitions, each containing block-level content.
+ */
+data class OrcaDefinitionListItem(
+    val term: List<OrcaInline>,
+    val definitions: List<List<OrcaBlock>>,
 )
 
 /** Inline-level markdown element. Each variant maps to a specific inline construct. */

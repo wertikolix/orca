@@ -209,6 +209,20 @@ data class OrcaInlineImageStyle(
     val heightSp: TextUnit = 18.sp,
 )
 
+/**
+ * Appearance of definition list blocks.
+ *
+ * Defaults: bold term text, 16 dp left indent for definitions, 4 dp spacing between definitions.
+ *
+ * @see OrcaStyle
+ */
+data class OrcaDefinitionListStyle(
+    val termStyle: TextStyle = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
+    val definitionIndent: Dp = 16.dp,
+    val termSpacing: Dp = 8.dp,
+    val definitionSpacing: Dp = 4.dp,
+)
+
 data class OrcaStyle(
     val typography: OrcaTypographyStyle = OrcaTypographyStyle(),
     val inline: OrcaInlineStyle = OrcaInlineStyle(),
@@ -220,6 +234,7 @@ data class OrcaStyle(
     val image: OrcaImageStyle = OrcaImageStyle(),
     val admonition: OrcaAdmonitionStyle = OrcaAdmonitionStyle(),
     val inlineImage: OrcaInlineImageStyle = OrcaInlineImageStyle(),
+    val definitionList: OrcaDefinitionListStyle = OrcaDefinitionListStyle(),
 ) {
     fun heading(level: Int): TextStyle = typography.heading(level)
 
@@ -367,6 +382,9 @@ object OrcaDefaults {
             importantBackground = Color(0x1ACE93D8),
             warningBackground = Color(0x1AFFB74D),
             cautionBackground = Color(0x1AEF9A9A),
+        ),
+        definitionList = OrcaDefinitionListStyle(
+            termStyle = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE0E0E0)),
         ),
     )
 }
