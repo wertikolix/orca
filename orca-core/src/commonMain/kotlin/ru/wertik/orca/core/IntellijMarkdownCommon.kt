@@ -10,6 +10,8 @@ internal const val INLINE_FOOTNOTE_LABEL_PREFIX = "__inline_footnote_"
 internal data class ParserCacheKey(
     val parser: MarkdownParser,
     val maxTreeDepth: Int,
+    val enableSuperscript: Boolean = true,
+    val enableSubscript: Boolean = true,
 )
 
 internal class DepthLimitReporter(

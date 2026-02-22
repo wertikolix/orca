@@ -7,8 +7,8 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.8.1`
-- Release notes: [`docs/releases/0.8.1.md`](docs/releases/0.8.1.md)
+- Current stable minor: `0.8.2`
+- Release notes: [`docs/releases/0.8.2.md`](docs/releases/0.8.2.md)
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -45,8 +45,8 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.8.1")
-implementation("ru.wertik:orca-compose:0.8.1")
+implementation("ru.wertik:orca-core:0.8.2")
+implementation("ru.wertik:orca-compose:0.8.2")
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -152,6 +152,8 @@ fun interface OrcaParser {
 OrcaMarkdownParser(
     maxTreeDepth = 64,
     cacheSize = 64,
+    enableSuperscript = true,  // set false to disable ^text^ parsing
+    enableSubscript = true,    // set false to disable ~text~ parsing
     onDepthLimitExceeded = { depth ->
         // observe depth truncation if needed
     },
@@ -167,7 +169,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.8.1`)
+## Supported Syntax (`0.8.2`)
 
 ### Blocks
 

@@ -12,6 +12,8 @@ import org.intellij.markdown.parser.MarkdownParser
  * @param maxTreeDepth Maximum allowed AST nesting depth. Defaults to [DEFAULT_MAX_TREE_DEPTH].
  * @param onDepthLimitExceeded Optional callback invoked when nesting exceeds [maxTreeDepth].
  * @param cacheSize Maximum number of cached parse results (LRU). Defaults to [DEFAULT_PARSE_CACHE_SIZE].
+ * @param enableSuperscript Whether to parse `^text^` as superscript. Defaults to `true`.
+ * @param enableSubscript Whether to parse `~text~` as subscript. Defaults to `true`.
  * @see OrcaParser
  */
 class OrcaMarkdownParser(
@@ -19,6 +21,8 @@ class OrcaMarkdownParser(
     private val maxTreeDepth: Int = DEFAULT_MAX_TREE_DEPTH,
     private val onDepthLimitExceeded: ((Int) -> Unit)? = null,
     cacheSize: Int = DEFAULT_PARSE_CACHE_SIZE,
+    private val enableSuperscript: Boolean = true,
+    private val enableSubscript: Boolean = true,
 ) : OrcaParser {
     private val cache = OrcaParserCache(maxEntries = cacheSize)
 
@@ -27,7 +31,7 @@ class OrcaMarkdownParser(
         require(cacheSize > 0) { "cacheSize must be greater than 0" }
     }
 
-    override fun cacheKey(): Any = ParserCacheKey(parser, maxTreeDepth)
+    override fun cacheKey(): Any = ParserCacheKey(parser, maxTreeDepth, enableSuperscript, enableSubscript)
 
     override fun parse(input: String): OrcaDocument {
         return parseInternal(input).document
@@ -89,6 +93,8 @@ class OrcaMarkdownParser(
             linkMap = LinkMap.buildLinkMap(root, footnoteExtraction.markdown),
             maxTreeDepth = maxTreeDepth,
             depthLimitReporter = depthLimitReporter,
+            enableSuperscript = enableSuperscript,
+            enableSubscript = enableSubscript,
         )
 
         val blocks = root.children

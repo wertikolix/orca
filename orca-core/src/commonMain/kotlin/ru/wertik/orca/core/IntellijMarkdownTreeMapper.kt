@@ -31,6 +31,8 @@ internal class IntellijTreeMapper(
     private val linkMap: LinkMap,
     private val maxTreeDepth: Int,
     private val depthLimitReporter: DepthLimitReporter,
+    private val enableSuperscript: Boolean = true,
+    private val enableSubscript: Boolean = true,
 ) {
     private val inlineFootnotes = mutableListOf<OrcaFootnoteDefinition>()
 
@@ -357,7 +359,11 @@ internal class IntellijTreeMapper(
                 inline
             }
         }
-        val withSuperSub = processSuperSubScript(withEmoji)
+        val withSuperSub = if (enableSuperscript || enableSubscript) {
+            processSuperSubScript(withEmoji)
+        } else {
+            withEmoji
+        }
         val normalized = if (trimEdges) {
             withSuperSub.trimEdgeWhitespace()
         } else {
@@ -805,20 +811,36 @@ internal class IntellijTreeMapper(
     }
 
     private fun parseSuperSubFromText(text: String): List<OrcaInline> {
-        // Match ^text^ for superscript and ~text~ for subscript (single delimiters only)
-        val regex = Regex("""(?<!\^)\^([^\^]+)\^(?!\^)|(?<!~)~([^~]+)~(?!~)""")
+        val superPattern = if (enableSuperscript) """(?<!\^)\^([^\^]+)\^(?!\^)""" else null
+        val subPattern = if (enableSubscript) """(?<!~)~([^~]+)~(?!~)""" else null
+        val combined = listOfNotNull(superPattern, subPattern).joinToString("|")
+        if (combined.isEmpty()) return listOf(OrcaInline.Text(text))
+
+        val regex = Regex(combined)
         val result = mutableListOf<OrcaInline>()
         var lastEnd = 0
         for (match in regex.findAll(text)) {
             if (match.range.first > lastEnd) {
                 result += OrcaInline.Text(text.substring(lastEnd, match.range.first))
             }
-            val supContent = match.groupValues[1]
-            val subContent = match.groupValues[2]
-            if (supContent.isNotEmpty()) {
-                result += OrcaInline.Superscript(content = listOf(OrcaInline.Text(supContent)))
-            } else if (subContent.isNotEmpty()) {
-                result += OrcaInline.Subscript(content = listOf(OrcaInline.Text(subContent)))
+            if (enableSuperscript && enableSubscript) {
+                val supContent = match.groupValues[1]
+                val subContent = match.groupValues[2]
+                if (supContent.isNotEmpty()) {
+                    result += OrcaInline.Superscript(content = listOf(OrcaInline.Text(supContent)))
+                } else if (subContent.isNotEmpty()) {
+                    result += OrcaInline.Subscript(content = listOf(OrcaInline.Text(subContent)))
+                }
+            } else if (enableSuperscript) {
+                val supContent = match.groupValues[1]
+                if (supContent.isNotEmpty()) {
+                    result += OrcaInline.Superscript(content = listOf(OrcaInline.Text(supContent)))
+                }
+            } else {
+                val subContent = match.groupValues[1]
+                if (subContent.isNotEmpty()) {
+                    result += OrcaInline.Subscript(content = listOf(OrcaInline.Text(subContent)))
+                }
             }
             lastEnd = match.range.last + 1
         }

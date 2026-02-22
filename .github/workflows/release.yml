@@ -119,10 +119,31 @@ jobs:
             -PcentralTokenUsername=${CENTRAL_TOKEN_USERNAME} \
             -PcentralTokenPassword=${CENTRAL_TOKEN_PASSWORD}
 
+          # Trigger automatic publishing on the staging repo.
+          # The staging repo may not be ready immediately after publish, so retry up to 3 times.
+          # If all retries fail we print a warning but do NOT fail the step – the Gradle
+          # publish above is the important part.
           auth="$(printf '%s' "${CENTRAL_TOKEN_USERNAME}:${CENTRAL_TOKEN_PASSWORD}" | base64 -w0)"
-          curl -fsS -X POST \
-            -H "Authorization: Bearer ${auth}" \
-            "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/ru.wertik?publishing_type=automatic"
+          publish_url="https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/ru.wertik?publishing_type=automatic"
+          max_attempts=3
+          delay=10
+          for attempt in $(seq 1 "${max_attempts}"); do
+            echo "Attempt ${attempt}/${max_attempts}: POST ${publish_url}"
+            if curl -fsS -X POST \
+              -H "Authorization: Bearer ${auth}" \
+              "${publish_url}"; then
+              echo "Automatic publishing triggered successfully."
+              break
+            else
+              echo "::warning::Attempt ${attempt}/${max_attempts} to trigger automatic publishing failed (curl exit code: $?)."
+              if [[ "${attempt}" -lt "${max_attempts}" ]]; then
+                echo "Retrying in ${delay}s…"
+                sleep "${delay}"
+              else
+                echo "::warning::All ${max_attempts} attempts to trigger automatic publishing failed. The staged artifacts were published to the staging repo by Gradle; you may need to release them manually from the Sonatype UI."
+              fi
+            fi
+          done
 
       - name: Upload release artifacts to workflow
         uses: actions/upload-artifact@v4
