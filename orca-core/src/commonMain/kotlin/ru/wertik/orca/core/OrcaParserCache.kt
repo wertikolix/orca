@@ -22,31 +22,36 @@ internal class OrcaParserCache(
         parse: () -> OrcaParseResult,
     ): OrcaParseResult {
         // Fast path: check cache under a short lock.
-        lock.withLock {
+        val cached = lock.withLock {
             val entry = entries[key]
             if (entry != null && entry.input == input) {
                 // Cache hit — move to end (LRU refresh).
                 entries.remove(key)
                 entries[key] = entry
-                return entry.result
+                entry.result
+            } else {
+                null
             }
         }
+        if (cached != null) return cached
 
         // Slow path: parse outside the lock to avoid blocking other threads.
         val result = parse()
 
-        lock.withLock {
+        val raced = lock.withLock {
             // Re-check: another thread may have raced and cached the same key.
             val existing = entries[key]
             if (existing != null && existing.input == input) {
-                return existing.result
+                existing.result
+            } else {
+                entries.remove(key)
+                entries[key] = CachedParseEntry(input = input, result = result)
+                trimToLimit()
+                null
             }
-            entries.remove(key)
-            entries[key] = CachedParseEntry(input = input, result = result)
-            trimToLimit()
         }
 
-        return result
+        return raced ?: result
     }
 
     fun clear() {
