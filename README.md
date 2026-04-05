@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.9.0`
+- Current stable minor: `0.9.1`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -44,8 +44,8 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.9.0")
-implementation("ru.wertik:orca-compose:0.9.0")
+implementation("ru.wertik:orca-core:0.9.1")
+implementation("ru.wertik:orca-compose:0.9.1")
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -168,7 +168,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.9.0`)
+## Supported Syntax (`0.9.1`)
 
 ### Blocks
 
@@ -225,8 +225,8 @@ data class OrcaParseResult(
 - `LazyColumn` root for long documents
 - optional root layout switch: `OrcaRootLayout.LAZY_COLUMN` or `OrcaRootLayout.COLUMN`
 - parsing off main thread (`Dispatchers.Default`)
-- parse failure fallback to previous valid document (UI is not dropped)
-- deterministic block keys for better list state retention
+- parse failure fallback to previous valid document (UI is not dropped); partial results with errors accepted when blocks are present (avoids streaming freeze on unclosed fences)
+- deterministic block keys for better list state retention (FNV-1a hash with 256-char sampling + tail fold)
 - **full document text selection** — all text (headings, paragraphs, lists, quotes, tables) is selectable
 - footnotes rendered as superscript markers + numbered definitions block
 - footnote navigation:
@@ -272,6 +272,7 @@ data class OrcaParseResult(
 - block-level HTML rendered with styled AnnotatedString
 - supported tags: `<b>`, `<i>`, `<s>`, `<u>`, `<code>`, `<a>`, `<sup>`, `<sub>`, `<mark>`, `<br>`, `<p>`, `<h1>`-`<h6>`, `<li>`, `<hr>`, `<blockquote>`, `<pre>`
 - HTML entities decoded (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&nbsp;`, etc.)
+- interleaved/malformed tags handled gracefully (e.g. `<b><i></b></i>` -- styles popped and re-pushed correctly)
 - unknown tags gracefully stripped
 
 ## Styling
@@ -422,9 +423,21 @@ For release-like check:
 
 ## Versioning
 
-- Stable releases use plain semver tags like `0.8.0`
+- Stable releases use plain semver tags like `0.9.1`
 - Pre-releases use `-alpha`, `-beta`, `-rc`
 - Maven Central artifacts are immutable after publish
+
+## Changelog
+
+### 0.9.1
+
+- **Cache lock fix** -- `OrcaParserCache` now parses outside the lock; concurrent callers no longer block each other (eliminates ANR risk on main thread)
+- **HTML interleaved tags** -- malformed tag nesting like `<b><i></b></i>` is handled correctly by scanning the stack and re-pushing intervening styles
+- **Table recomposition** -- `TableRowNode` uses `rememberUpdatedState` for callbacks, preventing unnecessary `AnnotatedString` rebuilds on every recomposition
+- **Initial parse diagnostics** -- warnings and errors from the synchronous first-frame parse are now reported via `onParseDiagnostics`
+- **Streaming freeze fix** -- parse results with errors but non-empty blocks are accepted instead of falling back to a stale document (fixes UI freeze on unclosed code fences during streaming)
+- **Render depth guard** -- `OrcaBlockNode` enforces `MAX_RENDER_DEPTH = 32` to prevent stack overflow on deeply nested markdown from custom parsers
+- **Hash distribution** -- `stableHash` samples 256 characters (was 128) and folds in tail content for strings >256 chars, reducing LazyColumn key collisions for code blocks with identical imports
 
 ## Contributing
 
