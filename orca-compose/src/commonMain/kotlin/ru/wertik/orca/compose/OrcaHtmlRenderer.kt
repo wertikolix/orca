@@ -175,14 +175,39 @@ internal fun renderHtmlToAnnotatedString(
                     "blockquote", "pre",
                     -> {
                         if (builderPushCount > 0 && tagPushStack.isNotEmpty()) {
-                            // Only pop if the most recent push was for this tag type,
-                            // or a compatible one (e.g. </b> can close <strong>).
                             val normalizedClosing = normalizeTagName(tagName)
-                            val lastPushed = tagPushStack.lastOrNull()?.let { normalizeTagName(it) }
-                            if (lastPushed == normalizedClosing) {
-                                pop()
-                                builderPushCount--
-                                tagPushStack.removeLastOrNull()
+
+                            // Find the matching opening tag anywhere in the stack.
+                            // This handles interleaved tags like <b><i></b></i>:
+                            // when </b> arrives, last pushed is "i", so we need to
+                            // pop "i", pop "b" (the match), then re-push "i".
+                            val matchIndex = tagPushStack.indexOfLast {
+                                normalizeTagName(it) == normalizedClosing
+                            }
+                            if (matchIndex >= 0) {
+                                // Collect tags above the match that need re-pushing.
+                                val toPop = tagPushStack.size - matchIndex
+                                val toRePush = mutableListOf<String>()
+                                repeat(toPop) {
+                                    if (builderPushCount > 0) {
+                                        pop()
+                                        builderPushCount--
+                                        val removed = tagPushStack.removeLastOrNull()
+                                        // Re-push everything except the matched tag.
+                                        if (removed != null && normalizeTagName(removed) != normalizedClosing) {
+                                            toRePush.add(0, removed) // prepend to preserve order
+                                        }
+                                    }
+                                }
+                                // Re-apply styles that were popped but not closed.
+                                for (tag in toRePush) {
+                                    val reStyle = styleForTag(tag, style)
+                                    if (reStyle != null) {
+                                        pushStyle(reStyle)
+                                        builderPushCount++
+                                        tagPushStack.add(tag)
+                                    }
+                                }
                             }
                         }
                     }
@@ -226,6 +251,27 @@ private fun normalizeTagName(tag: String): String {
         "del", "strike" -> "s"
         "ins" -> "u"
         else -> tag
+    }
+}
+
+/**
+ * Returns the [SpanStyle] to re-push when a tag is temporarily popped
+ * to close an interleaved inner tag.
+ */
+private fun styleForTag(tag: String, style: OrcaStyle): SpanStyle? {
+    return when (tag) {
+        "b", "strong" -> SpanStyle(fontWeight = FontWeight.Bold)
+        "i", "em" -> SpanStyle(fontStyle = FontStyle.Italic)
+        "s", "del", "strike" -> SpanStyle(textDecoration = TextDecoration.LineThrough)
+        "u", "ins" -> SpanStyle(textDecoration = TextDecoration.Underline)
+        "code" -> style.inline.inlineCode
+        "sup" -> SpanStyle(baselineShift = BaselineShift.Superscript, fontSize = 12.sp)
+        "sub" -> SpanStyle(baselineShift = BaselineShift.Subscript, fontSize = 12.sp)
+        "mark" -> SpanStyle(background = Color(0x40FFEB3B))
+        "h1", "h2", "h3", "h4", "h5", "h6" -> SpanStyle(fontWeight = FontWeight.Bold)
+        "blockquote" -> SpanStyle(fontStyle = FontStyle.Italic, color = Color(0xFF6D6D6D))
+        "pre" -> SpanStyle(fontFamily = FontFamily.Monospace)
+        else -> null
     }
 }
 

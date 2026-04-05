@@ -17,6 +17,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -144,30 +146,29 @@ private fun TableRowNode(
     sourceBlockKey: String,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
 ) {
+    // Use rememberUpdatedState for callbacks so that the AnnotatedString
+    // cache (keyed on cell data + style) doesn't invalidate every recomposition
+    // due to a new lambda reference.
+    val currentOnLinkClick by rememberUpdatedState(onLinkClick)
+    val currentSecurityPolicy by rememberUpdatedState(securityPolicy)
+    val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
+
     Row(
         modifier = Modifier.height(IntrinsicSize.Min),
     ) {
         repeat(columnCount) { index ->
             val cell = cells.getOrNull(index)
-            val text = remember(
-                cell,
-                style,
-                onLinkClick,
-                securityPolicy,
-                footnoteNumbers,
-                sourceBlockKey,
-                onFootnoteReferenceClick,
-            ) {
+            val text = remember(cell, style, footnoteNumbers, sourceBlockKey) {
                 if (cell == null) {
                     AnnotatedString("")
                 } else {
                     buildInlineAnnotatedString(
                         inlines = cell.content,
                         style = style,
-                        onLinkClick = onLinkClick,
-                        securityPolicy = securityPolicy,
+                        onLinkClick = currentOnLinkClick,
+                        securityPolicy = currentSecurityPolicy,
                         footnoteNumbers = footnoteNumbers,
-                        onFootnoteClick = { label -> onFootnoteReferenceClick(label, sourceBlockKey) },
+                        onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
                     )
                 }
             }

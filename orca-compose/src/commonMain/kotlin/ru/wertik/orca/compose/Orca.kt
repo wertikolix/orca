@@ -26,6 +26,7 @@ import ru.wertik.orca.core.OrcaBlock
 import ru.wertik.orca.core.OrcaDocument
 import ru.wertik.orca.core.OrcaParseError
 import ru.wertik.orca.core.OrcaParseDiagnostics
+import ru.wertik.orca.core.OrcaParseResult
 import ru.wertik.orca.core.OrcaParser
 import kotlin.reflect.KClass
 
@@ -91,19 +92,29 @@ fun Orca(
     // Synchronous initial parse so the very first frame has the correct layout size.
     // This eliminates the empty→content "jump" when items scroll into a LazyColumn.
     // Only runs once per composable instance (keyed on parserKey only, not markdown).
-    val initialDocument = remember(parserKey) {
+    val initialParseResult = remember(parserKey) {
         try {
             if (parseCacheKey == null) {
-                parser.parse(markdown)
+                parser.parseWithDiagnostics(markdown)
             } else {
-                parser.parseCached(key = parseCacheKey, input = markdown)
+                parser.parseCachedWithDiagnostics(key = parseCacheKey, input = markdown)
             }
         } catch (_: Throwable) {
-            OrcaDocument(emptyList())
+            OrcaParseResult(
+                document = OrcaDocument(emptyList()),
+                diagnostics = OrcaParseDiagnostics(),
+            )
+        }
+    }
+    // Report diagnostics from the initial synchronous parse so callers
+    // observe warnings/errors even before the debounced LaunchedEffect fires.
+    LaunchedEffect(initialParseResult) {
+        if (initialParseResult.diagnostics.hasWarnings || initialParseResult.diagnostics.hasErrors) {
+            onParseDiagnostics?.invoke(initialParseResult.diagnostics)
         }
     }
 
-    var document by remember(parserKey) { mutableStateOf(initialDocument) }
+    var document by remember(parserKey) { mutableStateOf(initialParseResult.document) }
 
     // Debounced re-parse for subsequent updates (streaming, edits).
     // On first composition this still fires but the result will match initialDocument
@@ -133,12 +144,18 @@ fun Orca(
             null
         }
 
-        val parsed = if (parsedResult == null || parsedResult.diagnostics.hasErrors) {
-            if (parsedResult?.diagnostics?.hasErrors == true) {
-                println("W/$PARSE_LOG_TAG: parser reported errors, using previous document")
-            }
+        val parsed = if (parsedResult == null) {
+            // Total parser failure (exception) — keep previous document.
+            document
+        } else if (parsedResult.diagnostics.hasErrors && parsedResult.document.blocks.isEmpty()) {
+            // Parser reported errors AND produced an empty document — keep previous.
+            println("W/$PARSE_LOG_TAG: parser reported errors with empty result, using previous document")
             document
         } else {
+            // Accept the document even when diagnostics.hasErrors is true,
+            // as long as blocks were produced. This prevents the UI from
+            // "freezing" on a stale document during streaming when markdown
+            // is temporarily invalid (e.g. unclosed code fence).
             parsedResult.document
         }
         onParseDiagnostics?.invoke(
@@ -426,15 +443,27 @@ private fun blockContentKey(block: OrcaBlock): String {
 /**
  * FNV-1a 32-bit hash — distributes much better than [String.hashCode] for short
  * prefixes, dramatically reducing key collisions in the LazyColumn.
+ *
+ * Samples up to 256 leading characters and, for strings longer than 256 chars,
+ * folds in characters from the tail as well. Combined with the length xor,
+ * this virtually eliminates collisions for code blocks with identical imports.
  */
 private fun stableHash(value: String): String {
     var hash = 0x811c9dc5.toInt()
-    val limit = value.length.coerceAtMost(128)
+    val limit = value.length.coerceAtMost(256)
     for (i in 0 until limit) {
         hash = hash xor value[i].code
         hash = hash * 0x01000193
     }
-    // Include length so that strings sharing a 128-char prefix but differing
+    // For long strings, fold in characters from the tail for better discrimination.
+    if (value.length > 256) {
+        val tailStart = (value.length - 64).coerceAtLeast(256)
+        for (i in tailStart until value.length) {
+            hash = hash xor value[i].code
+            hash = hash * 0x01000193
+        }
+    }
+    // Include length so that strings sharing a prefix but differing
     // in length still produce different hashes.
     hash = hash xor value.length
     return hash.toUInt().toString(36)

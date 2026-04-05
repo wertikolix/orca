@@ -46,6 +46,8 @@ import ru.wertik.orca.core.OrcaAdmonitionType
 import ru.wertik.orca.core.OrcaBlock
 import ru.wertik.orca.core.OrcaTaskState
 
+private const val MAX_RENDER_DEPTH = 32
+
 @Composable
 internal fun OrcaBlockNode(
     block: OrcaBlock,
@@ -58,7 +60,11 @@ internal fun OrcaBlockNode(
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    depth: Int = 0,
 ) {
+    // Guard against excessively nested markdown (e.g. 50-level deep quotes).
+    // The parser caps at maxTreeDepth, but a custom parser might not.
+    if (depth > MAX_RENDER_DEPTH) return
     when (block) {
         is OrcaBlock.Heading -> HeadingNode(
             block = block,
@@ -91,6 +97,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
+            depth = depth,
         )
 
         is OrcaBlock.Quote -> QuoteBlockNode(
@@ -104,6 +111,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
+            depth = depth,
         )
 
         is OrcaBlock.CodeBlock -> CodeBlockNode(block = block, style = style)
@@ -138,6 +146,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
+            depth = depth,
         )
 
         is OrcaBlock.HtmlBlock -> HtmlBlockNode(
@@ -158,6 +167,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
+            depth = depth,
         )
 
         is OrcaBlock.DefinitionList -> DefinitionListNode(
@@ -171,6 +181,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
+            depth = depth,
         )
     }
 }
@@ -274,6 +285,7 @@ private fun ListBlockNode(
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    depth: Int = 0,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
@@ -307,6 +319,7 @@ private fun ListBlockNode(
                             onFootnoteReferenceClick = onFootnoteReferenceClick,
                             onFootnoteBackClick = onFootnoteBackClick,
                             imageContent = imageContent,
+                            depth = depth + 1,
                         )
                     }
                 }
@@ -327,6 +340,7 @@ private fun QuoteBlockNode(
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    depth: Int = 0,
 ) {
     Row(
         modifier = Modifier.height(IntrinsicSize.Min),
@@ -355,6 +369,7 @@ private fun QuoteBlockNode(
                     onFootnoteReferenceClick = onFootnoteReferenceClick,
                     onFootnoteBackClick = onFootnoteBackClick,
                     imageContent = imageContent,
+                    depth = depth + 1,
                 )
             }
         }
@@ -373,6 +388,7 @@ private fun FootnotesNode(
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    depth: Int = 0,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
@@ -409,6 +425,7 @@ private fun FootnotesNode(
                             onFootnoteReferenceClick = onFootnoteReferenceClick,
                             onFootnoteBackClick = onFootnoteBackClick,
                             imageContent = imageContent,
+                            depth = depth + 1,
                         )
                     }
 
@@ -596,6 +613,7 @@ private fun AdmonitionNode(
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    depth: Int = 0,
 ) {
     val admonitionStyle = style.admonition
     val color = when (block.type) {
@@ -677,6 +695,7 @@ private fun AdmonitionNode(
                             onFootnoteReferenceClick = onFootnoteReferenceClick,
                             onFootnoteBackClick = onFootnoteBackClick,
                             imageContent = imageContent,
+                            depth = depth + 1,
                         )
                     }
                 }
@@ -697,6 +716,7 @@ private fun DefinitionListNode(
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    depth: Int = 0,
 ) {
     val dlStyle = style.definitionList
     Column(
@@ -745,6 +765,7 @@ private fun DefinitionListNode(
                             onFootnoteReferenceClick = onFootnoteReferenceClick,
                             onFootnoteBackClick = onFootnoteBackClick,
                             imageContent = imageContent,
+                            depth = depth + 1,
                         )
                     }
                 }

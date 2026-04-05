@@ -7,32 +7,46 @@ internal class OrcaParserCache(
     private val entries = linkedMapOf<Any, CachedParseEntry>()
     private val lock = OrcaLock()
 
+    /**
+     * Returns the cached result for [key] if it matches [input],
+     * otherwise invokes [parse] and caches the result.
+     *
+     * Thread-safe: the lock only guards cache reads and writes.
+     * Parsing itself runs **outside** the lock so that concurrent
+     * callers on different keys (or the same key with different
+     * input) never block each other.
+     */
     fun getOrPut(
         key: Any,
         input: String,
         parse: () -> OrcaParseResult,
     ): OrcaParseResult {
-        return lock.withLock {
+        // Fast path: check cache under a short lock.
+        lock.withLock {
             val entry = entries[key]
             if (entry != null && entry.input == input) {
                 // Cache hit — move to end (LRU refresh).
                 entries.remove(key)
                 entries[key] = entry
-                return@withLock entry.result
+                return entry.result
             }
-
-            // Cache miss — parse under lock to prevent duplicate work
-            // and ensure consistent cache state for the same key.
-            val parsed = parse()
-
-            entries.remove(key)
-            entries[key] = CachedParseEntry(
-                input = input,
-                result = parsed,
-            )
-            trimToLimit()
-            parsed
         }
+
+        // Slow path: parse outside the lock to avoid blocking other threads.
+        val result = parse()
+
+        lock.withLock {
+            // Re-check: another thread may have raced and cached the same key.
+            val existing = entries[key]
+            if (existing != null && existing.input == input) {
+                return existing.result
+            }
+            entries.remove(key)
+            entries[key] = CachedParseEntry(input = input, result = result)
+            trimToLimit()
+        }
+
+        return result
     }
 
     fun clear() {
