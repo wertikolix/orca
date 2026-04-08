@@ -597,6 +597,25 @@ Everything below gets into practical patterns.
 
 ## Deep nesting
 
+<details>
+<summary>Architecture patterns breakdown</summary>
+
+- **MVVM** — standard for Compose apps
+    - ViewModel holds `StateFlow`
+    - UI collects and renders
+- MVI — more structured, more boilerplate
+
+</details>
+
+<details open>
+<summary>Testing strategies</summary>
+
+- Unit tests for business logic
+- `@Preview` for UI snapshots
+- Integration tests with `ComposeTestRule`
+
+</details>
+
 - Architecture patterns
     - **MVVM** — standard for Compose apps
         - ViewModel holds `StateFlow`

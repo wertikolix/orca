@@ -20,6 +20,10 @@ kotlin {
         browser()
     }
 
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.intellij.markdown)

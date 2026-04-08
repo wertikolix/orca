@@ -231,6 +231,15 @@ data class OrcaDefinitionListStyle(
     val definitionSpacing: Dp = 4.dp,
 )
 
+data class OrcaDetailsStyle(
+    val summaryStyle: TextStyle = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium),
+    val borderColor: Color = Color(0xFFD0D7DE),
+    val borderWidth: Dp = 1.dp,
+    val shape: Shape = RoundedCornerShape(8.dp),
+    val background: Color = Color(0x08000000),
+    val contentPadding: PaddingValues = PaddingValues(12.dp),
+)
+
 data class OrcaStyle(
     val typography: OrcaTypographyStyle = OrcaTypographyStyle(),
     val inline: OrcaInlineStyle = OrcaInlineStyle(),
@@ -243,6 +252,7 @@ data class OrcaStyle(
     val admonition: OrcaAdmonitionStyle = OrcaAdmonitionStyle(),
     val inlineImage: OrcaInlineImageStyle = OrcaInlineImageStyle(),
     val definitionList: OrcaDefinitionListStyle = OrcaDefinitionListStyle(),
+    val details: OrcaDetailsStyle = OrcaDetailsStyle(),
 ) {
     fun heading(level: Int): TextStyle = typography.heading(level)
 
@@ -405,6 +415,11 @@ object OrcaDefaults {
         ),
         definitionList = OrcaDefinitionListStyle(
             termStyle = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE0E0E0)),
+        ),
+        details = OrcaDetailsStyle(
+            summaryStyle = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE0E0E0)),
+            borderColor = Color(0xFF333333),
+            background = Color(0x0DFFFFFF),
         ),
     )
 }

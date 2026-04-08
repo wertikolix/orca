@@ -183,6 +183,20 @@ internal fun OrcaBlockNode(
             imageContent = imageContent,
             depth = depth,
         )
+
+        is OrcaBlock.Details -> DetailsNode(
+            block = block,
+            style = style,
+            onLinkClick = onLinkClick,
+            securityPolicy = securityPolicy,
+            footnoteNumbers = footnoteNumbers,
+            sourceBlockKey = sourceBlockKey,
+            activeFootnoteLabel = activeFootnoteLabel,
+            onFootnoteReferenceClick = onFootnoteReferenceClick,
+            onFootnoteBackClick = onFootnoteBackClick,
+            imageContent = imageContent,
+            depth = depth,
+        )
     }
 }
 
@@ -768,6 +782,78 @@ private fun DefinitionListNode(
                             depth = depth + 1,
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailsNode(
+    block: OrcaBlock.Details,
+    style: OrcaStyle,
+    onLinkClick: (String) -> Unit,
+    securityPolicy: OrcaSecurityPolicy,
+    footnoteNumbers: Map<String, Int>,
+    sourceBlockKey: String,
+    activeFootnoteLabel: String?,
+    onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
+    onFootnoteBackClick: (label: String) -> Unit,
+    imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    depth: Int = 0,
+) {
+    val detailsStyle = style.details
+    var expanded by remember { mutableStateOf(block.startOpen) }
+    val summary = block.summary ?: "Details"
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(detailsStyle.shape)
+            .border(detailsStyle.borderWidth, detailsStyle.borderColor, detailsStyle.shape)
+            .background(detailsStyle.background, detailsStyle.shape),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(detailsStyle.contentPadding),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = if (expanded) "\u25BC" else "\u25B6",
+                style = detailsStyle.summaryStyle,
+                modifier = Modifier.padding(end = 8.dp),
+            )
+            Text(
+                text = summary,
+                style = detailsStyle.summaryStyle,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            Column(
+                modifier = Modifier.padding(detailsStyle.contentPadding),
+                verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
+            ) {
+                block.blocks.forEach { childBlock ->
+                    OrcaBlockNode(
+                        block = childBlock,
+                        style = style,
+                        onLinkClick = onLinkClick,
+                        securityPolicy = securityPolicy,
+                        footnoteNumbers = footnoteNumbers,
+                        sourceBlockKey = sourceBlockKey,
+                        activeFootnoteLabel = activeFootnoteLabel,
+                        onFootnoteReferenceClick = onFootnoteReferenceClick,
+                        onFootnoteBackClick = onFootnoteBackClick,
+                        imageContent = imageContent,
+                        depth = depth + 1,
+                    )
                 }
             }
         }

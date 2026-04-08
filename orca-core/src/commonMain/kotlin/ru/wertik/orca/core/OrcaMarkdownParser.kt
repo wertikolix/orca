@@ -83,7 +83,8 @@ class OrcaMarkdownParser(
     private fun parseInternal(input: String): OrcaParseResult {
         val frontMatterExtraction = extractFrontMatter(input)
         val abbreviationExtraction = extractAbbreviations(frontMatterExtraction.markdown)
-        val definitionListExtraction = extractDefinitionLists(abbreviationExtraction.markdown)
+        val detailsExtraction = extractDetailsBlocks(abbreviationExtraction.markdown)
+        val definitionListExtraction = extractDefinitionLists(detailsExtraction.markdown)
         val footnoteExtraction = extractFootnoteDefinitions(definitionListExtraction.markdown)
         val root = parser.buildMarkdownTreeFromString(footnoteExtraction.markdown)
         val depthLimitReporter = DepthLimitReporter(onDepthLimitExceeded)
@@ -101,26 +102,39 @@ class OrcaMarkdownParser(
             .mapNotNull { child -> mapper.mapBlock(child, depth = 0) }
             .toMutableList()
 
-        // Replace definition list placeholders with actual DefinitionList blocks.
+        // Replace placeholders with actual blocks.
         val defListPlaceholderRegex = Regex("""^<!--orca:deflist:(\d+)-->$""")
+        val detailsPlaceholderRegex = Regex("""^<!--orca:details:(\d+)-->$""")
         val resolvedBlocks = blocks.map { block ->
             if (block is OrcaBlock.HtmlBlock) {
-                val match = defListPlaceholderRegex.matchEntire(block.html)
-                if (match != null) {
-                    val listIndex = match.groupValues[1].toInt()
-                    val source = definitionListExtraction.definitionLists.getOrNull(listIndex)
-                    if (source != null) {
-                        mapDefinitionList(
-                            parser = parser,
-                            source = source,
-                            maxTreeDepth = maxTreeDepth,
-                            depthLimitReporter = depthLimitReporter,
-                        )
-                    } else {
-                        block
+                val defMatch = defListPlaceholderRegex.matchEntire(block.html)
+                val detMatch = detailsPlaceholderRegex.matchEntire(block.html)
+                when {
+                    defMatch != null -> {
+                        val listIndex = defMatch.groupValues[1].toInt()
+                        val source = definitionListExtraction.definitionLists.getOrNull(listIndex)
+                        if (source != null) {
+                            mapDefinitionList(
+                                parser = parser,
+                                source = source,
+                                maxTreeDepth = maxTreeDepth,
+                                depthLimitReporter = depthLimitReporter,
+                            )
+                        } else block
                     }
-                } else {
-                    block
+                    detMatch != null -> {
+                        val detIndex = detMatch.groupValues[1].toInt()
+                        val source = detailsExtraction.detailsBlocks.getOrNull(detIndex)
+                        if (source != null) {
+                            mapDetailsBlock(
+                                parser = parser,
+                                source = source,
+                                maxTreeDepth = maxTreeDepth,
+                                depthLimitReporter = depthLimitReporter,
+                            )
+                        } else block
+                    }
+                    else -> block
                 }
             } else {
                 block

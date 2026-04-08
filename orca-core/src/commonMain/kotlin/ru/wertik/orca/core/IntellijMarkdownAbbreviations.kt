@@ -107,6 +107,9 @@ private fun applyAbbreviationsToBlock(
                 )
             },
         )
+        is OrcaBlock.Details -> block.copy(
+            blocks = applyAbbreviations(block.blocks, abbreviations),
+        )
         is OrcaBlock.CodeBlock,
         is OrcaBlock.Image,
         is OrcaBlock.ThematicBreak,

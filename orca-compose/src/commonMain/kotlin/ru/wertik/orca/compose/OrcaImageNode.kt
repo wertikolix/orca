@@ -25,7 +25,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import ru.wertik.orca.core.OrcaBlock
@@ -78,20 +77,10 @@ internal fun MarkdownImageNode(
             .clip(style.image.shape)
             .background(style.image.background)
             .semantics { contentDescription = description },
-    ) {
-        when (painter.state) {
-            is AsyncImagePainter.State.Error -> {
-                ImageErrorPlaceholder(style = style)
-            }
-            is AsyncImagePainter.State.Loading,
-            is AsyncImagePainter.State.Empty -> {
-                ShimmerPlaceholder(style = style)
-            }
-            is AsyncImagePainter.State.Success -> {
-                SubcomposeAsyncImageContent()
-            }
-        }
-    }
+        loading = { ShimmerPlaceholder(style = style) },
+        error = { ImageErrorPlaceholder(style = style) },
+        success = { SubcomposeAsyncImageContent() },
+    )
 }
 
 @Composable

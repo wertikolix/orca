@@ -186,6 +186,7 @@ data class OrcaParseResult(
 - footnote definitions
 - **admonitions / callouts** (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`)
 - **definition lists** (`Term` + `: Definition`)
+- **details / spoilers** (`<details>/<summary>` — collapsible blocks)
 
 ### Inlines
 
@@ -244,6 +245,14 @@ data class OrcaParseResult(
 - light and dark theme color presets
 - **collapsible mode** — toggle content visibility with animated expand/collapse
 
+### Details / spoiler rendering
+
+- HTML `<details>/<summary>` blocks rendered as collapsible sections
+- animated expand/collapse
+- supports `<details open>` for initially expanded state
+- nested markdown content inside details is fully rendered
+- styled border + background, configurable via `OrcaDetailsStyle`
+
 ### Code block rendering
 
 - monospace typography
@@ -290,6 +299,7 @@ Use `OrcaStyle` as a single configuration object:
 - `inlineImage`
 - `admonition`
 - `definitionList`
+- `details`
 
 ### Adaptive theme
 
@@ -404,10 +414,6 @@ Orca(
     ),
 )
 ```
-
-## Not Supported Yet
-
-- built-in LaTeX math rendering
 
 ## Verification
 
