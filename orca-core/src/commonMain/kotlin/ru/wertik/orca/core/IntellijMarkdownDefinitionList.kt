@@ -220,7 +220,7 @@ internal fun mapDefinitionList(
     return OrcaBlock.DefinitionList(items = items)
 }
 
-private fun parseInlinesFromMarkdown(
+internal fun parseInlinesFromMarkdown(
     parser: MarkdownParser,
     markdown: String,
     maxTreeDepth: Int,

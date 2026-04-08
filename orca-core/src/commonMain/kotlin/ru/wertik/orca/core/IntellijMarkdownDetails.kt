@@ -94,8 +94,13 @@ internal fun mapDetailsBlock(
         )
         root.children.mapNotNull { child -> mapper.mapBlock(child, depth = 0) }
     }
+    val summaryInlines = if (source.summary != null) {
+        parseInlinesFromMarkdown(parser, source.summary, maxTreeDepth, depthLimitReporter)
+    } else {
+        emptyList()
+    }
     return OrcaBlock.Details(
-        summary = source.summary,
+        summary = summaryInlines,
         blocks = blocks,
         startOpen = source.startOpen,
     )

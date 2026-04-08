@@ -146,7 +146,7 @@ sealed interface OrcaBlock {
 
     /** Collapsible `<details>/<summary>` block. */
     data class Details(
-        val summary: String?,
+        val summary: List<OrcaInline>,
         val blocks: List<OrcaBlock>,
         val startOpen: Boolean = false,
     ) : OrcaBlock

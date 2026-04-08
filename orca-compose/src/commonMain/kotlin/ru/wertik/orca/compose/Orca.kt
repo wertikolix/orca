@@ -437,7 +437,7 @@ private fun blockContentKey(block: OrcaBlock): String {
         is OrcaBlock.HtmlBlock -> "Html:${stableHash(block.html)}"
         is OrcaBlock.Admonition -> "Adm:${block.type.name}:${block.blocks.size}"
         is OrcaBlock.DefinitionList -> "DL:${block.items.size}:${block.items.firstOrNull()?.let { inlineContentDigest(it.term) }.orEmpty()}"
-        is OrcaBlock.Details -> "Det:${block.summary.orEmpty().take(32)}:${block.blocks.size}"
+        is OrcaBlock.Details -> "Det:${inlineContentDigest(block.summary)}:${block.blocks.size}"
     }
 }
 

@@ -108,6 +108,16 @@ internal fun renderHtmlToAnnotatedString(
                         builderPushCount++
                         tagPushStack.add(tagName)
                     }
+                    "kbd" -> {
+                        val s = SpanStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            background = Color(0x1A000000),
+                        )
+                        pushStyle(s)
+                        builderPushCount++
+                        tagPushStack.add(tagName)
+                    }
                     "a" -> {
                         val href = HREF_REGEX.find(attrs)?.groupValues?.get(1).orEmpty()
                         if (href.isNotEmpty() && securityPolicy.isAllowed(OrcaUrlType.LINK, href)) {
@@ -170,7 +180,7 @@ internal fun renderHtmlToAnnotatedString(
             } else {
                 when (tagName) {
                     "b", "strong", "i", "em", "s", "del", "strike", "u", "ins",
-                    "code", "sup", "sub", "mark", "a",
+                    "code", "sup", "sub", "mark", "kbd", "a",
                     "h1", "h2", "h3", "h4", "h5", "h6",
                     "blockquote", "pre",
                     -> {
@@ -232,10 +242,21 @@ private fun AnnotatedString.Builder.endsWith(suffix: String): Boolean {
     return text.endsWith(suffix)
 }
 
+private val NUMERIC_ENTITY_DEC = Regex("""&#(\d+);""")
+private val NUMERIC_ENTITY_HEX = Regex("""&#x([0-9a-fA-F]+);""")
+
 private fun decodeHtmlEntities(text: String): String {
     var result = text
     ENTITY_MAP.forEach { (entity, replacement) ->
         result = result.replace(entity, replacement)
+    }
+    result = NUMERIC_ENTITY_DEC.replace(result) { m ->
+        val code = m.groupValues[1].toIntOrNull() ?: return@replace m.value
+        runCatching { String(intArrayOf(code), 0, 1) }.getOrDefault(m.value)
+    }
+    result = NUMERIC_ENTITY_HEX.replace(result) { m ->
+        val code = m.groupValues[1].toIntOrNull(16) ?: return@replace m.value
+        runCatching { String(intArrayOf(code), 0, 1) }.getOrDefault(m.value)
     }
     return result
 }
@@ -268,6 +289,7 @@ private fun styleForTag(tag: String, style: OrcaStyle): SpanStyle? {
         "sup" -> SpanStyle(baselineShift = BaselineShift.Superscript, fontSize = 12.sp)
         "sub" -> SpanStyle(baselineShift = BaselineShift.Subscript, fontSize = 12.sp)
         "mark" -> SpanStyle(background = Color(0x40FFEB3B))
+        "kbd" -> SpanStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, background = Color(0x1A000000))
         "h1", "h2", "h3", "h4", "h5", "h6" -> SpanStyle(fontWeight = FontWeight.Bold)
         "blockquote" -> SpanStyle(fontStyle = FontStyle.Italic, color = Color(0xFF6D6D6D))
         "pre" -> SpanStyle(fontFamily = FontFamily.Monospace)

@@ -3,11 +3,19 @@ package ru.wertik.orca.compose
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.LinkInteractionListener
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 import ru.wertik.orca.core.OrcaInline
 
 internal fun buildInlineAnnotatedString(
@@ -37,6 +45,7 @@ private fun AnnotatedString.Builder.appendInlines(
     securityPolicy: OrcaSecurityPolicy,
     footnoteNumbers: Map<String, Int>,
     onFootnoteClick: ((String) -> Unit)?,
+    htmlTagStack: MutableList<String> = mutableListOf(),
 ) {
     inlines.forEach { inline ->
         appendInline(
@@ -46,6 +55,7 @@ private fun AnnotatedString.Builder.appendInlines(
             securityPolicy = securityPolicy,
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = onFootnoteClick,
+            htmlTagStack = htmlTagStack,
         )
     }
 }
@@ -57,6 +67,7 @@ private fun AnnotatedString.Builder.appendInline(
     securityPolicy: OrcaSecurityPolicy,
     footnoteNumbers: Map<String, Int>,
     onFootnoteClick: ((String) -> Unit)?,
+    htmlTagStack: MutableList<String>,
 ) {
     when (inline) {
         is OrcaInline.Text -> append(inline.text)
@@ -176,9 +187,37 @@ private fun AnnotatedString.Builder.appendInline(
         }
 
         is OrcaInline.HtmlInline -> {
-            val plainText = htmlInlineFallbackText(inline.html)
-            if (plainText.isNotEmpty()) {
-                append(plainText)
+            val tag = parseHtmlInlineTag(inline.html)
+            if (tag != null) {
+                if (!tag.isClosing) {
+                    val spanStyle = htmlInlineStyleForTag(tag.name, style)
+                    if (spanStyle != null) {
+                        pushStyle(spanStyle)
+                        htmlTagStack.add(tag.name)
+                    }
+                } else {
+                    val normalized = normalizeHtmlTagName(tag.name)
+                    val idx = htmlTagStack.indexOfLast { normalizeHtmlTagName(it) == normalized }
+                    if (idx >= 0) {
+                        val toPop = htmlTagStack.size - idx
+                        val toRePush = mutableListOf<String>()
+                        repeat(toPop) {
+                            pop()
+                            val removed = htmlTagStack.removeLastOrNull()
+                            if (removed != null && normalizeHtmlTagName(removed) != normalized) {
+                                toRePush.add(0, removed)
+                            }
+                        }
+                        for (t in toRePush) {
+                            val s = htmlInlineStyleForTag(t, style) ?: continue
+                            pushStyle(s)
+                            htmlTagStack.add(t)
+                        }
+                    }
+                }
+            } else {
+                val plainText = htmlInlineFallbackText(inline.html)
+                if (plainText.isNotEmpty()) append(plainText)
             }
         }
 
@@ -234,4 +273,33 @@ internal fun htmlInlineFallbackText(html: String): String {
     )
 }
 
+private data class HtmlInlineTag(val name: String, val isClosing: Boolean)
+
+private val INLINE_TAG_REGEX = Regex("""^<(/?)(\w+)[^>]*>$""")
+
+private fun parseHtmlInlineTag(html: String): HtmlInlineTag? {
+    val m = INLINE_TAG_REGEX.find(html.trim()) ?: return null
+    return HtmlInlineTag(name = m.groupValues[2].lowercase(), isClosing = m.groupValues[1] == "/")
+}
+
+private fun normalizeHtmlTagName(tag: String): String = when (tag) {
+    "strong" -> "b"
+    "em" -> "i"
+    "del", "strike" -> "s"
+    "ins" -> "u"
+    else -> tag
+}
+
+private fun htmlInlineStyleForTag(tag: String, style: OrcaStyle): SpanStyle? = when (tag) {
+    "b", "strong" -> SpanStyle(fontWeight = FontWeight.Bold)
+    "i", "em" -> SpanStyle(fontStyle = FontStyle.Italic)
+    "s", "del", "strike" -> SpanStyle(textDecoration = TextDecoration.LineThrough)
+    "u", "ins" -> SpanStyle(textDecoration = TextDecoration.Underline)
+    "code" -> style.inline.inlineCode
+    "sup" -> SpanStyle(baselineShift = BaselineShift.Superscript, fontSize = 12.sp)
+    "sub" -> SpanStyle(baselineShift = BaselineShift.Subscript, fontSize = 12.sp)
+    "mark" -> SpanStyle(background = Color(0x40FFEB3B))
+    "kbd" -> SpanStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, background = Color(0x1A000000))
+    else -> null
+}
 

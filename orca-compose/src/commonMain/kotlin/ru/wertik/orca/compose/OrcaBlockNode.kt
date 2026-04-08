@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import ru.wertik.orca.core.OrcaAdmonitionType
 import ru.wertik.orca.core.OrcaBlock
+import ru.wertik.orca.core.OrcaInline
 import ru.wertik.orca.core.OrcaTaskState
 
 private const val MAX_RENDER_DEPTH = 32
@@ -804,7 +805,21 @@ private fun DetailsNode(
 ) {
     val detailsStyle = style.details
     var expanded by remember { mutableStateOf(block.startOpen) }
-    val summary = block.summary ?: "Details"
+
+    val summaryInlines = block.summary.ifEmpty { listOf(OrcaInline.Text("Details")) }
+    val currentOnLinkClick by rememberUpdatedState(onLinkClick)
+    val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
+
+    val summaryText = remember(summaryInlines, style, securityPolicy, footnoteNumbers, sourceBlockKey) {
+        buildInlineAnnotatedString(
+            inlines = summaryInlines,
+            style = style,
+            onLinkClick = { url -> currentOnLinkClick(url) },
+            securityPolicy = securityPolicy,
+            footnoteNumbers = footnoteNumbers,
+            onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -825,9 +840,9 @@ private fun DetailsNode(
                 style = detailsStyle.summaryStyle,
                 modifier = Modifier.padding(end = 8.dp),
             )
-            Text(
-                text = summary,
-                style = detailsStyle.summaryStyle,
+            InlineTextNode(
+                text = summaryText,
+                textStyle = detailsStyle.summaryStyle,
                 modifier = Modifier.weight(1f),
             )
         }

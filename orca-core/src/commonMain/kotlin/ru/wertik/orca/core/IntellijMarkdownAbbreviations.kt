@@ -108,6 +108,7 @@ private fun applyAbbreviationsToBlock(
             },
         )
         is OrcaBlock.Details -> block.copy(
+            summary = applyAbbreviationsToInlines(block.summary, abbreviations),
             blocks = applyAbbreviations(block.blocks, abbreviations),
         )
         is OrcaBlock.CodeBlock,
