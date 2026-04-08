@@ -252,13 +252,24 @@ private fun decodeHtmlEntities(text: String): String {
     }
     result = NUMERIC_ENTITY_DEC.replace(result) { m ->
         val code = m.groupValues[1].toIntOrNull() ?: return@replace m.value
-        runCatching { String(intArrayOf(code), 0, 1) }.getOrDefault(m.value)
+        codePointToString(code) ?: m.value
     }
     result = NUMERIC_ENTITY_HEX.replace(result) { m ->
         val code = m.groupValues[1].toIntOrNull(16) ?: return@replace m.value
-        runCatching { String(intArrayOf(code), 0, 1) }.getOrDefault(m.value)
+        codePointToString(code) ?: m.value
     }
     return result
+}
+
+private fun codePointToString(code: Int): String? {
+    if (code < 0 || code > 0x10FFFF) return null
+    return if (code <= 0xFFFF) {
+        code.toChar().toString()
+    } else {
+        val high = ((code - 0x10000) shr 10) + 0xD800
+        val low = ((code - 0x10000) and 0x3FF) + 0xDC00
+        charArrayOf(high.toChar(), low.toChar()).concatToString()
+    }
 }
 
 /**
