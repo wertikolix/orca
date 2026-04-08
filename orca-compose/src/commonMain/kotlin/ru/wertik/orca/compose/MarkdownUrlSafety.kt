@@ -23,6 +23,7 @@ internal fun hasAllowedScheme(
 ): Boolean {
     val trimmed = value.trim()
     if (trimmed.isEmpty()) return false
+    if (trimmed.startsWith("#")) return true
     val colonIndex = trimmed.indexOf(':')
     if (colonIndex <= 0) return false
     val scheme = trimmed.substring(0, colonIndex).lowercase()

@@ -42,6 +42,7 @@ sealed interface OrcaBlock {
     data class Heading(
         val level: Int,
         val content: List<OrcaInline>,
+        val id: String? = null,
     ) : OrcaBlock
 
     /** Paragraph containing inline elements. */
@@ -249,6 +250,11 @@ sealed interface OrcaInline {
 
     /** Subscript (~text~) wrapping nested inlines. */
     data class Subscript(
+        val content: List<OrcaInline>,
+    ) : OrcaInline
+
+    /** Highlighted text (==text==) wrapping nested inlines. */
+    data class Highlight(
         val content: List<OrcaInline>,
     ) : OrcaInline
 

@@ -152,6 +152,9 @@ private fun applyAbbreviationsToInline(
         is OrcaInline.Link -> listOf(
             inline.copy(content = applyAbbreviationsToInlines(inline.content, abbreviations)),
         )
+        is OrcaInline.Highlight -> listOf(
+            inline.copy(content = applyAbbreviationsToInlines(inline.content, abbreviations)),
+        )
         is OrcaInline.InlineCode,
         is OrcaInline.Image,
         is OrcaInline.FootnoteReference,

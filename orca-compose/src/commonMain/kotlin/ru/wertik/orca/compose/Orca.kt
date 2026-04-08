@@ -228,6 +228,15 @@ fun Orca(
             .filter { renderBlock -> renderBlock.block is OrcaBlock.Footnotes }
             .mapNotNull { renderBlock -> blockIndexByKey[renderBlock.key]?.let { renderBlock to it } }
     }
+    val headingAnchorIndex = remember(renderBlocks) {
+        buildMap {
+            for ((index, rb) in renderBlocks.withIndex()) {
+                val heading = rb.block as? OrcaBlock.Heading ?: continue
+                val id = heading.id?.takeIf { it.isNotEmpty() } ?: continue
+                putIfAbsent(id, index)
+            }
+        }
+    }
 
     fun findFootnoteBlockIndex(label: String): Int? {
         for ((renderBlock, index) in footnoteBlockIndices) {
@@ -259,6 +268,19 @@ fun Orca(
     when (rootLayout) {
         OrcaRootLayout.LAZY_COLUMN -> {
             val listState = rememberLazyListState()
+            val wrappedLinkClick: (String) -> Unit = { url ->
+                if (url.startsWith("#")) {
+                    val fragment = url.removePrefix("#")
+                    val targetIndex = headingAnchorIndex[fragment]
+                    if (targetIndex != null) {
+                        scope.launch { listState.animateScrollToItem(targetIndex) }
+                    } else {
+                        onLinkClick(url)
+                    }
+                } else {
+                    onLinkClick(url)
+                }
+            }
             LazyColumn(
                 state = listState,
                 modifier = modifier,
@@ -275,7 +297,7 @@ fun Orca(
                         OrcaBlockNode(
                             block = item.block,
                             style = style,
-                            onLinkClick = onLinkClick,
+                            onLinkClick = wrappedLinkClick,
                             securityPolicy = securityPolicy,
                             footnoteNumbers = footnoteNumbers,
                             sourceBlockKey = item.key,
@@ -318,6 +340,22 @@ fun Orca(
             val blockRequesters = remember(renderBlocks) {
                 renderBlocks.associate { item -> item.key to BringIntoViewRequester() }
             }
+            val wrappedLinkClickColumn: (String) -> Unit = { url ->
+                if (url.startsWith("#")) {
+                    val fragment = url.removePrefix("#")
+                    val targetRb = renderBlocks.firstOrNull { rb ->
+                        (rb.block as? OrcaBlock.Heading)?.id == fragment
+                    }
+                    val targetRequester = targetRb?.key?.let { blockRequesters[it] }
+                    if (targetRequester != null) {
+                        scope.launch { targetRequester.bringIntoView() }
+                    } else {
+                        onLinkClick(url)
+                    }
+                } else {
+                    onLinkClick(url)
+                }
+            }
 
             SelectionContainer {
                 Column(
@@ -340,7 +378,7 @@ fun Orca(
                                 OrcaBlockNode(
                                     block = item.block,
                                     style = style,
-                                    onLinkClick = onLinkClick,
+                                    onLinkClick = wrappedLinkClickColumn,
                                     securityPolicy = securityPolicy,
                                     footnoteNumbers = footnoteNumbers,
                                     sourceBlockKey = item.key,
@@ -494,6 +532,7 @@ private fun StringBuilder.appendInlineText(inline: ru.wertik.orca.core.OrcaInlin
         is ru.wertik.orca.core.OrcaInline.HtmlInline -> append(inline.html)
         is ru.wertik.orca.core.OrcaInline.Superscript -> inline.content.forEach { appendInlineText(it) }
         is ru.wertik.orca.core.OrcaInline.Subscript -> inline.content.forEach { appendInlineText(it) }
+        is ru.wertik.orca.core.OrcaInline.Highlight -> inline.content.forEach { appendInlineText(it) }
         is ru.wertik.orca.core.OrcaInline.Abbreviation -> append(inline.text)
     }
 }

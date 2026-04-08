@@ -86,6 +86,9 @@ data class OrcaInlineStyle(
         textDecoration = TextDecoration.Underline,
         background = Color(0x0A000000),
     ),
+    val highlight: SpanStyle = SpanStyle(
+        background = Color(0x40FFEB3B),
+    ),
 )
 
 /**
@@ -358,6 +361,9 @@ object OrcaDefaults {
             abbreviation = SpanStyle(
                 textDecoration = TextDecoration.Underline,
                 background = Color(0x0DFFFFFF),
+            ),
+            highlight = SpanStyle(
+                background = Color(0x40FFD54F),
             ),
         ),
         quote = OrcaQuoteStyle(

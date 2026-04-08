@@ -186,6 +186,17 @@ private fun AnnotatedString.Builder.appendInline(
             )
         }
 
+        is OrcaInline.Highlight -> withStyle(style = style.inline.highlight) {
+            appendInlines(
+                inlines = inline.content,
+                style = style,
+                onLinkClick = onLinkClick,
+                securityPolicy = securityPolicy,
+                footnoteNumbers = footnoteNumbers,
+                onFootnoteClick = onFootnoteClick,
+            )
+        }
+
         is OrcaInline.HtmlInline -> {
             val tag = parseHtmlInlineTag(inline.html)
             if (tag != null) {

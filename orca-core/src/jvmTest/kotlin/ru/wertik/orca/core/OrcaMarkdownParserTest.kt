@@ -28,6 +28,7 @@ class OrcaMarkdownParserTest {
                 OrcaBlock.Heading(
                     level = 1,
                     content = listOf(OrcaInline.Text("Title")),
+                    id = "title",
                 ),
                 OrcaBlock.Paragraph(
                     content = listOf(
@@ -377,6 +378,7 @@ class OrcaMarkdownParserTest {
             OrcaBlock.Heading(
                 level = 1,
                 content = listOf(OrcaInline.Text("Second")),
+                id = "second",
             ),
             second.blocks.single(),
         )
@@ -644,6 +646,7 @@ class OrcaMarkdownParserTest {
             OrcaBlock.Heading(
                 level = 1,
                 content = listOf(OrcaInline.Text("Heading")),
+                id = "heading",
             ),
             result.blocks.single(),
         )
@@ -713,7 +716,7 @@ class OrcaMarkdownParserTest {
 
         assertFalse(first === second)
         assertEquals(
-            OrcaBlock.Heading(level = 1, content = listOf(OrcaInline.Text("Second"))),
+            OrcaBlock.Heading(level = 1, content = listOf(OrcaInline.Text("Second")), id = "second"),
             second.document.blocks.single(),
         )
     }
@@ -738,11 +741,11 @@ class OrcaMarkdownParserTest {
 
         assertEquals(2, result.blocks.size)
         assertEquals(
-            OrcaBlock.Heading(level = 1, content = listOf(OrcaInline.Text("Title"))),
+            OrcaBlock.Heading(level = 1, content = listOf(OrcaInline.Text("Title")), id = "title"),
             result.blocks[0],
         )
         assertEquals(
-            OrcaBlock.Heading(level = 2, content = listOf(OrcaInline.Text("Subtitle"))),
+            OrcaBlock.Heading(level = 2, content = listOf(OrcaInline.Text("Subtitle")), id = "subtitle"),
             result.blocks[1],
         )
     }

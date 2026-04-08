@@ -315,6 +315,7 @@ private fun estimateInlineTextLength(inline: OrcaInline): Int {
         is OrcaInline.HtmlInline -> htmlInlineFallbackText(inline.html).length
         is OrcaInline.Superscript -> inline.content.sumOf(::estimateInlineTextLength)
         is OrcaInline.Subscript -> inline.content.sumOf(::estimateInlineTextLength)
+        is OrcaInline.Highlight -> inline.content.sumOf(::estimateInlineTextLength)
         is OrcaInline.Abbreviation -> inline.text.length
     }
 }

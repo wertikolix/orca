@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.9.1`
+- Current stable minor: `0.9.4`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -44,8 +44,8 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.9.1")
-implementation("ru.wertik:orca-compose:0.9.1")
+implementation("ru.wertik:orca-core:0.9.4")
+implementation("ru.wertik:orca-compose:0.9.4")
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -168,7 +168,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.9.1`)
+## Supported Syntax (`0.9.4`)
 
 ### Blocks
 
@@ -196,10 +196,11 @@ data class OrcaParseResult(
 - strikethrough
 - **superscript** (`^text^`)
 - **subscript** (`~text~`)
+- **highlight** (`==text==`)
 - inline code
 - link (with title support)
 - **inline image rendering** (actual images in text flow via InlineTextContent)
-- inline HTML (styled rendering)
+- inline HTML (rich styled rendering — `<kbd>`, `<mark>`, `<b>`, `<i>`, `<sup>`, `<sub>`, etc.)
 - footnote references
 - inline footnotes `^[...]`
 - soft/hard line breaks (`\n`)
@@ -234,6 +235,7 @@ data class OrcaParseResult(
   - tap reference marker (`[n]`) to jump to definition
   - tap backlink (`↩`) to return to source block
 - **accessibility** — semantic roles for headings, content descriptions for images and blocks
+- **heading anchor links** — `[link](#heading-text)` scrolls to the corresponding heading (auto-generated GitHub-style slugs)
 - **custom block renderers** — override rendering for any block type via `blockOverride` parameter
 - **pluggable image loading** — supply custom `imageContent` composable to replace built-in Coil loader
 
@@ -279,8 +281,8 @@ data class OrcaParseResult(
 ### HTML rendering
 
 - block-level HTML rendered with styled AnnotatedString
-- supported tags: `<b>`, `<i>`, `<s>`, `<u>`, `<code>`, `<a>`, `<sup>`, `<sub>`, `<mark>`, `<br>`, `<p>`, `<h1>`-`<h6>`, `<li>`, `<hr>`, `<blockquote>`, `<pre>`
-- HTML entities decoded (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&nbsp;`, etc.)
+- supported tags: `<b>`, `<i>`, `<s>`, `<u>`, `<code>`, `<a>`, `<sup>`, `<sub>`, `<mark>`, `<kbd>`, `<br>`, `<p>`, `<h1>`-`<h6>`, `<li>`, `<hr>`, `<blockquote>`, `<pre>`
+- HTML entities decoded (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&nbsp;`, numeric `&#8212;`, `&#x2714;`, etc.)
 - interleaved/malformed tags handled gracefully (e.g. `<b><i></b></i>` -- styles popped and re-pushed correctly)
 - unknown tags gracefully stripped
 
@@ -434,6 +436,27 @@ For release-like check:
 - Maven Central artifacts are immutable after publish
 
 ## Changelog
+
+### 0.9.4
+
+- **`==highlight==` syntax** -- inline text highlight with configurable `OrcaInlineStyle.highlight` (yellow background by default)
+- **Heading anchor IDs** -- headings auto-generate GitHub-style slugs (`## My Heading` -> `id = "my-heading"`), duplicate headings get `-1`, `-2` suffixes
+- **Fragment link scroll** -- `[link](#heading-slug)` clicks auto-scroll to the matching heading in both `LAZY_COLUMN` and `COLUMN` layouts
+- **Fragment URLs allowed** -- `#fragment` URLs now pass security policy (previously blocked as schemeless)
+
+### 0.9.3
+
+- **Inline HTML rendering** -- `<kbd>`, `<mark>`, `<b>`, `<i>`, `<sup>`, `<sub>`, `<code>`, `<u>`, `<s>` tags in paragraphs now render with proper styles (previously stripped to plain text)
+- **`<kbd>` tag** -- keyboard input tag rendered with monospace font + subtle background in both block and inline HTML
+- **Numeric HTML entities** -- `&#8212;`, `&#x2714;` and all decimal/hex character references decoded correctly
+- **Details summary inline markdown** -- `<summary>**bold** text</summary>` now renders rich inline formatting (was plain text)
+- **KMP fix** -- numeric entity decoder uses cross-platform codepoint conversion instead of JVM-only `String(IntArray)`
+
+### 0.9.2
+
+- **`<details>/<summary>` support** -- collapsible blocks with animated expand/collapse, `<details open>`, nested markdown content
+- **Coil warnings fix** -- replaced manual `when (painter.state)` with slot-based `loading`/`error`/`success` parameters
+- **Kotlin expect/actual warnings** -- suppressed beta warnings via compiler opt-in
 
 ### 0.9.1
 

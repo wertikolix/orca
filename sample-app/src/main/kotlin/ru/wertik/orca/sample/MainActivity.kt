@@ -595,6 +595,14 @@ Everything below gets into practical patterns.
 
 ---
 
+## Highlight & anchors
+
+This has ==highlighted text== and normal text.
+
+Jump to [Architecture patterns](#deep-nesting) section above.
+
+---
+
 ## Deep nesting
 
 <details>

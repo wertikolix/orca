@@ -35,6 +35,7 @@ internal class IntellijTreeMapper(
     private val enableSubscript: Boolean = true,
 ) {
     private val inlineFootnotes = mutableListOf<OrcaFootnoteDefinition>()
+    private val headingSlugCounts = mutableMapOf<String, Int>()
 
     fun consumeInlineFootnoteDefinitions(): List<OrcaFootnoteDefinition> = inlineFootnotes.toList()
 
@@ -128,10 +129,24 @@ internal class IntellijTreeMapper(
             depth = depth + 1,
             trimEdges = true,
         )
+        val slug = generateHeadingSlug(content)
         return OrcaBlock.Heading(
             level = level,
             content = content,
+            id = slug,
         )
+    }
+
+    private fun generateHeadingSlug(content: List<OrcaInline>): String {
+        val base = content.toPlainText()
+            .lowercase()
+            .replace(Regex("[^\\w\\s-]"), "")
+            .trim()
+            .replace(Regex("\\s+"), "-")
+        if (base.isEmpty()) return ""
+        val count = headingSlugCounts[base] ?: 0
+        headingSlugCounts[base] = count + 1
+        return if (count == 0) base else "$base-$count"
     }
 
     private fun mapParagraph(node: ASTNode, depth: Int): OrcaBlock {
@@ -813,7 +828,8 @@ internal class IntellijTreeMapper(
     private fun parseSuperSubFromText(text: String): List<OrcaInline> {
         val superPattern = if (enableSuperscript) """(?<!\^)\^([^\^]+)\^(?!\^)""" else null
         val subPattern = if (enableSubscript) """(?<!~)~([^~]+)~(?!~)""" else null
-        val combined = listOfNotNull(superPattern, subPattern).joinToString("|")
+        val highlightPattern = """(?<!=)==([^=]+)==(?!=)"""
+        val combined = listOfNotNull(superPattern, subPattern, highlightPattern).joinToString("|")
         if (combined.isEmpty()) return listOf(OrcaInline.Text(text))
 
         val regex = Regex(combined)
@@ -823,24 +839,33 @@ internal class IntellijTreeMapper(
             if (match.range.first > lastEnd) {
                 result += OrcaInline.Text(text.substring(lastEnd, match.range.first))
             }
-            if (enableSuperscript && enableSubscript) {
-                val supContent = match.groupValues[1]
-                val subContent = match.groupValues[2]
-                if (supContent.isNotEmpty()) {
-                    result += OrcaInline.Superscript(content = listOf(OrcaInline.Text(supContent)))
-                } else if (subContent.isNotEmpty()) {
-                    result += OrcaInline.Subscript(content = listOf(OrcaInline.Text(subContent)))
+            // figure out which group matched
+            val groupCount = match.groupValues.size - 1
+            var handled = false
+            if (!handled && enableSuperscript) {
+                val idx = 1
+                if (idx <= groupCount && match.groupValues[idx].isNotEmpty()) {
+                    result += OrcaInline.Superscript(content = listOf(OrcaInline.Text(match.groupValues[idx])))
+                    handled = true
                 }
-            } else if (enableSuperscript) {
-                val supContent = match.groupValues[1]
-                if (supContent.isNotEmpty()) {
-                    result += OrcaInline.Superscript(content = listOf(OrcaInline.Text(supContent)))
+            }
+            if (!handled && enableSubscript) {
+                val idx = if (enableSuperscript) 2 else 1
+                if (idx <= groupCount && match.groupValues[idx].isNotEmpty()) {
+                    result += OrcaInline.Subscript(content = listOf(OrcaInline.Text(match.groupValues[idx])))
+                    handled = true
                 }
-            } else {
-                val subContent = match.groupValues[1]
-                if (subContent.isNotEmpty()) {
-                    result += OrcaInline.Subscript(content = listOf(OrcaInline.Text(subContent)))
+            }
+            if (!handled) {
+                // highlight is always the last group
+                val idx = groupCount
+                if (idx >= 1 && match.groupValues[idx].isNotEmpty()) {
+                    result += OrcaInline.Highlight(content = listOf(OrcaInline.Text(match.groupValues[idx])))
+                    handled = true
                 }
+            }
+            if (!handled) {
+                result += OrcaInline.Text(match.value)
             }
             lastEnd = match.range.last + 1
         }
@@ -1029,6 +1054,7 @@ private fun List<OrcaInline>.toPlainText(): String {
                 is OrcaInline.FootnoteReference -> append("[${inline.label}]")
                 is OrcaInline.Superscript -> append(inline.content.toPlainText())
                 is OrcaInline.Subscript -> append(inline.content.toPlainText())
+                is OrcaInline.Highlight -> append(inline.content.toPlainText())
                 is OrcaInline.HtmlInline -> append(htmlInlineToPlainText(inline.html))
                 is OrcaInline.Abbreviation -> append(inline.text)
             }
