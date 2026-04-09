@@ -233,7 +233,7 @@ fun Orca(
             for ((index, rb) in renderBlocks.withIndex()) {
                 val heading = rb.block as? OrcaBlock.Heading ?: continue
                 val id = heading.id?.takeIf { it.isNotEmpty() } ?: continue
-                putIfAbsent(id, index)
+                if (id !in this) put(id, index)
             }
         }
     }
