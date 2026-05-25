@@ -85,6 +85,17 @@ class OrcaDefaultsTest {
     }
 
     @Test
+    fun darkStyleProvidesReadableTableTextColors() {
+        val light = OrcaDefaults.lightStyle()
+        val dark = OrcaDefaults.darkStyle()
+
+        assertNotEquals(light.table.text.color, dark.table.text.color)
+        assertNotEquals(light.table.headerText.color, dark.table.headerText.color)
+        assertEquals(dark.typography.paragraph.color, dark.table.text.color)
+        assertEquals(dark.typography.heading1.color, dark.table.headerText.color)
+    }
+
+    @Test
     fun darkStyleHeadingLevelClamping() {
         val dark = OrcaDefaults.darkStyle()
 

@@ -25,8 +25,10 @@ fun ChatMessage(
     chunks: Flow<String>,
 ) {
     val stream = rememberOrcaStreamingState(frameIntervalMs = 80)
+    val parser = remember { OrcaIncrementalParserSession(OrcaMarkdownParser()) }
 
     LaunchedEffect(messageId) {
+        parser.reset()
         stream.clear()
         chunks.collect(stream::append)
         stream.finish()
@@ -34,7 +36,7 @@ fun ChatMessage(
 
     Orca(
         state = stream,
-        parser = remember { OrcaMarkdownParser() },
+        parser = parser,
         parseCacheKey = messageId, // stable key avoids redundant re-parses
         rootLayout = OrcaRootLayout.COLUMN, // parent LazyColumn handles scrolling
     )
@@ -44,6 +46,7 @@ fun ChatMessage(
 Key points:
 - `parseCacheKey` should be stable per message (e.g. message ID)
 - `frameIntervalMs` controls how frequently buffered deltas publish a renderable snapshot
+- `OrcaIncrementalParserSession` reuses completed prose paragraphs; complex Markdown automatically falls back to exact full parsing
 - `OrcaRootLayout.COLUMN` when the parent already scrolls (e.g. chat list)
 - parsing starts off the UI thread, including first render
 - parser instance should be `remember`ed or shared across messages

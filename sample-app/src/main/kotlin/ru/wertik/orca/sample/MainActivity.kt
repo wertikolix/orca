@@ -75,6 +75,7 @@ import ru.wertik.orca.compose.OrcaDefaults
 import ru.wertik.orca.compose.OrcaRootLayout
 import ru.wertik.orca.compose.OrcaSecurityPolicies
 import ru.wertik.orca.compose.rememberOrcaStreamingState
+import ru.wertik.orca.core.OrcaIncrementalParserSession
 import ru.wertik.orca.core.OrcaMarkdownParser
 import ru.wertik.orca.images.coil.OrcaCoilImage
 import ru.wertik.orca.images.coil.OrcaCoilInlineImage
@@ -253,8 +254,10 @@ private fun StreamingScreen(
 ) {
     val fullText = STREAMING_DEMO_MARKDOWN
     val stream = rememberOrcaStreamingState(frameIntervalMs = 80)
+    val incrementalParser = remember(parser) { OrcaIncrementalParserSession(parser) }
 
     LaunchedEffect(Unit) {
+        incrementalParser.reset()
         stream.clear()
         val random = kotlin.random.Random
         var i = 0
@@ -305,7 +308,7 @@ private fun StreamingScreen(
 
         Orca(
             state = stream,
-            parser = parser,
+            parser = incrementalParser,
             parseCacheKey = "streaming-demo",
             modifier = Modifier.fillMaxSize(),
             style = style,

@@ -398,6 +398,8 @@ object OrcaDefaults {
             highlightNumber = SpanStyle(color = Color(0xFFB5CEA8)),
         ),
         table = OrcaTableStyle(
+            text = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, color = Color(0xFFD0D0D0)),
+            headerText = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE0E0E0)),
             borderColor = Color(0xFF333333),
             headerBackground = Color(0xFF252525),
         ),

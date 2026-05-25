@@ -192,7 +192,7 @@ Thread safety is provided by `OrcaLock.withLock {}` around all map operations. T
 
 ## Streaming
 
-For LLM token streams, `OrcaStreamingState` accepts delta chunks and publishes renderable snapshots at `frameIntervalMs`. `Orca(state = ..., ...)` avoids a second debounce interval because pacing already happened at the state boundary.
+For LLM token streams, `OrcaStreamingState` accepts delta chunks and publishes renderable snapshots at `frameIntervalMs`. `Orca(state = ..., ...)` avoids a second debounce interval because pacing already happened at the state boundary. `OrcaIncrementalParserSession` supplies a conservative parser fast path: completed standalone prose paragraphs are retained as stable AST blocks while only the active tail is reparsed; rich/document-scoped Markdown constructs use the exact full-parser path.
 
 The underlying `Orca(markdown: String, ...)` composable handles each published snapshot as follows:
 
