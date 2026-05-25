@@ -1,13 +1,12 @@
 package ru.wertik.orca.compose
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import ru.wertik.orca.core.OrcaInline
 
 private const val INLINE_IMAGE_ID_PREFIX = "orca-inline-img:"
@@ -40,7 +39,9 @@ internal fun buildInlineImageMap(
     inlines: List<OrcaInline>,
     style: OrcaStyle,
     securityPolicy: OrcaSecurityPolicy,
+    inlineImageContent: OrcaImageContent?,
 ): Map<String, InlineTextContent> {
+    if (inlineImageContent == null) return emptyMap()
     val images = collectInlineImages(inlines)
     if (images.isEmpty()) return emptyMap()
 
@@ -54,23 +55,20 @@ internal fun buildInlineImageMap(
         } ?: continue
 
         val id = inlineImageId(image.source)
-        val widthSp = style.inlineImage.widthSp
-        val heightSp = style.inlineImage.heightSp
-
         map[id] = InlineTextContent(
             placeholder = Placeholder(
-                width = widthSp,
-                height = heightSp,
+                width = style.inlineImage.widthSp,
+                height = style.inlineImage.heightSp,
                 placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter,
             ),
         ) { _ ->
-            AsyncImage(
-                model = safeSource,
-                contentDescription = image.alt,
+            Box(
                 modifier = Modifier
                     .size(style.inlineImage.size)
                     .clip(style.inlineImage.shape),
-            )
+            ) {
+                inlineImageContent(safeSource, image.alt)
+            }
         }
     }
     return map

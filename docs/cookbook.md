@@ -104,6 +104,8 @@ Orca(
     markdown = markdown,
     parser = remember { OrcaMarkdownParser() },
     securityPolicy = policy,
+    imageContent = { url, description -> OrcaCoilImage(url, description, style) },
+    inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, style) },
 )
 ```
 

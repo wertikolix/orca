@@ -23,7 +23,6 @@ kotlin {
     }
 
     jvm("desktop")
-
     iosX64()
     iosArm64()
     iosSimulatorArm64()
@@ -37,21 +36,32 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            api(project(":orca-core"))
-            api(compose.runtime)
-            api(compose.foundation)
-            api(compose.ui)
+            api(project(":orca-compose"))
+            implementation(compose.foundation)
+            implementation(compose.ui)
             implementation(compose.animation)
-            implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.coil3.compose)
+            implementation(libs.coil3.network.ktor3)
         }
-        commonTest.dependencies {
-            implementation(kotlin("test"))
+        androidMain.dependencies {
+            implementation(libs.ktor.client.android)
+        }
+        val desktopMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.java)
+            }
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
+        }
+        wasmJsMain.dependencies {
+            implementation(libs.ktor.client.js)
         }
     }
 }
 
 android {
-    namespace = "ru.wertik.orca.compose"
+    namespace = "ru.wertik.orca.images.coil"
     compileSdk = 36
 
     defaultConfig {
@@ -92,7 +102,7 @@ publishing {
             "androidRelease" -> "-android"
             else -> "-$name"
         }
-        val publicationArtifactId = "orca-compose$platformSuffix"
+        val publicationArtifactId = "orca-images-coil$platformSuffix"
         artifactId = publicationArtifactId
 
         val javadocJar = tasks.register("${name}JavadocJar", Jar::class) {
@@ -103,8 +113,8 @@ publishing {
         artifact(javadocJar)
 
         pom {
-            name.set("Orca Compose")
-            description.set("Compose Multiplatform renderer for Orca")
+            name.set("Orca Images Coil")
+            description.set("Optional Coil image renderer for Orca Compose")
             url.set("https://github.com/wertikolix/Orca")
             licenses {
                 license {
@@ -130,11 +140,7 @@ publishing {
     repositories {
         maven {
             name = "github"
-            url = uri(
-                providers.gradleProperty("orcaMavenRepoUrl")
-                    .orElse("https://maven.pkg.github.com/wertikolix/Orca")
-                    .get(),
-            )
+            url = uri(providers.gradleProperty("orcaMavenRepoUrl").orElse("https://maven.pkg.github.com/wertikolix/Orca").get())
             credentials {
                 username = providers.gradleProperty("orcaMavenUsername").orNull
                 password = providers.gradleProperty("orcaMavenPassword").orNull
@@ -142,11 +148,7 @@ publishing {
         }
         maven {
             name = "centralStaging"
-            url = uri(
-                providers.gradleProperty("centralStagingRepoUrl")
-                    .orElse("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
-                    .get(),
-            )
+            url = uri(providers.gradleProperty("centralStagingRepoUrl").orElse("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/").get())
             credentials {
                 username = providers.gradleProperty("centralTokenUsername").orNull
                 password = providers.gradleProperty("centralTokenPassword").orNull

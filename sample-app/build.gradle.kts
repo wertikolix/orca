@@ -58,6 +58,7 @@ kotlin {
 dependencies {
     implementation(project(":orca-core"))
     implementation(project(":orca-compose"))
+    implementation(project(":orca-images-coil"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.androidx.core.ktx)

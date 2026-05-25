@@ -69,7 +69,8 @@ enum class OrcaRootLayout {
  * @param onParseDiagnostics optional callback receiving parse diagnostics (errors and warnings) after each parse.
  * @param streamingDebounceMs minimum pacing delay in milliseconds between streaming re-parses. Default is 80 ms.
  * @param blockOverride optional map of block types to custom composable renderers. When a block's class matches a key, the override is used instead of the default renderer.
- * @param imageContent optional composable for rendering images. When provided, replaces the built-in Coil-based image loader. Receives the image URL and content description.
+ * @param imageContent optional composable for rendering allowed block images. Without it, block images render as fallback text.
+ * @param inlineImageContent optional composable for rendering allowed inline images. Without it, inline images render their alt text.
  * @see Orca
  * @see OrcaStyle
  * @see OrcaSecurityPolicy
@@ -87,7 +88,8 @@ fun Orca(
     onParseDiagnostics: ((OrcaParseDiagnostics) -> Unit)? = null,
     streamingDebounceMs: Long = DEFAULT_STREAMING_DEBOUNCE_MS,
     blockOverride: Map<KClass<out OrcaBlock>, @Composable (OrcaBlock) -> Unit> = emptyMap(),
-    imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    imageContent: OrcaImageContent? = null,
+    inlineImageContent: OrcaImageContent? = null,
 ) {
     val parserKey = remember(parser) { parser.cacheKey() }
     val latestMarkdown by rememberUpdatedState(markdown)
@@ -161,6 +163,7 @@ fun Orca(
         onLinkClick = onLinkClick,
         blockOverride = blockOverride,
         imageContent = imageContent,
+        inlineImageContent = inlineImageContent,
     )
 }
 
@@ -178,7 +181,8 @@ fun Orca(
  * @param securityPolicy URL filter applied to links and images before rendering.
  * @param onLinkClick callback invoked when a user taps a link.
  * @param blockOverride optional map of block types to custom composable renderers.
- * @param imageContent optional composable for rendering images, replacing the built-in Coil loader.
+ * @param imageContent optional composable for rendering allowed block images.
+ * @param inlineImageContent optional composable for rendering allowed inline images.
  * @see OrcaDocument
  * @see OrcaStyle
  */
@@ -191,7 +195,8 @@ fun Orca(
     securityPolicy: OrcaSecurityPolicy = OrcaSecurityPolicies.Default,
     onLinkClick: (String) -> Unit = noOpLinkClick,
     blockOverride: Map<KClass<out OrcaBlock>, @Composable (OrcaBlock) -> Unit> = emptyMap(),
-    imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    imageContent: OrcaImageContent? = null,
+    inlineImageContent: OrcaImageContent? = null,
 ) {
     val renderBlocks = remember(document.blocks) {
         buildRenderBlocks(document.blocks)
@@ -311,6 +316,7 @@ fun Orca(
                                 )
                             },
                             imageContent = imageContent,
+                            inlineImageContent = inlineImageContent,
                         )
                     }
                 }
@@ -392,6 +398,7 @@ fun Orca(
                                         )
                                     },
                                     imageContent = imageContent,
+                                    inlineImageContent = inlineImageContent,
                                 )
                             }
                         }

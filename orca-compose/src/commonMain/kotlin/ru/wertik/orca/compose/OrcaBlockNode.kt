@@ -60,7 +60,8 @@ internal fun OrcaBlockNode(
     activeFootnoteLabel: String?,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
-    imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    imageContent: OrcaImageContent? = null,
+    inlineImageContent: OrcaImageContent? = null,
     depth: Int = 0,
 ) {
     // Guard against excessively nested markdown (e.g. 50-level deep quotes).
@@ -75,6 +76,7 @@ internal fun OrcaBlockNode(
             footnoteNumbers = footnoteNumbers,
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             sourceBlockKey = sourceBlockKey,
+            inlineImageContent = inlineImageContent,
         )
 
         is OrcaBlock.Paragraph -> ParagraphNode(
@@ -85,6 +87,7 @@ internal fun OrcaBlockNode(
             footnoteNumbers = footnoteNumbers,
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             sourceBlockKey = sourceBlockKey,
+            inlineImageContent = inlineImageContent,
         )
 
         is OrcaBlock.ListBlock -> ListBlockNode(
@@ -98,6 +101,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
+            inlineImageContent = inlineImageContent,
             depth = depth,
         )
 
@@ -112,6 +116,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
+            inlineImageContent = inlineImageContent,
             depth = depth,
         )
 
@@ -147,6 +152,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
+            inlineImageContent = inlineImageContent,
             depth = depth,
         )
 
@@ -168,6 +174,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
+            inlineImageContent = inlineImageContent,
             depth = depth,
         )
 
@@ -182,6 +189,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
+            inlineImageContent = inlineImageContent,
             depth = depth,
         )
 
@@ -196,6 +204,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
+            inlineImageContent = inlineImageContent,
             depth = depth,
         )
     }
@@ -210,6 +219,7 @@ private fun HeadingNode(
     footnoteNumbers: Map<String, Int>,
     sourceBlockKey: String,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
+    inlineImageContent: OrcaImageContent?,
 ) {
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
@@ -230,11 +240,12 @@ private fun HeadingNode(
             onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
         )
     }
-    val inlineImages = remember(block.content, style, securityPolicy) {
+    val inlineImages = remember(block.content, style, securityPolicy, inlineImageContent) {
         buildInlineImageMap(
             inlines = block.content,
             style = style,
             securityPolicy = securityPolicy,
+            inlineImageContent = inlineImageContent,
         )
     }
     InlineTextNode(
@@ -254,6 +265,7 @@ private fun ParagraphNode(
     footnoteNumbers: Map<String, Int>,
     sourceBlockKey: String,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
+    inlineImageContent: OrcaImageContent?,
 ) {
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
@@ -274,11 +286,12 @@ private fun ParagraphNode(
             onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
         )
     }
-    val inlineImages = remember(block.content, style, securityPolicy) {
+    val inlineImages = remember(block.content, style, securityPolicy, inlineImageContent) {
         buildInlineImageMap(
             inlines = block.content,
             style = style,
             securityPolicy = securityPolicy,
+            inlineImageContent = inlineImageContent,
         )
     }
     InlineTextNode(
@@ -299,7 +312,8 @@ private fun ListBlockNode(
     activeFootnoteLabel: String?,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
-    imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    imageContent: OrcaImageContent? = null,
+    inlineImageContent: OrcaImageContent? = null,
     depth: Int = 0,
 ) {
     Column(
@@ -334,6 +348,7 @@ private fun ListBlockNode(
                             onFootnoteReferenceClick = onFootnoteReferenceClick,
                             onFootnoteBackClick = onFootnoteBackClick,
                             imageContent = imageContent,
+                            inlineImageContent = inlineImageContent,
                             depth = depth + 1,
                         )
                     }
@@ -354,7 +369,8 @@ private fun QuoteBlockNode(
     activeFootnoteLabel: String?,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
-    imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    imageContent: OrcaImageContent? = null,
+    inlineImageContent: OrcaImageContent? = null,
     depth: Int = 0,
 ) {
     Row(
@@ -384,6 +400,7 @@ private fun QuoteBlockNode(
                     onFootnoteReferenceClick = onFootnoteReferenceClick,
                     onFootnoteBackClick = onFootnoteBackClick,
                     imageContent = imageContent,
+                    inlineImageContent = inlineImageContent,
                     depth = depth + 1,
                 )
             }
@@ -402,7 +419,8 @@ private fun FootnotesNode(
     activeFootnoteLabel: String?,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
-    imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    imageContent: OrcaImageContent? = null,
+    inlineImageContent: OrcaImageContent? = null,
     depth: Int = 0,
 ) {
     Column(
@@ -440,6 +458,7 @@ private fun FootnotesNode(
                             onFootnoteReferenceClick = onFootnoteReferenceClick,
                             onFootnoteBackClick = onFootnoteBackClick,
                             imageContent = imageContent,
+                            inlineImageContent = inlineImageContent,
                             depth = depth + 1,
                         )
                     }
@@ -627,7 +646,8 @@ private fun AdmonitionNode(
     activeFootnoteLabel: String?,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
-    imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    imageContent: OrcaImageContent? = null,
+    inlineImageContent: OrcaImageContent? = null,
     depth: Int = 0,
 ) {
     val admonitionStyle = style.admonition
@@ -710,6 +730,7 @@ private fun AdmonitionNode(
                             onFootnoteReferenceClick = onFootnoteReferenceClick,
                             onFootnoteBackClick = onFootnoteBackClick,
                             imageContent = imageContent,
+                            inlineImageContent = inlineImageContent,
                             depth = depth + 1,
                         )
                     }
@@ -730,7 +751,8 @@ private fun DefinitionListNode(
     activeFootnoteLabel: String?,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
-    imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    imageContent: OrcaImageContent? = null,
+    inlineImageContent: OrcaImageContent? = null,
     depth: Int = 0,
 ) {
     val dlStyle = style.definitionList
@@ -751,11 +773,12 @@ private fun DefinitionListNode(
                     onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
                 )
             }
-            val termInlineImages = remember(item.term, style, securityPolicy) {
+            val termInlineImages = remember(item.term, style, securityPolicy, inlineImageContent) {
                 buildInlineImageMap(
                     inlines = item.term,
                     style = style,
                     securityPolicy = securityPolicy,
+                    inlineImageContent = inlineImageContent,
                 )
             }
             InlineTextNode(
@@ -780,6 +803,7 @@ private fun DefinitionListNode(
                             onFootnoteReferenceClick = onFootnoteReferenceClick,
                             onFootnoteBackClick = onFootnoteBackClick,
                             imageContent = imageContent,
+                            inlineImageContent = inlineImageContent,
                             depth = depth + 1,
                         )
                     }
@@ -800,7 +824,8 @@ private fun DetailsNode(
     activeFootnoteLabel: String?,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     onFootnoteBackClick: (label: String) -> Unit,
-    imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
+    imageContent: OrcaImageContent? = null,
+    inlineImageContent: OrcaImageContent? = null,
     depth: Int = 0,
 ) {
     val detailsStyle = style.details
@@ -867,6 +892,7 @@ private fun DetailsNode(
                         onFootnoteReferenceClick = onFootnoteReferenceClick,
                         onFootnoteBackClick = onFootnoteBackClick,
                         imageContent = imageContent,
+                        inlineImageContent = inlineImageContent,
                         depth = depth + 1,
                     )
                 }

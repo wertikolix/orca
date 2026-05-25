@@ -2,14 +2,15 @@
 
 ## Module Structure
 
-Orca is split into two Kotlin Multiplatform modules:
+Orca is split into lightweight core/rendering modules plus optional integrations:
 
 | Module | Responsibility |
 |---|---|
 | **orca-core** | Parsing: markdown string → `OrcaDocument` AST. Zero Compose dependencies. |
-| **orca-compose** | Rendering: `OrcaDocument` → Compose UI. Owns styling, security, and layout. |
+| **orca-compose** | Rendering: `OrcaDocument` → Compose UI. Owns styling, security, layout, and image content slots; no image/network stack. |
+| **orca-images-coil** | Optional Coil/Ktor implementation of block and inline image slots. |
 
-**Dependency direction:** `orca-compose` depends on `orca-core`. `orca-core` has no knowledge of the rendering layer. Consumers who only need parsing (e.g. server-side indexing) can depend on `orca-core` alone.
+**Dependency direction:** `orca-images-coil` → `orca-compose` → `orca-core`. Consumers who only need parsing or chat rendering do not carry optional network/image dependencies.
 
 Both modules use `commonMain` for shared logic. The only platform-specific code in the entire project is `OrcaLock` (see [Platform Targets](#platform-targets)).
 
@@ -154,7 +155,7 @@ A single `@Composable OrcaBlockNode(block, style, ...)` function dispatches via 
 `buildInlineAnnotatedString()` walks a `List<OrcaInline>` and builds a Compose `AnnotatedString` with:
 - `SpanStyle` for bold, italic, strikethrough, inline code, superscript, subscript
 - `LinkAnnotation.Url` for links (with `OrcaSecurityPolicy` check — disallowed URLs render as plain text)
-- `appendInlineContent()` placeholders for inline images (resolved by `buildInlineImageMap()`)
+- `appendInlineContent()` placeholders for inline images (resolved only when `inlineImageContent` is supplied)
 - Footnote references rendered as superscript clickable annotations
 
 ---
@@ -216,9 +217,9 @@ fun interface OrcaSecurityPolicy {
 }
 ```
 
-`OrcaUrlType` is either `LINK` or `IMAGE`. The policy is checked in `OrcaInlineText.kt` before creating `LinkAnnotation`s and in image composables before loading URLs.
+`OrcaUrlType` is either `LINK` or `IMAGE`. The policy is checked in `OrcaInlineText.kt` before creating `LinkAnnotation`s and before image URLs are handed to supplied content slots.
 
-**If a URL is disallowed**, links render as plain text (no clickable annotation) and images are not loaded.
+**If a URL is disallowed**, links render as plain text and images are not passed to a loader. If no image slot is provided, block images render fallback text and inline images render their alt text even under an opt-in policy.
 
 ### Built-in policies (`OrcaSecurityPolicies`)
 

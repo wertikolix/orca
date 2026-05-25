@@ -1,0 +1,2 @@
+# Coil
+-dontwarn coil3.**

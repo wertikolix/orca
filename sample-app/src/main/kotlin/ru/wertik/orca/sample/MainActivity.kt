@@ -73,7 +73,10 @@ import kotlinx.coroutines.delay
 import ru.wertik.orca.compose.Orca
 import ru.wertik.orca.compose.OrcaDefaults
 import ru.wertik.orca.compose.OrcaRootLayout
+import ru.wertik.orca.compose.OrcaSecurityPolicies
 import ru.wertik.orca.core.OrcaMarkdownParser
+import ru.wertik.orca.images.coil.OrcaCoilImage
+import ru.wertik.orca.images.coil.OrcaCoilInlineImage
 
 class OrcaSampleApplication : Application(), SingletonImageLoader.Factory {
     override fun newImageLoader(context: coil3.PlatformContext): ImageLoader {
@@ -229,6 +232,9 @@ private fun OrcaSampleApp(
                             .fillMaxSize()
                             .padding(16.dp),
                         style = orcaStyle,
+                        securityPolicy = OrcaSecurityPolicies.RemoteImages,
+                        imageContent = { url, description -> OrcaCoilImage(url, description, orcaStyle) },
+                        inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, orcaStyle) },
                         onLinkClick = onLinkClick,
                     )
                 }
@@ -303,6 +309,9 @@ private fun StreamingScreen(
             parseCacheKey = "streaming-demo",
             modifier = Modifier.fillMaxSize(),
             style = style,
+            securityPolicy = OrcaSecurityPolicies.RemoteImages,
+            imageContent = { url, description -> OrcaCoilImage(url, description, style) },
+            inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, style) },
             onLinkClick = onLinkClick,
         )
     }
@@ -359,6 +368,9 @@ private fun PlaygroundScreen(
                 .padding(top = 12.dp, bottom = 16.dp),
             style = style,
             rootLayout = OrcaRootLayout.COLUMN,
+            securityPolicy = OrcaSecurityPolicies.RemoteImages,
+            imageContent = { url, description -> OrcaCoilImage(url, description, style) },
+            inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, style) },
             onLinkClick = onLinkClick,
         )
     }

@@ -36,7 +36,10 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
   - Compose Multiplatform renderer for `OrcaDocument`
   - Targets: Android, iOS, Desktop (JVM), wasmJs
   - Style model (`OrcaStyle`)
-  - Image loading via Coil 3 + Ktor (pluggable — bring your own image loader)
+  - Lightweight base renderer with no mandatory image/network runtime
+- `orca-images-coil` *(next minor release)*
+  - Optional Coil 3 + Ktor image renderer for trusted Markdown content
+  - Provides block and inline image content slots without making chat-only apps pay for them
 - `sample-app`
   - Android demo for manual checks
 
@@ -238,7 +241,7 @@ data class OrcaParseResult(
 - **accessibility** — semantic roles for headings, content descriptions for images and blocks
 - **heading anchor links** — `[link](#heading-text)` scrolls to the corresponding heading (auto-generated GitHub-style slugs)
 - **custom block renderers** — override rendering for any block type via `blockOverride` parameter
-- **pluggable image loading** — supply custom `imageContent` composable to replace built-in Coil loader
+- **zero-cost optional images** — base `orca-compose` displays fallback/alt text; supply `imageContent` and `inlineImageContent` only when image rendering is needed
 
 ### Admonition rendering
 
@@ -340,12 +343,17 @@ Orca(
 - Unsafe URLs are rendered as plain text/fallback instead of clickable/loaded targets.
 - You can fully override checks via `OrcaSecurityPolicy`.
 
-For trusted content that should load remote images, opt in explicitly:
+For trusted content that should load remote images, opt into both URL permission and an image renderer. With the optional Coil module:
 
 ```kotlin
+import ru.wertik.orca.images.coil.OrcaCoilImage
+import ru.wertik.orca.images.coil.OrcaCoilInlineImage
+
 Orca(
     document = document,
     securityPolicy = OrcaSecurityPolicies.RemoteImages,
+    imageContent = { url, description -> OrcaCoilImage(url, description, style) },
+    inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, style) },
 )
 ```
 
@@ -396,17 +404,20 @@ Orca(
 )
 ```
 
-### Custom image loader
+### Optional image loader
 
-Replace the built-in Coil image loader with your own:
+`orca-compose` intentionally ships without an image/network stack. Add `orca-images-coil` when it is published in the next minor release, or provide your own slots:
 
 ```kotlin
 Orca(
     markdown = markdown,
     parser = remember { OrcaMarkdownParser() },
+    securityPolicy = OrcaSecurityPolicies.RemoteImages,
     imageContent = { url, contentDescription ->
-        // Use Glide, Kamel, or any custom loader
         GlideImage(model = url, contentDescription = contentDescription)
+    },
+    inlineImageContent = { url, contentDescription ->
+        GlideInlineImage(model = url, contentDescription = contentDescription)
     },
 )
 ```
@@ -445,6 +456,11 @@ For release-like check:
 - Maven Central artifacts are immutable after publish
 
 ## Changelog
+
+### Unreleased (`0.10.0`)
+
+- **Ultra-light base renderer** -- moves Coil/Ktor image loading from `orca-compose` into opt-in `orca-images-coil`.
+- **Explicit image slots** -- block and inline Markdown images render only through `imageContent` / `inlineImageContent`; without a loader, safe alt/fallback text remains visible.
 
 ### 0.9.5
 

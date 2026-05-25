@@ -1,2 +1,1 @@
-# Coil
--dontwarn coil3.**
+# No consumer keep rules required by the base renderer.
