@@ -125,18 +125,25 @@ Orca(
 
 ### Streaming / LLM chat
 
-For token-by-token streaming (e.g. LLM responses), Orca paces parse operations to avoid redundant work without waiting for the stream to stop:
+For token-by-token streaming (e.g. LLM responses), use `OrcaStreamingState`: it accepts deltas and publishes paced snapshots instead of forcing your UI to replace the entire string on every token.
 
 ```kotlin
+val stream = rememberOrcaStreamingState(frameIntervalMs = 80)
+
+LaunchedEffect(messageId) {
+    stream.clear()
+    responseChunks.collect { delta -> stream.append(delta) }
+    stream.finish()
+}
+
 Orca(
-    markdown = streamingMarkdown, // updated on every token
+    state = stream,
     parser = remember { OrcaMarkdownParser() },
     parseCacheKey = "message-42",
-    streamingDebounceMs = 80, // default pacing interval; set 0 to parse every update
 )
 ```
 
-The initial parse starts immediately on `Dispatchers.Default`; during continuous output, Orca renders the latest snapshot at the pacing interval rather than waiting for an idle gap. This avoids UI-thread stalls and stream starvation.
+The parser still processes complete published snapshots, but token bursts no longer cause a Compose value replacement or parse request for every individual delta. The initial parse and subsequent parses run on `Dispatchers.Default`.
 
 ## Public API
 
@@ -461,6 +468,7 @@ For release-like check:
 
 - **Ultra-light base renderer** -- moves Coil/Ktor image loading from `orca-compose` into opt-in `orca-images-coil`.
 - **Explicit image slots** -- block and inline Markdown images render only through `imageContent` / `inlineImageContent`; without a loader, safe alt/fallback text remains visible.
+- **Streaming state API** -- `rememberOrcaStreamingState()` accepts token deltas and publishes paced snapshots for chat rendering without caller-side full-string updates per token.
 
 ### 0.9.5
 

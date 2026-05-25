@@ -192,7 +192,9 @@ Thread safety is provided by `OrcaLock.withLock {}` around all map operations. T
 
 ## Streaming
 
-The `Orca(markdown: String, ...)` composable handles rapid markdown changes (e.g. LLM token streaming):
+For LLM token streams, `OrcaStreamingState` accepts delta chunks and publishes renderable snapshots at `frameIntervalMs`. `Orca(state = ..., ...)` avoids a second debounce interval because pacing already happened at the state boundary.
+
+The underlying `Orca(markdown: String, ...)` composable handles each published snapshot as follows:
 
 1. **Background initial parse** — on first composition, raw Markdown is parsed immediately from `LaunchedEffect` on `Dispatchers.Default`; the UI thread is never blocked by document parsing.
 

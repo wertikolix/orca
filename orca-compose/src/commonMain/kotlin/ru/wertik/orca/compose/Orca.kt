@@ -168,6 +168,44 @@ fun Orca(
 }
 
 /**
+ * Renders Markdown from a delta-buffered [OrcaStreamingState].
+ *
+ * The state already paces published snapshots, so this overload parses each published value
+ * immediately rather than applying a second debounce interval.
+ */
+@Composable
+fun Orca(
+    state: OrcaStreamingState,
+    modifier: Modifier = Modifier,
+    parser: OrcaParser,
+    parseCacheKey: Any? = null,
+    style: OrcaStyle = defaultStyle,
+    rootLayout: OrcaRootLayout = OrcaRootLayout.LAZY_COLUMN,
+    securityPolicy: OrcaSecurityPolicy = OrcaSecurityPolicies.Default,
+    onLinkClick: (String) -> Unit = noOpLinkClick,
+    onParseDiagnostics: ((OrcaParseDiagnostics) -> Unit)? = null,
+    blockOverride: Map<KClass<out OrcaBlock>, @Composable (OrcaBlock) -> Unit> = emptyMap(),
+    imageContent: OrcaImageContent? = null,
+    inlineImageContent: OrcaImageContent? = null,
+) {
+    Orca(
+        markdown = state.markdown,
+        modifier = modifier,
+        parser = parser,
+        parseCacheKey = parseCacheKey,
+        style = style,
+        rootLayout = rootLayout,
+        securityPolicy = securityPolicy,
+        onLinkClick = onLinkClick,
+        onParseDiagnostics = onParseDiagnostics,
+        streamingDebounceMs = 0,
+        blockOverride = blockOverride,
+        imageContent = imageContent,
+        inlineImageContent = inlineImageContent,
+    )
+}
+
+/**
  * Renders a pre-parsed [OrcaDocument] as Compose UI.
  *
  * Use this overload when you already have a parsed AST (e.g. from a custom parser pipeline

@@ -16,19 +16,26 @@ fun MarkdownView(markdown: String) {
 
 ## Chat / LLM streaming
 
-For token-by-token streaming where `markdown` updates frequently:
+For token-by-token streaming, push deltas into paced state instead of replacing a whole string on every token:
 
 ```kotlin
 @Composable
 fun ChatMessage(
     messageId: String,
-    markdown: String, // updated on every token
+    chunks: Flow<String>,
 ) {
+    val stream = rememberOrcaStreamingState(frameIntervalMs = 80)
+
+    LaunchedEffect(messageId) {
+        stream.clear()
+        chunks.collect(stream::append)
+        stream.finish()
+    }
+
     Orca(
-        markdown = markdown,
+        state = stream,
         parser = remember { OrcaMarkdownParser() },
         parseCacheKey = messageId, // stable key avoids redundant re-parses
-        streamingDebounceMs = 80, // default; periodically renders the latest streamed value
         rootLayout = OrcaRootLayout.COLUMN, // parent LazyColumn handles scrolling
     )
 }
@@ -36,6 +43,7 @@ fun ChatMessage(
 
 Key points:
 - `parseCacheKey` should be stable per message (e.g. message ID)
+- `frameIntervalMs` controls how frequently buffered deltas publish a renderable snapshot
 - `OrcaRootLayout.COLUMN` when the parent already scrolls (e.g. chat list)
 - parsing starts off the UI thread, including first render
 - parser instance should be `remember`ed or shared across messages

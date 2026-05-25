@@ -74,6 +74,7 @@ import ru.wertik.orca.compose.Orca
 import ru.wertik.orca.compose.OrcaDefaults
 import ru.wertik.orca.compose.OrcaRootLayout
 import ru.wertik.orca.compose.OrcaSecurityPolicies
+import ru.wertik.orca.compose.rememberOrcaStreamingState
 import ru.wertik.orca.core.OrcaMarkdownParser
 import ru.wertik.orca.images.coil.OrcaCoilImage
 import ru.wertik.orca.images.coil.OrcaCoilInlineImage
@@ -251,19 +252,18 @@ private fun StreamingScreen(
     onLinkClick: (String) -> Unit,
 ) {
     val fullText = STREAMING_DEMO_MARKDOWN
-    var displayedText by remember { mutableStateOf("") }
-    var isStreaming by remember { mutableStateOf(true) }
+    val stream = rememberOrcaStreamingState(frameIntervalMs = 80)
 
     LaunchedEffect(Unit) {
-        displayedText = ""
-        isStreaming = true
+        stream.clear()
         val random = kotlin.random.Random
         var i = 0
         while (i < fullText.length) {
             // simulate chunked token delivery — 1 to 6 chars at a time
             val chunkSize = random.nextInt(1, 7).coerceAtMost(fullText.length - i)
+            val chunk = fullText.substring(i, i + chunkSize)
             i += chunkSize
-            displayedText = fullText.substring(0, i)
+            stream.append(chunk)
             // variable delay: shorter for mid-word, longer at whitespace/newlines
             val lastChar = fullText[i - 1]
             val baseDelay = when {
@@ -273,7 +273,7 @@ private fun StreamingScreen(
             }
             delay(baseDelay)
         }
-        isStreaming = false
+        stream.finish()
     }
 
     Column(
@@ -288,23 +288,23 @@ private fun StreamingScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = if (isStreaming) "Streaming..." else "Complete",
+                text = if (stream.isStreaming) "Streaming..." else "Complete",
                 style = MaterialTheme.typography.labelMedium,
-                color = if (isStreaming) {
+                color = if (stream.isStreaming) {
                     if (isDark) Color(0xFF82B1FF) else Color(0xFF1565C0)
                 } else {
                     if (isDark) Color(0xFF81C784) else Color(0xFF2E7D32)
                 },
             )
             Text(
-                text = "${displayedText.length} / ${fullText.length} chars",
+                text = "${stream.markdown.length} / ${fullText.length} chars",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
             )
         }
 
         Orca(
-            markdown = displayedText,
+            state = stream,
             parser = parser,
             parseCacheKey = "streaming-demo",
             modifier = Modifier.fillMaxSize(),
