@@ -6,53 +6,40 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import coil3.ImageLoader
-import coil3.SingletonImageLoader
-import coil3.network.ktor3.KtorNetworkFetcherFactory
-import coil3.request.crossfade
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Article
-import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.TableChart
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -63,17 +50,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.network.ktor3.KtorNetworkFetcherFactory
 import kotlinx.coroutines.delay
 import ru.wertik.orca.compose.Orca
 import ru.wertik.orca.compose.OrcaDefaults
 import ru.wertik.orca.compose.OrcaRootLayout
 import ru.wertik.orca.compose.OrcaSecurityPolicies
+import ru.wertik.orca.compose.OrcaStyle
 import ru.wertik.orca.compose.rememberOrcaStreamingState
 import ru.wertik.orca.core.OrcaIncrementalParserSession
 import ru.wertik.orca.core.OrcaMarkdownParser
@@ -83,25 +75,18 @@ import ru.wertik.orca.images.coil.OrcaCoilInlineImage
 class OrcaSampleApplication : Application(), SingletonImageLoader.Factory {
     override fun newImageLoader(context: coil3.PlatformContext): ImageLoader {
         return ImageLoader.Builder(context)
-            .components {
-                add(KtorNetworkFetcherFactory())
-            }
-            .crossfade(true)
+            .components { add(KtorNetworkFetcherFactory()) }
             .build()
     }
 }
 
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            var isDark by rememberSaveable { mutableStateOf(false) }
-
-            MaterialTheme(
-                colorScheme = if (isDark) darkColorScheme() else lightColorScheme(),
-            ) {
+            var isDark by rememberSaveable { mutableStateOf(true) }
+            OrcaSampleTheme(isDark = isDark) {
                 OrcaSampleApp(
                     isDark = isDark,
                     onToggleTheme = { isDark = !isDark },
@@ -111,16 +96,51 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private val LightColors = lightColorScheme(
+    background = Color(0xFFF7F6F3),
+    surface = Color(0xFFF7F6F3),
+    surfaceContainer = Color(0xFFF0EEE9),
+    surfaceContainerHigh = Color(0xFFE9E6DF),
+    onSurface = Color(0xFF201E1B),
+    onSurfaceVariant = Color(0xFF625E57),
+    primary = Color(0xFF3E5F67),
+    onPrimary = Color(0xFFF7F6F3),
+    outline = Color(0xFFC8C3BA),
+    outlineVariant = Color(0xFFE0DCD4),
+)
+
+private val DarkColors = darkColorScheme(
+    background = Color(0xFF121311),
+    surface = Color(0xFF121311),
+    surfaceContainer = Color(0xFF1A1B18),
+    surfaceContainerHigh = Color(0xFF232420),
+    onSurface = Color(0xFFE7E3DB),
+    onSurfaceVariant = Color(0xFFAAA59C),
+    primary = Color(0xFFAAC5CB),
+    onPrimary = Color(0xFF172327),
+    outline = Color(0xFF41423D),
+    outlineVariant = Color(0xFF2B2C28),
+)
+
+@Composable
+private fun OrcaSampleTheme(isDark: Boolean, content: @Composable () -> Unit) {
+    MaterialTheme(
+        colorScheme = if (isDark) DarkColors else LightColors,
+        content = content,
+    )
+}
+
 private enum class SampleScreen(
-    val label: String,
-    val icon: ImageVector,
+    val title: String,
+    val shortLabel: String,
+    val description: String,
 ) {
-    OVERVIEW("Overview", Icons.Default.Article),
-    BLOCKS("Blocks", Icons.Default.Code),
-    TABLES("Tables", Icons.Default.TableChart),
-    ADVANCED("Advanced", Icons.Default.Tune),
-    STREAMING("Stream", Icons.Default.PlayArrow),
-    PLAYGROUND("Edit", Icons.Default.Edit),
+    OVERVIEW("Reader", "Read", "Long-form markdown rendering and links"),
+    BLOCKS("Syntax", "Blocks", "Code, quotes, tasks and images"),
+    TABLES("Tables", "Data", "Readable tabular content in both themes"),
+    ADVANCED("Extended", "More", "Footnotes, details and definitions"),
+    STREAMING("Streaming", "Stream", "Token deltas with stable rendering"),
+    PLAYGROUND("Playground", "Edit", "Edit markdown and inspect output"),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -131,116 +151,175 @@ private fun OrcaSampleApp(
 ) {
     val context = LocalContext.current
     val parser = remember { OrcaMarkdownParser() }
-    val orcaStyle = if (isDark) OrcaDefaults.darkStyle() else OrcaDefaults.lightStyle()
-
+    val style = if (isDark) OrcaDefaults.darkStyle() else OrcaDefaults.lightStyle()
     val screens = remember { SampleScreen.entries }
-    var selectedScreen by rememberSaveable { mutableIntStateOf(0) }
-
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isDark) Color(0xFF121212) else Color.White,
-        animationSpec = tween(300),
-        label = "bg",
-    )
-
+    var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
+    val selectedScreen = screens[selectedIndex]
     val onLinkClick: (String) -> Unit = { link ->
-        Toast.makeText(context, "Link: $link", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, link, Toast.LENGTH_SHORT).show()
     }
 
-    Scaffold(
-        modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Orca",
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                        Text(
-                            text = "Compose Multiplatform Markdown",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onToggleTheme) {
-                        Icon(
-                            imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            contentDescription = "Toggle theme",
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (isDark) Color(0xFF1E1E1E) else MaterialTheme.colorScheme.surface,
-                ),
-            )
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = if (isDark) Color(0xFF1E1E1E) else MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp,
-            ) {
-                screens.forEachIndexed { index, screen ->
-                    NavigationBarItem(
-                        selected = selectedScreen == index,
-                        onClick = { selectedScreen = index },
-                        icon = {
-                            Icon(
-                                imageVector = screen.icon,
-                                contentDescription = screen.label,
-                            )
-                        },
-                        label = { Text(screen.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = if (isDark) Color(0xFF2D2D2D) else MaterialTheme.colorScheme.secondaryContainer,
-                        ),
-                    )
-                }
-            }
-        },
-    ) { innerPadding ->
-        AnimatedContent(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(WindowInsets.safeDrawing),
+    ) {
+        SampleHeader(isDark = isDark, onToggleTheme = onToggleTheme)
+        ScreenTabs(
+            screens = screens,
+            selectedIndex = selectedIndex,
+            onSelect = { selectedIndex = it },
+        )
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Crossfade(
             targetState = selectedScreen,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(backgroundColor),
-            transitionSpec = {
-                fadeIn(tween(200)) togetherWith fadeOut(tween(150))
-            },
+            animationSpec = tween(durationMillis = 160),
             label = "screen",
-        ) { screenIndex ->
-            when (screens[screenIndex]) {
-                SampleScreen.STREAMING -> StreamingScreen(
-                    parser = parser,
-                    style = orcaStyle,
-                    isDark = isDark,
-                    onLinkClick = onLinkClick,
-                )
-                SampleScreen.PLAYGROUND -> PlaygroundScreen(
-                    parser = parser,
-                    style = orcaStyle,
-                    isDark = isDark,
-                    onLinkClick = onLinkClick,
-                )
-                else -> {
-                    val markdown = sampleMarkdown(screens[screenIndex])
-                    Orca(
-                        markdown = markdown,
-                        parser = parser,
-                        parseCacheKey = screens[screenIndex].name,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        style = orcaStyle,
-                        securityPolicy = OrcaSecurityPolicies.RemoteImages,
-                        imageContent = { url, description -> OrcaCoilImage(url, description, orcaStyle) },
-                        inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, orcaStyle) },
-                        onLinkClick = onLinkClick,
-                    )
-                }
+            modifier = Modifier.fillMaxSize(),
+        ) { screen ->
+            when (screen) {
+                SampleScreen.STREAMING -> StreamingScreen(parser, style, screen, onLinkClick)
+                SampleScreen.PLAYGROUND -> PlaygroundScreen(parser, style, screen, onLinkClick)
+                else -> DocumentScreen(screen, parser, style, onLinkClick)
             }
+        }
+    }
+}
+
+@Composable
+private fun SampleHeader(isDark: Boolean, onToggleTheme: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 18.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                text = "ORCA",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    letterSpacing = 2.sp,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = "Markdown render lab",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(999.dp),
+            ) {
+                Text(
+                    text = "0.10 snapshot",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.size(6.dp))
+            IconButton(onClick = onToggleTheme) {
+                Icon(
+                    imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                    contentDescription = "Toggle theme",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScreenTabs(
+    screens: List<SampleScreen>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        screens.forEachIndexed { index, screen ->
+            val selected = index == selectedIndex
+            Surface(
+                color = if (selected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
+                shape = RoundedCornerShape(999.dp),
+                modifier = Modifier
+                    .border(
+                        width = 1.dp,
+                        color = if (selected) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant,
+                        shape = RoundedCornerShape(999.dp),
+                    )
+                    .clickable { onSelect(index) },
+            ) {
+                Text(
+                    text = screen.shortLabel,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeading(screen: SampleScreen, meta: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(screen.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(meta, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text(screen.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun DocumentScreen(
+    screen: SampleScreen,
+    parser: OrcaMarkdownParser,
+    style: OrcaStyle,
+    onLinkClick: (String) -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 820.dp)
+                .fillMaxSize()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+        ) {
+            SectionHeading(screen = screen, meta = "Static")
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Orca(
+                markdown = sampleMarkdown(screen),
+                parser = parser,
+                parseCacheKey = screen.name,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 18.dp),
+                style = style,
+                securityPolicy = OrcaSecurityPolicies.RemoteImages,
+                imageContent = { url, description -> OrcaCoilImage(url, description, style) },
+                inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, style) },
+                onLinkClick = onLinkClick,
+            )
         }
     }
 }
@@ -248,134 +327,120 @@ private fun OrcaSampleApp(
 @Composable
 private fun StreamingScreen(
     parser: OrcaMarkdownParser,
-    style: ru.wertik.orca.compose.OrcaStyle,
-    isDark: Boolean,
+    style: OrcaStyle,
+    screen: SampleScreen,
     onLinkClick: (String) -> Unit,
 ) {
-    val fullText = STREAMING_DEMO_MARKDOWN
-    val stream = rememberOrcaStreamingState(frameIntervalMs = 80)
+    val stream = rememberOrcaStreamingState(frameIntervalMs = 80L)
     val incrementalParser = remember(parser) { OrcaIncrementalParserSession(parser) }
 
     LaunchedEffect(Unit) {
         incrementalParser.reset()
         stream.clear()
-        val random = kotlin.random.Random
-        var i = 0
-        while (i < fullText.length) {
-            // simulate chunked token delivery — 1 to 6 chars at a time
-            val chunkSize = random.nextInt(1, 7).coerceAtMost(fullText.length - i)
-            val chunk = fullText.substring(i, i + chunkSize)
-            i += chunkSize
+        STREAMING_DEMO_MARKDOWN.chunked(9).forEach { chunk ->
             stream.append(chunk)
-            // variable delay: shorter for mid-word, longer at whitespace/newlines
-            val lastChar = fullText[i - 1]
-            val baseDelay = when {
-                lastChar == '\n' -> random.nextLong(30, 80)
-                lastChar == ' ' -> random.nextLong(10, 40)
-                else -> random.nextLong(5, 20)
-            }
-            delay(baseDelay)
+            delay(24L)
         }
         stream.finish()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-    ) {
-        Row(
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .widthIn(max = 820.dp)
+                .fillMaxSize()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
         ) {
-            Text(
-                text = if (stream.isStreaming) "Streaming..." else "Complete",
-                style = MaterialTheme.typography.labelMedium,
-                color = if (stream.isStreaming) {
-                    if (isDark) Color(0xFF82B1FF) else Color(0xFF1565C0)
-                } else {
-                    if (isDark) Color(0xFF81C784) else Color(0xFF2E7D32)
-                },
-            )
-            Text(
-                text = "${stream.markdown.length} / ${fullText.length} chars",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            SectionHeading(screen = screen, meta = if (stream.isStreaming) "Live" else "Complete")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(14.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = if (stream.isStreaming) "Receiving tokens" else "Response complete",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "${stream.markdown.length} / ${STREAMING_DEMO_MARKDOWN.length}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Orca(
+                state = stream,
+                parser = incrementalParser,
+                parseCacheKey = "streaming-demo",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 18.dp),
+                style = style,
+                securityPolicy = OrcaSecurityPolicies.RemoteImages,
+                imageContent = { url, description -> OrcaCoilImage(url, description, style) },
+                inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, style) },
+                onLinkClick = onLinkClick,
             )
         }
-
-        Orca(
-            state = stream,
-            parser = incrementalParser,
-            parseCacheKey = "streaming-demo",
-            modifier = Modifier.fillMaxSize(),
-            style = style,
-            securityPolicy = OrcaSecurityPolicies.RemoteImages,
-            imageContent = { url, description -> OrcaCoilImage(url, description, style) },
-            inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, style) },
-            onLinkClick = onLinkClick,
-        )
     }
 }
 
 @Composable
 private fun PlaygroundScreen(
     parser: OrcaMarkdownParser,
-    style: ru.wertik.orca.compose.OrcaStyle,
-    isDark: Boolean,
+    style: OrcaStyle,
+    screen: SampleScreen,
     onLinkClick: (String) -> Unit,
 ) {
-    var input by rememberSaveable { mutableStateOf(PLAYGROUND_DEFAULT_MARKDOWN) }
+    var markdown by rememberSaveable { mutableStateOf(PLAYGROUND_DEFAULT_MARKDOWN) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-    ) {
-        OutlinedTextField(
-            value = input,
-            onValueChange = { input = it },
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp)
-                .padding(top = 12.dp),
-            label = { Text("Markdown") },
-            placeholder = { Text("Type markdown here...") },
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = if (isDark) Color(0xFF82B1FF) else Color(0xFF1565C0),
-                unfocusedBorderColor = if (isDark) Color(0xFF424242) else Color(0xFFD0D7DE),
-                focusedContainerColor = if (isDark) Color(0xFF1E1E1E) else Color(0xFFFAFAFA),
-                unfocusedContainerColor = if (isDark) Color(0xFF1E1E1E) else Color(0xFFFAFAFA),
-            ),
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp)
-                .height(1.dp)
-                .background(
-                    if (isDark) Color(0xFF333333) else Color(0xFFE0E0E0),
-                ),
-        )
-
-        Orca(
-            markdown = input,
-            parser = parser,
-            parseCacheKey = "playground",
-            modifier = Modifier
+                .widthIn(max = 820.dp)
                 .fillMaxSize()
-                .padding(top = 12.dp, bottom = 16.dp),
-            style = style,
-            rootLayout = OrcaRootLayout.COLUMN,
-            securityPolicy = OrcaSecurityPolicies.RemoteImages,
-            imageContent = { url, description -> OrcaCoilImage(url, description, style) },
-            inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, style) },
-            onLinkClick = onLinkClick,
-        )
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+        ) {
+            SectionHeading(screen = screen, meta = "${markdown.length} chars")
+            OutlinedTextField(
+                value = markdown,
+                onValueChange = { markdown = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(158.dp),
+                label = { Text("Markdown source") },
+                supportingText = { Text("Preview updates while you type") },
+                textStyle = MaterialTheme.typography.bodyMedium,
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                ),
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(top = 18.dp, bottom = 18.dp),
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
+            Orca(
+                markdown = markdown,
+                parser = parser,
+                parseCacheKey = "playground",
+                modifier = Modifier.fillMaxSize(),
+                style = style,
+                rootLayout = OrcaRootLayout.COLUMN,
+                securityPolicy = OrcaSecurityPolicies.RemoteImages,
+                imageContent = { url, description -> OrcaCoilImage(url, description, style) },
+                inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, style) },
+                onLinkClick = onLinkClick,
+            )
+        }
     }
 }
 
@@ -392,80 +457,79 @@ private fun sampleMarkdown(screen: SampleScreen): String {
 // region Markdown content
 
 private val OVERVIEW_MARKDOWN = """
-# Setting up a Kotlin Multiplatform project
+# Orca Compose
 
-Getting KMP to work across all targets takes some effort, but the payoff is worth it. Here's a quick rundown of what you need to know.
+Render Markdown in Compose with a small base artifact and opt-in integrations only where they are needed.
 
-## The basics
+## Start with text
 
-Your shared code lives in `commonMain` and platform-specific bits go into `androidMain`, `iosMain`, etc. The Gradle setup looks something like this — expect/actual declarations bridge the gap between platforms.
+`orca-core` parses Markdown into an AST. `orca-compose` renders it. Images live in a separate optional module so chat and documentation screens do not inherit networking code by default.
 
-Key things: **dependency injection** works differently per target, *coroutines* are your best friend for async, and ~~don't bother with~~ `Dispatchers.IO` on native — use `Dispatchers.Default` instead.
+The renderer supports **rich text**, *emphasis*, ~~strikethrough~~, `inline code`, and links with your own click policy.
 
-## Versioning
+## Current direction
 
-Current release: v2.1.0^beta^
+Development line: 0.10.0^snapshot^
 
-Minimum SDK: API 24 (Android), iOS 15+, JDK 17 (Desktop)
+Base renderer: `orca-compose` + `orca-core`
 
-Chemical formula example: C~6~H~12~O~6~ (glucose)
+Optional images: `orca-images-coil`
 
 ## Quick links
 
-:white_check_mark: [Kotlin docs](https://kotlinlang.org/docs/multiplatform.html) — official guide
-:wrench: [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform) — UI framework
-:rocket: [KMP library template](https://github.com/AdrielCafe/lyricist) — good reference
+:white_check_mark: [Architecture](https://github.com/wertikolix/orca) — module split and usage
+:wrench: [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform) — rendering platform
+:rocket: [CommonMark](https://commonmark.org) — syntax baseline
 
-:warning: Watch out for binary compatibility issues when publishing. :bug: iOS memory leaks with circular references are a classic trap.
+:warning: Remote images stay disabled unless the caller opts in. :bug: Malformed Markdown falls back to readable text.
 
 ---
 
-## What to set up first
+## What to enable first
 
-- Gradle version catalogs (`libs.versions.toml`)
-- CI pipeline — **GitHub Actions** works well for KMP
-- Detekt + ktlint for code style
-- `expect`/`actual` for platform APIs like file I/O
+- Add `orca-compose` to render documents
+- Supply an `OrcaMarkdownParser` instance
+- Choose a security policy for remote content
+- Add `orca-images-coil` only if your UI needs images
 
 ## Recommended order
 
-1. Get `commonMain` compiling with shared models
-2. Wire up networking (Ktor is the standard choice)
-3. Add platform-specific UI on top
-4. Set up publishing to Maven Central
+1. Render plain text and links
+2. Tune typography and table contrast
+3. Enable streaming for chat messages
+4. Opt into images or future math rendering
 
 ## Project status
 
-- [x] Shared data layer
-- [x] Ktor networking module
-- [x] Compose UI for Android + Desktop
-- [ ] iOS SwiftUI wrapper
-- [ ] Wasm target support
+- [x] Lightweight base renderer
+- [x] Optional Coil image integration
+- [x] Paced streaming state
+- [ ] Optional LaTeX/math integration
 
 ---
 
 ## Image loading
 
-![Kotlin logo](https://raw.githubusercontent.com/JetBrains/kotlin-web-site/master/static/images/kotlin-logo.png)
+![Orca image sample](https://raw.githubusercontent.com/JetBrains/kotlin-web-site/master/static/images/kotlin-logo.png)
 """.trimIndent()
 
 private val BLOCKS_MARKDOWN = """
 ## Admonitions
 
 > [!NOTE]
-> Kotlin 2.1 introduced the new K2 compiler as the default. If your build breaks after updating, check for incompatible compiler plugins first.
+> Orca parses Markdown separately from rendering, so the same AST can power a preview and a full document view.
 
 > [!TIP]
-> Run `./gradlew dependencies --scan` to get a full dependency tree — super useful for debugging version conflicts.
+> Use a stable `parseCacheKey` when the same message is recomposed frequently.
 
 > [!IMPORTANT]
-> The `android` block in `build.gradle.kts` must come *after* the `kotlin` block, otherwise the AGP plugin won't pick up your source sets.
+> Keep remote image loading opt-in by passing content slots and an explicit security policy.
 
 > [!WARNING]
-> Proguard rules for KMP libraries need to be in the consumer module, not the library itself. This catches people off guard regularly.
+> For chat streams, push deltas into `OrcaStreamingState` instead of rebuilding a full value for every token.
 
 > [!CAUTION]
-> Never store API keys in `BuildConfig` for open-source projects — even if the repo is private now, it might not be later.
+> Treat rendered input as untrusted content and keep link/image decisions in the host application.
 
 ---
 
@@ -535,26 +599,24 @@ ORDER BY month DESC;
 private val TABLES_MARKDOWN = """
 ## Tables
 
-### Kotlin targets — build time comparison
+### Feature surfaces
 
-| Target | Clean build | Incremental | Binary size |
+| Surface | Base module | Optional integration | Status |
 |:-------|:------:|:--------:|-----:|
-| **Android** | 24s | 3s | 4.2 MB |
-| **Desktop (JVM)** | 31s | 5s | 18.7 MB |
-| **iOS arm64** | 48s | 12s | 9.1 MB |
-| **Wasm** | 52s | 8s | 2.8 MB |
+| **Text and links** | `orca-compose` | — | Ready |
+| **Tables** | `orca-compose` | — | Ready |
+| **Streaming prose** | `orca-compose` | — | Ready |
+| **Remote images** | slots | `orca-images-coil` | Opt-in |
+| **LaTeX math** | planned slots | planned module | Planned |
 
-### Common libraries for KMP
+### Dependency strategy
 
-| Library | Category | Platforms | Maturity |
+| Module | Responsibility | Included by default | Weight goal |
 |:--------|:---------|:---------:|:---------|
-| [Ktor](https://ktor.io) | Networking | All | :white_check_mark: Stable |
-| [SQLDelight](https://github.com/cashapp/sqldelight) | Database | All | :white_check_mark: Stable |
-| [Koin](https://insert-koin.io) | DI | All | :white_check_mark: Stable |
-| [Napier](https://github.com/AdrielCafe/napier) | Logging | All | :wrench: Maintained |
-| [Multiplatform Settings](https://github.com/russhwolf/multiplatform-settings) | Key-value | All | :white_check_mark: Stable |
-| [KStore](https://github.com/AdrielCafe/kstore) | File storage | All | :wrench: Maintained |
-| [Compose ImageLoader](https://github.com/AdrielCafe/compose-imageloader) | Images | Android, iOS, Desktop | :warning: Alpha |
+| `orca-core` | AST and parsing | Yes | Minimal |
+| `orca-compose` | Compose renderer | Yes | Minimal |
+| `orca-images-coil` | Network images | No | Consumer choice |
+| future math module | Formula rendering | No | Measure first |
 
 ---
 
@@ -663,88 +725,88 @@ Jump to [Architecture patterns](#deep-nesting) section above.
 """.trimIndent()
 
 private val STREAMING_DEMO_MARKDOWN = """
-## How to structure a Kotlin Multiplatform project
+## Streaming a response without jitter
 
-The key decision is how much code to share. Most teams start with shared data models and networking, then gradually move UI logic into `commonMain` as they get comfortable.
+Token deltas arrive frequently. Orca publishes a paced snapshot and incrementally reuses completed prose blocks whenever the syntax remains safe to reuse.
 
-### Recommended project layout
+### The UI path
 
 ```
-shared/
-  commonMain/    -- models, use cases, repositories
-  androidMain/   -- Android-specific implementations
-  iosMain/       -- iOS-specific implementations
-app-android/     -- Android Compose UI
-app-ios/         -- SwiftUI wrapper
-app-desktop/     -- Desktop Compose UI
+network chunks
+  -> OrcaStreamingState.append(delta)
+  -> paced rendered snapshot
+  -> OrcaIncrementalParserSession
+  -> stable document on screen
 ```
 
-### Networking with Ktor
+### Compose usage
 
 Ktor is the standard choice for KMP networking. Here's a typical setup:
 
 ```kotlin
-val client = HttpClient {
-    install(ContentNegotiation) { json() }
-    install(Logging) { level = LogLevel.HEADERS }
-    defaultRequest {
-        url("https://api.example.com/v2/")
-        header("Accept", "application/json")
-    }
+val stream = rememberOrcaStreamingState(frameIntervalMs = 80)
+val parser = remember { OrcaIncrementalParserSession(OrcaMarkdownParser()) }
+
+LaunchedEffect(messageId) {
+    chunks.collect(stream::append)
+    stream.finish()
 }
+
+Orca(state = stream, parser = parser, parseCacheKey = messageId)
 ```
 
 > [!TIP]
-> Use `expect`/`actual` for the HTTP engine — `OkHttp` on Android, `Darwin` on iOS, `CIO` for desktop.
+> Plain prose receives the incremental fast path. Complex blocks always fall back to exact parsing.
 
 ### Things that trip people up
 
-- **Serialization** — `@Serializable` classes must be in `commonMain`, not platform modules
-- **Coroutine scopes** — iOS doesn't have `viewModelScope`, you'll need a custom scope
-- ~~Freezing~~ — no longer needed since the new Kotlin/Native memory model
-- **Resources** — each platform handles strings, images, and assets differently
+- **Unfinished tables** — fall back to complete parsing while delimiters arrive
+- **Code fences** — remain exact rather than partially interpreted
+- ~~Every-token recomposition~~ — avoided by paced snapshots
+- **Remote images** — still require explicit policy and image slots
 
-### Database layer
+### A stable completed paragraph
 
 ```kotlin
-// SQLDelight generates type-safe Kotlin from SQL
-val players: Flow<List<Player>> =
-    playerQueries.selectAll()
-        .asFlow()
-        .mapToList(Dispatchers.Default)
+Orca(
+    state = stream,
+    parser = parser,
+    style = OrcaDefaults.darkStyle(),
+)
 ```
 
-That covers the basics — the rest is just connecting the pieces and writing tests.
+The final document is exact, while live updates remain calm and readable.
 """.trimIndent()
 
 private val PLAYGROUND_DEFAULT_MARKDOWN = """
-# Release notes — v2.1.0
+# Orca 0.10 snapshot
 
-This release focuses on **performance** and *developer experience*.
+This development line focuses on a **lighter base renderer** and *smoother streaming*.
 
 ## Changes
 
-- Reduced recomposition count by **40%** in large documents
-- Added `streamingDebounceMs` parameter for real-time use cases
-- Fixed ~~incorrect~~ table column alignment on RTL layouts
-- New `OrcaRootLayout.COLUMN` option for non-scrollable containers
+- Split remote images into the optional `orca-images-coil` module
+- Added paced `OrcaStreamingState` for token deltas
+- Added conservative incremental parsing for streaming prose
+- Fixed readable table text colors in dark themes
 
 ## Migration
 
 ```kotlin
-// Before
-Orca(markdown = text, parser = parser)
-
-// After — explicit cache key recommended
-Orca(markdown = text, parser = parser, parseCacheKey = "my-key")
+Orca(
+    markdown = text,
+    parser = parser,
+    parseCacheKey = messageId,
+    rootLayout = OrcaRootLayout.COLUMN,
+)
 ```
 
 > [!NOTE]
-> The `parseCacheKey` parameter is optional but improves performance when the same content is rendered in multiple places.
+> LaTeX support should arrive as opt-in syntax and renderer slots, not as weight in the base artifact.
 
-- [x] Update dependencies
-- [x] Run full test suite
-- [ ] Update documentation site
+- [x] Keep core rendering lightweight
+- [x] Make streaming stable
+- [ ] Add optional LaTeX/math rendering
 """.trimIndent()
 
 // endregion
