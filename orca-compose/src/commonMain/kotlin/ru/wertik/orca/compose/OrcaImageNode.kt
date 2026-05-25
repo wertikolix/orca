@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.BasicText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -132,8 +132,7 @@ internal fun ImageErrorPlaceholder(
     ) {
         Text(
             text = "\u26A0 Failed to load image",
-            style = style.typography.paragraph,
-            color = Color(0xFF9E9E9E),
+            style = style.typography.paragraph.copy(color = Color(0xFF9E9E9E)),
         )
     }
 }

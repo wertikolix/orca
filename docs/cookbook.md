@@ -9,7 +9,7 @@ Practical recipes for common Orca use cases.
 fun MarkdownView(markdown: String) {
     Orca(
         markdown = markdown,
-        parser = OrcaMarkdownParser(),
+        parser = remember { OrcaMarkdownParser() },
     )
 }
 ```
@@ -28,7 +28,7 @@ fun ChatMessage(
         markdown = markdown,
         parser = remember { OrcaMarkdownParser() },
         parseCacheKey = messageId, // stable key avoids redundant re-parses
-        streamingDebounceMs = 80, // default; only the latest value is parsed
+        streamingDebounceMs = 80, // default; periodically renders the latest streamed value
         rootLayout = OrcaRootLayout.COLUMN, // parent LazyColumn handles scrolling
     )
 }
@@ -37,7 +37,7 @@ fun ChatMessage(
 Key points:
 - `parseCacheKey` should be stable per message (e.g. message ID)
 - `OrcaRootLayout.COLUMN` when the parent already scrolls (e.g. chat list)
-- first render is synchronous -- no empty frame flash
+- parsing starts off the UI thread, including first render
 - parser instance should be `remember`ed or shared across messages
 
 ## Shared parser instance
@@ -77,7 +77,7 @@ Orca(document = document, style = fullStyle)
 ```kotlin
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     onLinkClick = { url ->
         when {
             url.startsWith("myapp://") -> handleDeepLink(url)
@@ -90,7 +90,7 @@ Orca(
 
 ## Custom security policy
 
-Allow custom schemes and relative URLs:
+Remote images are blocked by default. For trusted content, enable only the schemes you need together with any custom links:
 
 ```kotlin
 val policy = OrcaSecurityPolicies.byAllowedSchemes(
@@ -102,7 +102,7 @@ val policy = OrcaSecurityPolicies.byAllowedSchemes(
 
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     securityPolicy = policy,
 )
 ```
@@ -118,7 +118,7 @@ val style = if (isSystemInDarkTheme()) {
 
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     style = style,
 )
 ```
@@ -155,7 +155,7 @@ val style = OrcaStyle(
 ```kotlin
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     onParseDiagnostics = { diagnostics ->
         if (diagnostics.hasErrors) {
             Log.w("Orca", "Parse errors: ${diagnostics.errors}")
@@ -243,7 +243,7 @@ Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
     Text("Header")
     Orca(
         markdown = markdown,
-        parser = OrcaMarkdownParser(),
+        parser = remember { OrcaMarkdownParser() },
         rootLayout = OrcaRootLayout.COLUMN, // no nested LazyColumn
     )
     Text("Footer")
@@ -255,7 +255,7 @@ Use `LAZY_COLUMN` (default) when Orca is the root scrollable:
 ```kotlin
 Orca(
     markdown = longDocument,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     rootLayout = OrcaRootLayout.LAZY_COLUMN, // efficient for long content
 )
 ```
@@ -276,7 +276,7 @@ val markdown = """
 
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
 )
 ```
 
@@ -309,7 +309,7 @@ val markdown = """
 
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
 )
 ```
 

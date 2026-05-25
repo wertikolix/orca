@@ -193,15 +193,16 @@ Thread safety is provided by `OrcaLock.withLock {}` around all map operations. T
 
 The `Orca(markdown: String, ...)` composable handles rapid markdown changes (e.g. LLM token streaming):
 
-1. **Synchronous initial parse** — on first composition, `parser.parse(markdown)` runs synchronously in `remember(parserKey)`. This ensures the first frame has content and avoids an empty→content layout jump.
+1. **Background initial parse** — on first composition, raw Markdown is parsed immediately from `LaunchedEffect` on `Dispatchers.Default`; the UI thread is never blocked by document parsing.
 
-2. **Debounced background re-parse** — a `LaunchedEffect(markdown, parserKey, parseCacheKey)` fires on every `markdown` change. It:
-   - Waits `streamingDebounceMs` (default: 80ms) — if `markdown` changes again during the delay, the coroutine is cancelled and restarted.
+2. **Paced background re-parse** — a long-lived `snapshotFlow` conflates rapid `markdown` changes. It:
+   - Waits at most one `streamingDebounceMs` interval (default: 80ms) between subsequent parses while retaining the latest input.
    - Runs `parseWithDiagnostics()` on `Dispatchers.Default`.
+   - Continues updating during uninterrupted token streams instead of waiting for an idle gap.
    - If parsing fails or returns errors, the previous `document` is kept (graceful degradation).
    - On success, `document` state is updated, triggering recomposition.
 
-3. **Cache synergy** — when `parseCacheKey` is provided, both the initial sync parse and background re-parse go through `parseCached()`. The first background re-parse after initial composition is a cache hit (same input), so no redundant work.
+3. **Cache synergy** — when `parseCacheKey` is provided, background parses go through `parseCachedWithDiagnostics()`, avoiding repeated work for identical inputs.
 
 ---
 
@@ -223,7 +224,8 @@ fun interface OrcaSecurityPolicy {
 
 | Policy | Behavior |
 |---|---|
-| `Default` | Links: `http`, `https`, `mailto`. Images: `http`, `https`. |
+| `Default` | Links: `http`, `https`, `mailto`, fragments. Images blocked. |
+| `RemoteImages` | Default links plus `http`/`https` images; explicit opt-in for trusted content. |
 | `byAllowedSchemes(...)` | Custom scheme sets with optional `allowRelativeLinks` / `allowRelativeImages` flags. |
 
 The policy is passed as a parameter to the `Orca` composable and threaded through to all block/inline renderers.

@@ -300,8 +300,8 @@ class OrcaInlineTextTest {
         assertFalse(isSafeLinkDestination("intent://scan/#Intent;scheme=zxing;end"))
         assertFalse(isSafeLinkDestination("javascript:alert(1)"))
 
-        assertTrue(isSafeImageSource("http://example.com/image.png"))
-        assertTrue(isSafeImageSource("https://example.com/image.png"))
+        assertFalse(isSafeImageSource("http://example.com/image.png"))
+        assertFalse(isSafeImageSource("https://example.com/image.png"))
         assertFalse(isSafeImageSource("file:///sdcard/image.png"))
         assertFalse(isSafeImageSource("content://media/external/images/media/1"))
     }

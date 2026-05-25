@@ -164,13 +164,13 @@ class MarkdownUrlSafetyTest {
     // --- isSafeImageSource ---
 
     @Test
-    fun `isSafeImageSource returns true for http`() {
-        assertTrue(isSafeImageSource("http://example.com/img.png"))
+    fun `isSafeImageSource blocks http by default`() {
+        assertFalse(isSafeImageSource("http://example.com/img.png"))
     }
 
     @Test
-    fun `isSafeImageSource returns true for https`() {
-        assertTrue(isSafeImageSource("https://example.com/img.png"))
+    fun `isSafeImageSource blocks https by default`() {
+        assertFalse(isSafeImageSource("https://example.com/img.png"))
     }
 
     @Test
@@ -201,6 +201,12 @@ class MarkdownUrlSafetyTest {
 }
 
 class OrcaSecurityPoliciesByAllowedSchemesTest {
+
+    @Test
+    fun remoteImagesOptInAllowsHttpImages() {
+        assertTrue(OrcaSecurityPolicies.RemoteImages.isAllowed(OrcaUrlType.IMAGE, "https://example.com/img.png"))
+        assertTrue(OrcaSecurityPolicies.RemoteImages.isAllowed(OrcaUrlType.LINK, "#section"))
+    }
 
     @Test
     fun byAllowedSchemesAllowsCustomLinkScheme() {

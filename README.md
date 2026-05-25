@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.9.4`
+- Current stable minor: `0.9.5`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -44,8 +44,8 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.9.4")
-implementation("ru.wertik:orca-compose:0.9.4")
+implementation("ru.wertik:orca-core:0.9.5")
+implementation("ru.wertik:orca-compose:0.9.5")
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -93,10 +93,11 @@ val errors = result.diagnostics.errors
 import ru.wertik.orca.compose.Orca
 import ru.wertik.orca.compose.OrcaRootLayout
 import ru.wertik.orca.core.OrcaMarkdownParser
+import androidx.compose.runtime.remember
 
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     parseCacheKey = "message-42",
     rootLayout = OrcaRootLayout.COLUMN, // use when parent already controls scrolling
     securityPolicy = OrcaSecurityPolicies.Default,
@@ -121,18 +122,18 @@ Orca(
 
 ### Streaming / LLM chat
 
-For token-by-token streaming (e.g. LLM responses), Orca debounces parse operations to avoid redundant work:
+For token-by-token streaming (e.g. LLM responses), Orca paces parse operations to avoid redundant work without waiting for the stream to stop:
 
 ```kotlin
 Orca(
     markdown = streamingMarkdown, // updated on every token
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     parseCacheKey = "message-42",
-    streamingDebounceMs = 80, // default; set 0 to disable
+    streamingDebounceMs = 80, // default pacing interval; set 0 to parse every update
 )
 ```
 
-During fast updates, only the latest markdown value is parsed after the debounce window. The first render is always synchronous (no empty frame), so items in a scrollable list appear at their correct size immediately.
+The initial parse starts immediately on `Dispatchers.Default`; during continuous output, Orca renders the latest snapshot at the pacing interval rather than waiting for an idle gap. This avoids UI-thread stalls and stream starvation.
 
 ## Public API
 
@@ -168,7 +169,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.9.4`)
+## Supported Syntax (`0.9.5`)
 
 ### Blocks
 
@@ -226,7 +227,7 @@ data class OrcaParseResult(
 
 - `LazyColumn` root for long documents
 - optional root layout switch: `OrcaRootLayout.LAZY_COLUMN` or `OrcaRootLayout.COLUMN`
-- parsing off main thread (`Dispatchers.Default`)
+- initial and subsequent raw-Markdown parsing off main thread (`Dispatchers.Default`)
 - parse failure fallback to previous valid document (UI is not dropped); partial results with errors accepted when blocks are present (avoids streaming freeze on unclosed fences)
 - deterministic block keys for better list state retention (FNV-1a hash with 256-char sampling + tail fold)
 - **full document text selection** — all text (headings, paragraphs, lists, quotes, tables) is selectable
@@ -321,7 +322,7 @@ import ru.wertik.orca.compose.OrcaStyle
 
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     style = OrcaStyle(
         code = OrcaCodeBlockStyle(
             background = Color(0xFFF8F9FB),
@@ -334,11 +335,19 @@ Orca(
 
 ## Security Defaults
 
-- Default policy allows:
-  - links: `http`, `https`, `mailto`
-  - images: `http`, `https`
+- Default policy allows links using `http`, `https`, `mailto`, and local `#fragment` targets.
+- Images are blocked by default so rendering untrusted Markdown cannot trigger network requests.
 - Unsafe URLs are rendered as plain text/fallback instead of clickable/loaded targets.
 - You can fully override checks via `OrcaSecurityPolicy`.
+
+For trusted content that should load remote images, opt in explicitly:
+
+```kotlin
+Orca(
+    document = document,
+    securityPolicy = OrcaSecurityPolicies.RemoteImages,
+)
+```
 
 Custom policy example:
 
@@ -352,7 +361,7 @@ val policy = OrcaSecurityPolicies.byAllowedSchemes(
 
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     securityPolicy = policy,
 )
 ```
@@ -377,7 +386,7 @@ Override how specific block types are rendered:
 ```kotlin
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     blockOverride = mapOf(
         OrcaBlock.CodeBlock::class to { block ->
             val code = block as OrcaBlock.CodeBlock
@@ -394,7 +403,7 @@ Replace the built-in Coil image loader with your own:
 ```kotlin
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     imageContent = { url, contentDescription ->
         // Use Glide, Kamel, or any custom loader
         GlideImage(model = url, contentDescription = contentDescription)
@@ -407,7 +416,7 @@ Orca(
 ```kotlin
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     style = OrcaStyle(
         admonition = OrcaAdmonitionStyle(
             collapsible = true,
@@ -436,6 +445,15 @@ For release-like check:
 - Maven Central artifacts are immutable after publish
 
 ## Changelog
+
+### 0.9.5
+
+- **Smaller Android releases** -- removes keep-all consumer rules so R8 strips unused Orca code; in the Fish release APK this reduced output by about 116 KiB.
+- **Safer image defaults** -- remote images are blocked by default; opt in with `OrcaSecurityPolicies.RemoteImages` or a custom scheme policy.
+- **No initial UI-thread parse** -- raw Markdown is parsed on `Dispatchers.Default` from the first composition onward.
+- **Responsive token streaming** -- continuous updates are conflated and rendered at the pacing interval instead of waiting for a pause.
+- **Lighter renderer dependencies** -- renderer uses Foundation text instead of Material3 and drops unused direct Android/Ktor dependencies.
+- **Consumer ABI metadata** -- public Compose and Markdown parser types are now published through `api` dependencies.
 
 ### 0.9.4
 

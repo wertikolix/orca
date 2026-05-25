@@ -1,7 +1,7 @@
 package ru.wertik.orca.compose
 
 internal val DEFAULT_SAFE_LINK_SCHEMES = setOf("http", "https", "mailto")
-internal val DEFAULT_SAFE_IMAGE_SCHEMES = setOf("http", "https")
+internal val DEFAULT_SAFE_IMAGE_SCHEMES = emptySet<String>()
 
 internal fun isSafeLinkDestination(destination: String): Boolean {
     return OrcaSecurityPolicies.Default.isAllowed(
@@ -23,13 +23,14 @@ internal fun hasAllowedScheme(
 ): Boolean {
     val trimmed = value.trim()
     if (trimmed.isEmpty()) return false
-    if (trimmed.startsWith("#")) return true
     val colonIndex = trimmed.indexOf(':')
     if (colonIndex <= 0) return false
     val scheme = trimmed.substring(0, colonIndex).lowercase()
     if (!scheme.all { it.isLetter() }) return false
     return scheme in allowedSchemes
 }
+
+internal fun isFragmentLink(value: String): Boolean = value.trim().startsWith("#")
 
 internal fun isRelativeUrl(value: String): Boolean {
     val trimmed = value.trim()

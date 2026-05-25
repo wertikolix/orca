@@ -38,20 +38,18 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":orca-core"))
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.ui)
+            api(compose.runtime)
+            api(compose.foundation)
+            api(compose.ui)
+            implementation(compose.animation)
             implementation(libs.coil3.compose)
             implementation(libs.coil3.network.ktor3)
-            implementation(libs.ktor.client.core)
             implementation(libs.kotlinx.coroutines.core)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
         androidMain.dependencies {
-            implementation(libs.androidx.core.ktx)
             implementation(libs.ktor.client.android)
         }
         val desktopMain by getting {

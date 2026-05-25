@@ -5,7 +5,7 @@
 ```kotlin
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     style = OrcaStyle(...),
 )
 ```
@@ -207,7 +207,7 @@ GitHub-style callout blocks (`> [!NOTE]`, `> [!WARNING]`, etc.).
 ```kotlin
 Orca(
     markdown = markdown,
-    parser = OrcaMarkdownParser(),
+    parser = remember { OrcaMarkdownParser() },
     style = OrcaDefaults.darkStyle(),
 )
 ```

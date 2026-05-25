@@ -15,18 +15,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.wertik.orca.core.OrcaBlock
 import ru.wertik.orca.core.OrcaDocument
 import ru.wertik.orca.core.OrcaParseError
 import ru.wertik.orca.core.OrcaParseDiagnostics
-import ru.wertik.orca.core.OrcaParseResult
 import ru.wertik.orca.core.OrcaParser
 import kotlin.reflect.KClass
 
@@ -53,8 +55,8 @@ enum class OrcaRootLayout {
  * Renders Markdown text as Compose UI.
  *
  * Parses [markdown] using the supplied [parser] and renders the resulting document.
- * Parsing is debounced to handle streaming / rapid updates efficiently.
- * On first composition the parse is synchronous to avoid an empty-frame flash.
+ * Parsing runs off the UI thread and paced updates keep streaming content responsive
+ * without parsing every incoming token.
  *
  * @param markdown raw Markdown string to render.
  * @param modifier [Modifier] applied to the root layout.
@@ -65,7 +67,7 @@ enum class OrcaRootLayout {
  * @param securityPolicy URL filter applied to links and images before rendering.
  * @param onLinkClick callback invoked when a user taps a link.
  * @param onParseDiagnostics optional callback receiving parse diagnostics (errors and warnings) after each parse.
- * @param streamingDebounceMs debounce delay in milliseconds before re-parsing after [markdown] changes. Default is 80 ms.
+ * @param streamingDebounceMs minimum pacing delay in milliseconds between streaming re-parses. Default is 80 ms.
  * @param blockOverride optional map of block types to custom composable renderers. When a block's class matches a key, the override is used instead of the default renderer.
  * @param imageContent optional composable for rendering images. When provided, replaces the built-in Coil-based image loader. Receives the image URL and content description.
  * @see Orca
@@ -88,87 +90,66 @@ fun Orca(
     imageContent: (@Composable (url: String, contentDescription: String?) -> Unit)? = null,
 ) {
     val parserKey = remember(parser) { parser.cacheKey() }
+    val latestMarkdown by rememberUpdatedState(markdown)
+    val latestOnParseDiagnostics by rememberUpdatedState(onParseDiagnostics)
 
-    // Synchronous initial parse so the very first frame has the correct layout size.
-    // This eliminates the empty→content "jump" when items scroll into a LazyColumn.
-    // Only runs once per composable instance (keyed on parserKey only, not markdown).
-    val initialParseResult = remember(parserKey) {
-        try {
-            if (parseCacheKey == null) {
-                parser.parseWithDiagnostics(markdown)
-            } else {
-                parser.parseCachedWithDiagnostics(key = parseCacheKey, input = markdown)
-            }
-        } catch (_: Throwable) {
-            OrcaParseResult(
-                document = OrcaDocument(emptyList()),
-                diagnostics = OrcaParseDiagnostics(),
-            )
-        }
-    }
-    // Report diagnostics from the initial synchronous parse so callers
-    // observe warnings/errors even before the debounced LaunchedEffect fires.
-    LaunchedEffect(initialParseResult) {
-        if (initialParseResult.diagnostics.hasWarnings || initialParseResult.diagnostics.hasErrors) {
-            onParseDiagnostics?.invoke(initialParseResult.diagnostics)
-        }
-    }
+    var document by remember(parser, parserKey) { mutableStateOf(OrcaDocument(emptyList())) }
 
-    var document by remember(parserKey) { mutableStateOf(initialParseResult.document) }
-
-    // Debounced re-parse for subsequent updates (streaming, edits).
-    // On first composition this still fires but the result will match initialDocument
-    // (especially with caching enabled), so no visual jump occurs.
-    LaunchedEffect(markdown, parserKey, parseCacheKey) {
-        if (streamingDebounceMs > 0) {
-            delay(streamingDebounceMs)
-        }
-
-        var parseError: Throwable? = null
-        val parsedResult = try {
-            withContext(Dispatchers.Default) {
-                if (parseCacheKey == null) {
-                    parser.parseWithDiagnostics(markdown)
-                } else {
-                    parser.parseCachedWithDiagnostics(
-                        key = parseCacheKey,
-                        input = markdown,
-                    )
+    // Parse all raw Markdown off the UI thread, including initial composition.
+    // Conflation keeps the newest stream value without starving rendering until the stream stops.
+    LaunchedEffect(parser, parserKey, parseCacheKey, streamingDebounceMs) {
+        var hasParsedInput = false
+        var lastParsedInput: String? = null
+        snapshotFlow { latestMarkdown }
+            .conflate()
+            .collect {
+                if (hasParsedInput && streamingDebounceMs > 0) {
+                    delay(streamingDebounceMs)
                 }
-            }
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (error: Throwable) {
-            println("W/$PARSE_LOG_TAG: failed to parse markdown, using previous document: ${error.message}")
-            parseError = error
-            null
-        }
+                val input = latestMarkdown
+                if (input == lastParsedInput) return@collect
+                lastParsedInput = input
+                hasParsedInput = true
 
-        val parsed = if (parsedResult == null) {
-            // Total parser failure (exception) — keep previous document.
-            document
-        } else if (parsedResult.diagnostics.hasErrors && parsedResult.document.blocks.isEmpty()) {
-            // Parser reported errors AND produced an empty document — keep previous.
-            println("W/$PARSE_LOG_TAG: parser reported errors with empty result, using previous document")
-            document
-        } else {
-            // Accept the document even when diagnostics.hasErrors is true,
-            // as long as blocks were produced. This prevents the UI from
-            // "freezing" on a stale document during streaming when markdown
-            // is temporarily invalid (e.g. unclosed code fence).
-            parsedResult.document
-        }
-        onParseDiagnostics?.invoke(
-            parsedResult?.diagnostics ?: OrcaParseDiagnostics(
-                errors = listOf(
-                    OrcaParseError.ParserFailure(
-                        message = parseError?.message ?: "Unknown parse failure",
+                var parseError: Throwable? = null
+                val parsedResult = try {
+                    withContext(Dispatchers.Default) {
+                        if (parseCacheKey == null) {
+                            parser.parseWithDiagnostics(input)
+                        } else {
+                            parser.parseCachedWithDiagnostics(
+                                key = parseCacheKey,
+                                input = input,
+                            )
+                        }
+                    }
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (error: Throwable) {
+                    println("W/$PARSE_LOG_TAG: failed to parse markdown, using previous document: ${error.message}")
+                    parseError = error
+                    null
+                }
+
+                val parsed = if (parsedResult == null) {
+                    document
+                } else if (parsedResult.diagnostics.hasErrors && parsedResult.document.blocks.isEmpty()) {
+                    println("W/$PARSE_LOG_TAG: parser reported errors with empty result, using previous document")
+                    document
+                } else {
+                    parsedResult.document
+                }
+                latestOnParseDiagnostics?.invoke(
+                    parsedResult?.diagnostics ?: OrcaParseDiagnostics(
+                        errors = listOf(
+                            OrcaParseError.ParserFailure(
+                                message = parseError?.message ?: "Unknown parse failure",
+                            ),
+                        ),
                     ),
-                ),
-            ),
-        )
-
-        document = parsed
+                )
+                document = parsed
+            }
     }
 
     Orca(

@@ -26,7 +26,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.intellij.markdown)
+            api(libs.intellij.markdown)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
