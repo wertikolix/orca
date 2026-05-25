@@ -217,7 +217,7 @@ private fun SampleHeader(isDark: Boolean, onToggleTheme: () -> Unit) {
                 shape = RoundedCornerShape(999.dp),
             ) {
                 Text(
-                    text = "0.10 snapshot",
+                    text = "0.10.0",
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -469,7 +469,7 @@ The renderer supports **rich text**, *emphasis*, ~~strikethrough~~, `inline code
 
 ## Current direction
 
-Development line: 0.10.0^snapshot^
+Current release: 0.10.0
 
 Base renderer: `orca-compose` + `orca-core`
 
@@ -779,7 +779,7 @@ The final document is exact, while live updates remain calm and readable.
 """.trimIndent()
 
 private val PLAYGROUND_DEFAULT_MARKDOWN = """
-# Orca 0.10 snapshot
+# Orca 0.10.0
 
 This development line focuses on a **lighter base renderer** and *smoother streaming*.
 

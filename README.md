@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.9.5`
+- Current stable minor: `0.10.0`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -37,7 +37,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
   - Targets: Android, iOS, Desktop (JVM), wasmJs
   - Style model (`OrcaStyle`)
   - Lightweight base renderer with no mandatory image/network runtime
-- `orca-images-coil` *(next minor release)*
+- `orca-images-coil`
   - Optional Coil 3 + Ktor image renderer for trusted Markdown content
   - Provides block and inline image content slots without making chat-only apps pay for them
 - `sample-app`
@@ -47,8 +47,9 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.9.5")
-implementation("ru.wertik:orca-compose:0.9.5")
+implementation("ru.wertik:orca-core:0.10.0")
+implementation("ru.wertik:orca-compose:0.10.0")
+implementation("ru.wertik:orca-images-coil:0.10.0") // optional images
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -183,7 +184,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.9.5`)
+## Supported Syntax (`0.10.0`)
 
 ### Blocks
 
@@ -417,7 +418,7 @@ Orca(
 
 ### Optional image loader
 
-`orca-compose` intentionally ships without an image/network stack. Add `orca-images-coil` when it is published in the next minor release, or provide your own slots:
+`orca-compose` intentionally ships without an image/network stack. Add `orca-images-coil` for the provided Coil/Ktor slots, or provide your own slots:
 
 ```kotlin
 Orca(
@@ -468,7 +469,7 @@ For release-like check:
 
 ## Changelog
 
-### Unreleased (`0.10.0`)
+### 0.10.0
 
 - **Ultra-light base renderer** -- moves Coil/Ktor image loading from `orca-compose` into opt-in `orca-images-coil`.
 - **Explicit image slots** -- block and inline Markdown images render only through `imageContent` / `inlineImageContent`; without a loader, safe alt/fallback text remains visible.

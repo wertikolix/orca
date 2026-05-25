@@ -80,19 +80,21 @@ android {
 }
 
 signing {
-    val signingKey = providers.gradleProperty("signingInMemoryKey").orNull
-        ?: providers.environmentVariable("ORG_GRADLE_PROJECT_signingInMemoryKey").orNull
-        ?: providers.environmentVariable("SIGNING_IN_MEMORY_KEY").orNull
-    val signingKeyPassword = providers.gradleProperty("signingInMemoryKeyPassword").orNull
-        ?: providers.environmentVariable("ORG_GRADLE_PROJECT_signingInMemoryKeyPassword").orNull
-        ?: providers.environmentVariable("SIGNING_IN_MEMORY_KEY_PASSWORD").orNull
+    if (!providers.gradleProperty("skipSigning").map(String::toBoolean).orElse(false).get()) {
+        val signingKey = providers.gradleProperty("signingInMemoryKey").orNull
+            ?: providers.environmentVariable("ORG_GRADLE_PROJECT_signingInMemoryKey").orNull
+            ?: providers.environmentVariable("SIGNING_IN_MEMORY_KEY").orNull
+        val signingKeyPassword = providers.gradleProperty("signingInMemoryKeyPassword").orNull
+            ?: providers.environmentVariable("ORG_GRADLE_PROJECT_signingInMemoryKeyPassword").orNull
+            ?: providers.environmentVariable("SIGNING_IN_MEMORY_KEY_PASSWORD").orNull
 
-    if (signingKey.isNullOrBlank()) {
-        useGpgCmd()
-    } else {
-        useInMemoryPgpKeys(signingKey, signingKeyPassword ?: "")
+        if (signingKey.isNullOrBlank()) {
+            useGpgCmd()
+        } else {
+            useInMemoryPgpKeys(signingKey, signingKeyPassword ?: "")
+        }
+        sign(publishing.publications)
     }
-    sign(publishing.publications)
 }
 
 publishing {
