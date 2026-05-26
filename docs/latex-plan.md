@@ -1,10 +1,10 @@
 # LaTeX / Math Rendering Plan
 
-## Implementation Status (`0.11.0`)
+## Implementation Status (`0.11.2`)
 
 - `orca-core` now models conservative inline and display math nodes.
 - `orca-compose` now exposes `inlineMathContent` and `blockMathContent` slots with text fallback.
-- `orca-math-orcex` now provides an Android-native optional renderer backed by Orcex `0.2.1`.
+- `orca-math-orcex` now provides an Android-native optional renderer backed by Orcex `0.3.0`.
 - The STIX font dependency is optional and intentionally excluded from the lightweight base artifacts.
 
 LaTeX support should not make the base Orca renderer heavy or unsafe. The first implementation should model math syntax and let consumers opt into rendering.
