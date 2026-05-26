@@ -60,7 +60,7 @@ jobs:
           echo "Resolved release version: ${VERSION}"
 
       - name: Build tests and release artifacts
-        run: ./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-compose:assembleRelease :orca-images-coil:assembleRelease :orca-math-orcex:assembleRelease :orca-core:jvmJar :sample-app:assembleRelease :sample-app:bundleRelease -PorcaVersion=${{ steps.release-version.outputs.version }}
+        run: ./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-compose:assembleRelease :orca-images-coil:assembleRelease :orca-math-orcex:assembleRelease :orca-math-orcex:compileKotlinDesktop :orca-math-orcex:compileKotlinIosSimulatorArm64 :orca-core:jvmJar :sample-app:assembleRelease :sample-app:bundleRelease -PorcaVersion=${{ steps.release-version.outputs.version }}
 
       - name: Prepare signing key for Gradle (optional)
         if: startsWith(github.ref, 'refs/tags/')

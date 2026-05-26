@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.11.2`
+- Current stable minor: `0.12.0`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -40,8 +40,8 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 - `orca-images-coil`
   - Optional Coil 3 + Ktor image renderer for trusted Markdown content
   - Provides block and inline image content slots without making chat-only apps pay for them
-- `orca-math-orcex` *(optional, Android)*
-  - Optional native Android LaTeX renderer backed by [Orcex](https://github.com/wertikolix/Orcex)
+- `orca-math-orcex` *(optional, Android / Desktop / iOS)*
+  - Optional Compose Multiplatform LaTeX renderer backed by [Orcex](https://github.com/wertikolix/Orcex)
   - Leaves `orca-core` and `orca-compose` free from a bundled font or math engine
 - `sample-app`
   - Android demo for manual checks
@@ -50,10 +50,10 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.11.2")
-implementation("ru.wertik:orca-compose:0.11.2")
-implementation("ru.wertik:orca-images-coil:0.11.2") // optional images
-implementation("ru.wertik:orca-math-orcex:0.11.2") // optional Android math renderer
+implementation("ru.wertik:orca-core:0.12.0")
+implementation("ru.wertik:orca-compose:0.12.0")
+implementation("ru.wertik:orca-images-coil:0.12.0") // optional images
+implementation("ru.wertik:orca-math-orcex:0.12.0") // optional multiplatform math renderer
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -188,7 +188,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.11.2`)
+## Supported Syntax (`0.12.0`)
 
 ### Blocks
 
@@ -472,6 +472,12 @@ For release-like check:
 - Maven Central artifacts are immutable after publish
 
 ## Changelog
+
+### 0.12.0
+
+- **Multiplatform Orcex math** -- migrates `orca-math-orcex` from the Android Canvas bridge to Orcex `0.4.0`'s Compose Multiplatform renderer for Android, Desktop, and supported iOS targets.
+- **Android compatibility** -- keeps the existing `Typeface` convenience overloads so current Android applications can upgrade without rewriting their formula slots.
+- **Explicit verification** -- CI and release builds now compile the math adapter on Desktop and iOS Simulator as well as Android.
 
 ### 0.11.2
 

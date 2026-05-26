@@ -1,10 +1,10 @@
 # LaTeX / Math Rendering Plan
 
-## Implementation Status (`0.11.2`)
+## Implementation Status (`0.12.0`)
 
 - `orca-core` now models conservative inline and display math nodes.
 - `orca-compose` now exposes `inlineMathContent` and `blockMathContent` slots with text fallback.
-- `orca-math-orcex` now provides an Android-native optional renderer backed by Orcex `0.3.0`.
+- `orca-math-orcex` now provides an optional Compose Multiplatform renderer backed by Orcex `0.4.0` on Android, Desktop, and supported iOS targets.
 - The STIX font dependency is optional and intentionally excluded from the lightweight base artifacts.
 
 LaTeX support should not make the base Orca renderer heavy or unsafe. The first implementation should model math syntax and let consumers opt into rendering.
@@ -18,7 +18,7 @@ LaTeX support should not make the base Orca renderer heavy or unsafe. The first 
 
 ## Phase 2: Optional Renderer
 
-- Publish a separate optional math integration module after comparing Android APK cost and multiplatform support.
+- Keep the separate optional math integration module while tracking binary cost and renderer coverage per platform.
 - Keep the base `orca-compose` artifact free from a bundled TeX engine, WebView bridge, or JavaScript runtime.
 - Select a renderer only after measuring binary size, first-render latency, and formula coverage in the sample app and Fish.
 
@@ -30,5 +30,5 @@ LaTeX support should not make the base Orca renderer heavy or unsafe. The first 
 
 ## Sample App Follow-Up
 
-- Add a dedicated `Math` document screen only after Phase 1 exists.
+- Maintain the dedicated `Math` document screen as a manual regression surface.
 - Cover inline formulas, display equations, malformed input, dark-mode contrast, and streamed formula completion.
