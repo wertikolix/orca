@@ -118,7 +118,11 @@ private fun parseInlineMathText(text: String): List<OrcaInline> {
 private fun String.isProbableCurrencyAmount(): Boolean {
     if (firstOrNull()?.isDigit() != true) return false
     val numericPrefix = takeWhile { character -> character.isDigit() || character == '.' || character == ',' }
-    return numericPrefix.isNotEmpty() && (numericPrefix.length == length || getOrNull(numericPrefix.length)?.isWhitespace() == true)
+    if (numericPrefix.length == length) return true
+    if (getOrNull(numericPrefix.length)?.isWhitespace() != true) return false
+    return drop(numericPrefix.length).none { character ->
+        character == '\\' || character in "+-=*/^_{}<>"
+    }
 }
 
 private fun String.isEscaped(index: Int): Boolean {

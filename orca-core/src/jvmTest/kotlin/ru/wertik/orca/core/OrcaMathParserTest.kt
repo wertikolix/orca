@@ -24,6 +24,15 @@ class OrcaMathParserTest {
     }
 
     @Test
+    fun parsesNumericInlineMathWithCommands() {
+        val paragraph = assertIs<OrcaBlock.Paragraph>(
+            parser.parse("Матрица $2 \\times 2$:").blocks.single(),
+        )
+
+        assertEquals(OrcaInline.Math("2 \\times 2"), paragraph.content[1])
+    }
+
+    @Test
     fun parsesDisplayMathBlock() {
         val document = parser.parse("""
             Before.
