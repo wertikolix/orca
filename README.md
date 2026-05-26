@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.10.0`
+- Current stable minor: `0.11.0`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -40,7 +40,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 - `orca-images-coil`
   - Optional Coil 3 + Ktor image renderer for trusted Markdown content
   - Provides block and inline image content slots without making chat-only apps pay for them
-- `orca-math-orcex` *(0.11 snapshot)*
+- `orca-math-orcex` *(optional, Android)*
   - Optional native Android LaTeX renderer backed by [Orcex](https://github.com/wertikolix/Orcex)
   - Leaves `orca-core` and `orca-compose` free from a bundled font or math engine
 - `sample-app`
@@ -50,9 +50,10 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.10.0")
-implementation("ru.wertik:orca-compose:0.10.0")
-implementation("ru.wertik:orca-images-coil:0.10.0") // optional images
+implementation("ru.wertik:orca-core:0.11.0")
+implementation("ru.wertik:orca-compose:0.11.0")
+implementation("ru.wertik:orca-images-coil:0.11.0") // optional images
+implementation("ru.wertik:orca-math-orcex:0.11.0") // optional Android math renderer
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -187,7 +188,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.10.0`)
+## Supported Syntax (`0.11.0`)
 
 ### Blocks
 
@@ -472,11 +473,12 @@ For release-like check:
 
 ## Changelog
 
-### Unreleased (`0.11.0`)
+### 0.11.0
 
 - **Math AST and slots** -- parses conservative inline `$...$` and display `$$...$$` formulas with readable source fallback.
 - **Optional Orcex renderer** -- adds `orca-math-orcex` for native Android Canvas math rendering; the STIX font remains opt-in.
 - **Streaming-safe formulas** -- incomplete formula delimiters stay text until the closing delimiter arrives.
+- **Orcex 0.2.1** -- consumes the published renderer release with corrected matrix delimiter layout.
 
 ### 0.10.0
 
