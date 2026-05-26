@@ -30,6 +30,7 @@ import ru.wertik.orca.core.OrcaBlock
 import ru.wertik.orca.core.OrcaDocument
 import ru.wertik.orca.core.OrcaParseError
 import ru.wertik.orca.core.OrcaParseDiagnostics
+import ru.wertik.orca.core.OrcaParseResult
 import ru.wertik.orca.core.OrcaParser
 import kotlin.reflect.KClass
 
@@ -99,9 +100,28 @@ fun Orca(
     val latestMarkdown by rememberUpdatedState(markdown)
     val latestOnParseDiagnostics by rememberUpdatedState(onParseDiagnostics)
 
-    var document by remember(parser, parserKey) { mutableStateOf(OrcaDocument(emptyList())) }
+    // Establish the first measured layout synchronously. Rendering an empty document first makes
+    // outer lazy lists measure a zero-height message and jump when async parsing fills it in.
+    val initialParseResult = remember(parser, parserKey) {
+        runCatching {
+            if (parseCacheKey == null) {
+                parser.parseWithDiagnostics(markdown)
+            } else {
+                parser.parseCachedWithDiagnostics(key = parseCacheKey, input = markdown)
+            }
+        }.getOrElse {
+            OrcaParseResult(document = OrcaDocument(emptyList()))
+        }
+    }
+    var document by remember(parser, parserKey) { mutableStateOf(initialParseResult.document) }
 
-    // Parse all raw Markdown off the UI thread, including initial composition.
+    LaunchedEffect(initialParseResult) {
+        if (initialParseResult.diagnostics.hasWarnings || initialParseResult.diagnostics.hasErrors) {
+            latestOnParseDiagnostics?.invoke(initialParseResult.diagnostics)
+        }
+    }
+
+    // Re-parse updates off the UI thread after the synchronous first measured frame.
     // Conflation keeps the newest stream value without starving rendering until the stream stops.
     LaunchedEffect(parser, parserKey, parseCacheKey, streamingDebounceMs) {
         var hasParsedInput = false

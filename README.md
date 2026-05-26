@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.12.0`
+- Current stable minor: `0.12.1`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -50,10 +50,10 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.12.0")
-implementation("ru.wertik:orca-compose:0.12.0")
-implementation("ru.wertik:orca-images-coil:0.12.0") // optional images
-implementation("ru.wertik:orca-math-orcex:0.12.0") // optional multiplatform math renderer
+implementation("ru.wertik:orca-core:0.12.1")
+implementation("ru.wertik:orca-compose:0.12.1")
+implementation("ru.wertik:orca-images-coil:0.12.1") // optional images
+implementation("ru.wertik:orca-math-orcex:0.12.1") // optional multiplatform math renderer
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -188,7 +188,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.12.0`)
+## Supported Syntax (`0.12.1`)
 
 ### Blocks
 
@@ -472,6 +472,11 @@ For release-like check:
 - Maven Central artifacts are immutable after publish
 
 ## Changelog
+
+### 0.12.1
+
+- **Stable first layout** -- restores synchronous initial Markdown parsing so messages nested in an outer `LazyColumn` no longer appear empty before gaining their real height and displacing scroll position.
+- **Streaming preserved** -- subsequent text updates remain asynchronously parsed and paced; only the first measured frame is stabilised.
 
 ### 0.12.0
 
