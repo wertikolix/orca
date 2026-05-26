@@ -27,6 +27,7 @@ internal fun collectInlineImages(inlines: List<OrcaInline>): List<OrcaInline.Ima
                 is OrcaInline.Link -> walk(item.content)
                 is OrcaInline.Superscript -> walk(item.content)
                 is OrcaInline.Subscript -> walk(item.content)
+                is OrcaInline.Highlight -> walk(item.content)
                 else -> {}
             }
         }

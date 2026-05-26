@@ -92,6 +92,11 @@ sealed interface OrcaBlock {
         val language: String?,
     ) : OrcaBlock
 
+    /** Display math formula delimited by `$$...$$`. */
+    data class Math(
+        val source: String,
+    ) : OrcaBlock
+
     /**
      * Block-level image (standalone image not wrapped in a paragraph).
      *
@@ -261,6 +266,11 @@ sealed interface OrcaInline {
     /** Inline code span (`` `code` ``). */
     data class InlineCode(
         val code: String,
+    ) : OrcaInline
+
+    /** Inline math formula delimited by `$...$`. */
+    data class Math(
+        val source: String,
     ) : OrcaInline
 
     /**

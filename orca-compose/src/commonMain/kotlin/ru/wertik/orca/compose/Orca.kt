@@ -90,6 +90,8 @@ fun Orca(
     blockOverride: Map<KClass<out OrcaBlock>, @Composable (OrcaBlock) -> Unit> = emptyMap(),
     imageContent: OrcaImageContent? = null,
     inlineImageContent: OrcaImageContent? = null,
+    blockMathContent: OrcaMathContent? = null,
+    inlineMathContent: OrcaMathContent? = null,
 ) {
     val parserKey = remember(parser) { parser.cacheKey() }
     val latestMarkdown by rememberUpdatedState(markdown)
@@ -164,6 +166,8 @@ fun Orca(
         blockOverride = blockOverride,
         imageContent = imageContent,
         inlineImageContent = inlineImageContent,
+        blockMathContent = blockMathContent,
+        inlineMathContent = inlineMathContent,
     )
 }
 
@@ -187,6 +191,8 @@ fun Orca(
     blockOverride: Map<KClass<out OrcaBlock>, @Composable (OrcaBlock) -> Unit> = emptyMap(),
     imageContent: OrcaImageContent? = null,
     inlineImageContent: OrcaImageContent? = null,
+    blockMathContent: OrcaMathContent? = null,
+    inlineMathContent: OrcaMathContent? = null,
 ) {
     Orca(
         markdown = state.markdown,
@@ -202,6 +208,8 @@ fun Orca(
         blockOverride = blockOverride,
         imageContent = imageContent,
         inlineImageContent = inlineImageContent,
+        blockMathContent = blockMathContent,
+        inlineMathContent = inlineMathContent,
     )
 }
 
@@ -235,6 +243,8 @@ fun Orca(
     blockOverride: Map<KClass<out OrcaBlock>, @Composable (OrcaBlock) -> Unit> = emptyMap(),
     imageContent: OrcaImageContent? = null,
     inlineImageContent: OrcaImageContent? = null,
+    blockMathContent: OrcaMathContent? = null,
+    inlineMathContent: OrcaMathContent? = null,
 ) {
     val renderBlocks = remember(document.blocks) {
         buildRenderBlocks(document.blocks)
@@ -355,6 +365,8 @@ fun Orca(
                             },
                             imageContent = imageContent,
                             inlineImageContent = inlineImageContent,
+                            blockMathContent = blockMathContent,
+                            inlineMathContent = inlineMathContent,
                         )
                     }
                 }
@@ -437,6 +449,8 @@ fun Orca(
                                     },
                                     imageContent = imageContent,
                                     inlineImageContent = inlineImageContent,
+                                    blockMathContent = blockMathContent,
+                                    inlineMathContent = inlineMathContent,
                                 )
                             }
                         }
@@ -495,6 +509,7 @@ private fun blockContentKey(block: OrcaBlock): String {
             "Quote:${block.blocks.size}:$firstBlockDigest"
         }
         is OrcaBlock.Table -> "Table:${block.header.size}x${block.rows.size}:${block.header.firstOrNull()?.content?.let { inlineContentDigest(it) }.orEmpty()}"
+        is OrcaBlock.Math -> "Math:${stableHash(block.source)}"
         is OrcaBlock.Image -> "Img:${block.source.take(64)}"
         is OrcaBlock.ThematicBreak -> "HR"
         is OrcaBlock.Footnotes -> "FN:${block.definitions.size}:${block.definitions.firstOrNull()?.label.orEmpty()}"
@@ -552,6 +567,7 @@ private fun StringBuilder.appendInlineText(inline: ru.wertik.orca.core.OrcaInlin
         is ru.wertik.orca.core.OrcaInline.Italic -> inline.content.forEach { appendInlineText(it) }
         is ru.wertik.orca.core.OrcaInline.Strikethrough -> inline.content.forEach { appendInlineText(it) }
         is ru.wertik.orca.core.OrcaInline.InlineCode -> append(inline.code)
+        is ru.wertik.orca.core.OrcaInline.Math -> append("\$${inline.source}\$")
         is ru.wertik.orca.core.OrcaInline.Link -> inline.content.forEach { appendInlineText(it) }
         is ru.wertik.orca.core.OrcaInline.Image -> append(inline.alt.orEmpty())
         is ru.wertik.orca.core.OrcaInline.FootnoteReference -> append("[^${inline.label}]")

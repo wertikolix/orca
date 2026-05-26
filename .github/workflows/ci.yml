@@ -48,7 +48,7 @@ jobs:
             "build-tools;36.0.0"
 
       - name: Build and test
-        run: ./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-images-coil:assembleRelease :sample-app:assembleDebug
+        run: ./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-images-coil:assembleRelease :orca-math-orcex:assembleRelease :sample-app:assembleDebug
 
       - name: Upload reports on failure
         if: failure()
@@ -59,6 +59,7 @@ jobs:
             orca-core/build/reports/
             orca-compose/build/reports/
             orca-images-coil/build/reports/
+            orca-math-orcex/build/reports/
             sample-app/build/reports/
             sample-app/build/outputs/logs/
             build/reports/problems/

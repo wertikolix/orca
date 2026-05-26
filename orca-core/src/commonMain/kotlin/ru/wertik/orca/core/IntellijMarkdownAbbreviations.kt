@@ -112,6 +112,7 @@ private fun applyAbbreviationsToBlock(
             blocks = applyAbbreviations(block.blocks, abbreviations),
         )
         is OrcaBlock.CodeBlock,
+        is OrcaBlock.Math,
         is OrcaBlock.Image,
         is OrcaBlock.ThematicBreak,
         is OrcaBlock.HtmlBlock,
@@ -156,6 +157,7 @@ private fun applyAbbreviationsToInline(
             inline.copy(content = applyAbbreviationsToInlines(inline.content, abbreviations)),
         )
         is OrcaInline.InlineCode,
+        is OrcaInline.Math,
         is OrcaInline.Image,
         is OrcaInline.FootnoteReference,
         is OrcaInline.HtmlInline,

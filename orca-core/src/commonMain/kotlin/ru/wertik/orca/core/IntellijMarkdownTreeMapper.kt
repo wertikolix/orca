@@ -367,7 +367,8 @@ internal class IntellijTreeMapper(
 
         val withFootnotes = processFootnoteSyntax(raw, depth + 1)
             .mergeAdjacentText()
-        val withEmoji = withFootnotes.map { inline ->
+        val withMath = processInlineMathSyntax(withFootnotes)
+        val withEmoji = withMath.map { inline ->
             if (inline is OrcaInline.Text) {
                 OrcaInline.Text(replaceEmojiShortcodes(inline.text))
             } else {
@@ -1049,6 +1050,7 @@ private fun List<OrcaInline>.toPlainText(): String {
                 is OrcaInline.Italic -> append(inline.content.toPlainText())
                 is OrcaInline.Strikethrough -> append(inline.content.toPlainText())
                 is OrcaInline.InlineCode -> append(inline.code)
+                is OrcaInline.Math -> append("\$${inline.source}\$")
                 is OrcaInline.Link -> append(inline.content.toPlainText().ifEmpty { inline.destination })
                 is OrcaInline.Image -> append(inline.alt ?: "")
                 is OrcaInline.FootnoteReference -> append("[${inline.label}]")

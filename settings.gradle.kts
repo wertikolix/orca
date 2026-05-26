@@ -20,5 +20,6 @@ include(
     ":orca-core",
     ":orca-compose",
     ":orca-images-coil",
+    ":orca-math-orcex",
     ":sample-app",
 )

@@ -71,6 +71,8 @@ import ru.wertik.orca.core.OrcaIncrementalParserSession
 import ru.wertik.orca.core.OrcaMarkdownParser
 import ru.wertik.orca.images.coil.OrcaCoilImage
 import ru.wertik.orca.images.coil.OrcaCoilInlineImage
+import ru.wertik.orca.math.orcex.OrcaOrcexMath
+import ru.wertik.orcex.font.stix2.StixTwoMath
 
 class OrcaSampleApplication : Application(), SingletonImageLoader.Factory {
     override fun newImageLoader(context: coil3.PlatformContext): ImageLoader {
@@ -138,6 +140,7 @@ private enum class SampleScreen(
     OVERVIEW("Reader", "Read", "Long-form markdown rendering and links"),
     BLOCKS("Syntax", "Blocks", "Code, quotes, tasks and images"),
     TABLES("Tables", "Data", "Readable tabular content in both themes"),
+    MATH("Math", "Math", "Native LaTeX rendering through optional Orcex"),
     ADVANCED("Extended", "More", "Footnotes, details and definitions"),
     STREAMING("Streaming", "Stream", "Token deltas with stable rendering"),
     PLAYGROUND("Playground", "Edit", "Edit markdown and inspect output"),
@@ -217,7 +220,7 @@ private fun SampleHeader(isDark: Boolean, onToggleTheme: () -> Unit) {
                 shape = RoundedCornerShape(999.dp),
             ) {
                 Text(
-                    text = "0.10.0",
+                    text = "0.11 dev",
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -298,6 +301,8 @@ private fun DocumentScreen(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
 ) {
+    val context = LocalContext.current
+    val mathTypeface = remember(context) { StixTwoMath.load(context) }
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
             modifier = Modifier
@@ -318,6 +323,22 @@ private fun DocumentScreen(
                 securityPolicy = OrcaSecurityPolicies.RemoteImages,
                 imageContent = { url, description -> OrcaCoilImage(url, description, style) },
                 inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, style) },
+                blockMathContent = { source ->
+                    OrcaOrcexMath(
+                        source = source,
+                        typeface = mathTypeface,
+                        fontSize = 27.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                },
+                inlineMathContent = { source ->
+                    OrcaOrcexMath(
+                        source = source,
+                        typeface = mathTypeface,
+                        fontSize = 17.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                },
                 onLinkClick = onLinkClick,
             )
         }
@@ -449,6 +470,7 @@ private fun sampleMarkdown(screen: SampleScreen): String {
         SampleScreen.OVERVIEW -> OVERVIEW_MARKDOWN
         SampleScreen.BLOCKS -> BLOCKS_MARKDOWN
         SampleScreen.TABLES -> TABLES_MARKDOWN
+        SampleScreen.MATH -> MATH_MARKDOWN
         SampleScreen.ADVANCED -> ADVANCED_MARKDOWN
         else -> ""
     }
@@ -722,6 +744,26 @@ Jump to [Architecture patterns](#deep-nesting) section above.
 >     TextField(value = query, onValueChange = onQueryChange)
 > }
 > ```
+""".trimIndent()
+
+private val MATH_MARKDOWN = """
+# Native LaTeX with Orcex
+
+Orca keeps formula parsing in the document model while the optional `orca-math-orcex` adapter draws it natively on Android. Inline math stays part of readable prose: ${'$'}E = mc^2${'$'} and ${'$'}\\alpha + \\beta = \\gamma${'$'}.
+
+## Display equation
+
+${'$'}${'$'}
+\\frac{1}{n} \\sum_{i=1}^{n} x_i = \\bar{x}
+${'$'}${'$'}
+
+## Matrix and integral
+
+${'$'}${'$'}
+\\int_0^1 x^2 \\, dx = \\frac{1}{3}
+${'$'}${'$'}
+
+Unclosed formulas remain source text during streaming, then become rendered math only when the closing delimiter arrives.
 """.trimIndent()
 
 private val STREAMING_DEMO_MARKDOWN = """

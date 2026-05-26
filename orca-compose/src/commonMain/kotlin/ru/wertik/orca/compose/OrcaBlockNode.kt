@@ -62,6 +62,8 @@ internal fun OrcaBlockNode(
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: OrcaImageContent? = null,
     inlineImageContent: OrcaImageContent? = null,
+    blockMathContent: OrcaMathContent? = null,
+    inlineMathContent: OrcaMathContent? = null,
     depth: Int = 0,
 ) {
     // Guard against excessively nested markdown (e.g. 50-level deep quotes).
@@ -77,6 +79,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             sourceBlockKey = sourceBlockKey,
             inlineImageContent = inlineImageContent,
+            inlineMathContent = inlineMathContent,
         )
 
         is OrcaBlock.Paragraph -> ParagraphNode(
@@ -88,6 +91,7 @@ internal fun OrcaBlockNode(
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             sourceBlockKey = sourceBlockKey,
             inlineImageContent = inlineImageContent,
+            inlineMathContent = inlineMathContent,
         )
 
         is OrcaBlock.ListBlock -> ListBlockNode(
@@ -102,6 +106,8 @@ internal fun OrcaBlockNode(
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
             inlineImageContent = inlineImageContent,
+            blockMathContent = blockMathContent,
+            inlineMathContent = inlineMathContent,
             depth = depth,
         )
 
@@ -117,10 +123,14 @@ internal fun OrcaBlockNode(
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
             inlineImageContent = inlineImageContent,
+            blockMathContent = blockMathContent,
+            inlineMathContent = inlineMathContent,
             depth = depth,
         )
 
         is OrcaBlock.CodeBlock -> CodeBlockNode(block = block, style = style)
+
+        is OrcaBlock.Math -> MarkdownMathNode(block = block, style = style, blockMathContent = blockMathContent)
 
         is OrcaBlock.Image -> MarkdownImageNode(
             block = block,
@@ -153,6 +163,8 @@ internal fun OrcaBlockNode(
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
             inlineImageContent = inlineImageContent,
+            blockMathContent = blockMathContent,
+            inlineMathContent = inlineMathContent,
             depth = depth,
         )
 
@@ -175,6 +187,8 @@ internal fun OrcaBlockNode(
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
             inlineImageContent = inlineImageContent,
+            blockMathContent = blockMathContent,
+            inlineMathContent = inlineMathContent,
             depth = depth,
         )
 
@@ -190,6 +204,8 @@ internal fun OrcaBlockNode(
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
             inlineImageContent = inlineImageContent,
+            blockMathContent = blockMathContent,
+            inlineMathContent = inlineMathContent,
             depth = depth,
         )
 
@@ -205,6 +221,8 @@ internal fun OrcaBlockNode(
             onFootnoteBackClick = onFootnoteBackClick,
             imageContent = imageContent,
             inlineImageContent = inlineImageContent,
+            blockMathContent = blockMathContent,
+            inlineMathContent = inlineMathContent,
             depth = depth,
         )
     }
@@ -220,6 +238,7 @@ private fun HeadingNode(
     sourceBlockKey: String,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     inlineImageContent: OrcaImageContent?,
+    inlineMathContent: OrcaMathContent?,
 ) {
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
@@ -248,10 +267,13 @@ private fun HeadingNode(
             inlineImageContent = inlineImageContent,
         )
     }
+    val inlineMath = remember(block.content, inlineMathContent) {
+        buildInlineMathMap(block.content, inlineMathContent)
+    }
     InlineTextNode(
         text = headingText,
         textStyle = style.heading(block.level),
-        inlineContent = inlineImages,
+        inlineContent = inlineImages + inlineMath,
         modifier = Modifier.semantics { heading() },
     )
 }
@@ -266,6 +288,7 @@ private fun ParagraphNode(
     sourceBlockKey: String,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     inlineImageContent: OrcaImageContent?,
+    inlineMathContent: OrcaMathContent?,
 ) {
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
@@ -294,10 +317,13 @@ private fun ParagraphNode(
             inlineImageContent = inlineImageContent,
         )
     }
+    val inlineMath = remember(block.content, inlineMathContent) {
+        buildInlineMathMap(block.content, inlineMathContent)
+    }
     InlineTextNode(
         text = paragraphText,
         textStyle = style.typography.paragraph,
-        inlineContent = inlineImages,
+        inlineContent = inlineImages + inlineMath,
     )
 }
 
@@ -314,6 +340,8 @@ private fun ListBlockNode(
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: OrcaImageContent? = null,
     inlineImageContent: OrcaImageContent? = null,
+    blockMathContent: OrcaMathContent? = null,
+    inlineMathContent: OrcaMathContent? = null,
     depth: Int = 0,
 ) {
     Column(
@@ -349,6 +377,8 @@ private fun ListBlockNode(
                             onFootnoteBackClick = onFootnoteBackClick,
                             imageContent = imageContent,
                             inlineImageContent = inlineImageContent,
+                            blockMathContent = blockMathContent,
+                            inlineMathContent = inlineMathContent,
                             depth = depth + 1,
                         )
                     }
@@ -371,6 +401,8 @@ private fun QuoteBlockNode(
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: OrcaImageContent? = null,
     inlineImageContent: OrcaImageContent? = null,
+    blockMathContent: OrcaMathContent? = null,
+    inlineMathContent: OrcaMathContent? = null,
     depth: Int = 0,
 ) {
     Row(
@@ -401,6 +433,8 @@ private fun QuoteBlockNode(
                     onFootnoteBackClick = onFootnoteBackClick,
                     imageContent = imageContent,
                     inlineImageContent = inlineImageContent,
+                    blockMathContent = blockMathContent,
+                    inlineMathContent = inlineMathContent,
                     depth = depth + 1,
                 )
             }
@@ -421,6 +455,8 @@ private fun FootnotesNode(
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: OrcaImageContent? = null,
     inlineImageContent: OrcaImageContent? = null,
+    blockMathContent: OrcaMathContent? = null,
+    inlineMathContent: OrcaMathContent? = null,
     depth: Int = 0,
 ) {
     Column(
@@ -459,6 +495,8 @@ private fun FootnotesNode(
                             onFootnoteBackClick = onFootnoteBackClick,
                             imageContent = imageContent,
                             inlineImageContent = inlineImageContent,
+                            blockMathContent = blockMathContent,
+                            inlineMathContent = inlineMathContent,
                             depth = depth + 1,
                         )
                     }
@@ -648,6 +686,8 @@ private fun AdmonitionNode(
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: OrcaImageContent? = null,
     inlineImageContent: OrcaImageContent? = null,
+    blockMathContent: OrcaMathContent? = null,
+    inlineMathContent: OrcaMathContent? = null,
     depth: Int = 0,
 ) {
     val admonitionStyle = style.admonition
@@ -731,6 +771,8 @@ private fun AdmonitionNode(
                             onFootnoteBackClick = onFootnoteBackClick,
                             imageContent = imageContent,
                             inlineImageContent = inlineImageContent,
+                            blockMathContent = blockMathContent,
+                            inlineMathContent = inlineMathContent,
                             depth = depth + 1,
                         )
                     }
@@ -753,6 +795,8 @@ private fun DefinitionListNode(
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: OrcaImageContent? = null,
     inlineImageContent: OrcaImageContent? = null,
+    blockMathContent: OrcaMathContent? = null,
+    inlineMathContent: OrcaMathContent? = null,
     depth: Int = 0,
 ) {
     val dlStyle = style.definitionList
@@ -781,10 +825,13 @@ private fun DefinitionListNode(
                     inlineImageContent = inlineImageContent,
                 )
             }
+            val termInlineMath = remember(item.term, inlineMathContent) {
+                buildInlineMathMap(item.term, inlineMathContent)
+            }
             InlineTextNode(
                 text = termText,
                 textStyle = dlStyle.termStyle,
-                inlineContent = termInlineImages,
+                inlineContent = termInlineImages + termInlineMath,
             )
             item.definitions.forEach { definitionBlocks ->
                 Column(
@@ -804,6 +851,8 @@ private fun DefinitionListNode(
                             onFootnoteBackClick = onFootnoteBackClick,
                             imageContent = imageContent,
                             inlineImageContent = inlineImageContent,
+                            blockMathContent = blockMathContent,
+                            inlineMathContent = inlineMathContent,
                             depth = depth + 1,
                         )
                     }
@@ -826,6 +875,8 @@ private fun DetailsNode(
     onFootnoteBackClick: (label: String) -> Unit,
     imageContent: OrcaImageContent? = null,
     inlineImageContent: OrcaImageContent? = null,
+    blockMathContent: OrcaMathContent? = null,
+    inlineMathContent: OrcaMathContent? = null,
     depth: Int = 0,
 ) {
     val detailsStyle = style.details
@@ -893,6 +944,8 @@ private fun DetailsNode(
                         onFootnoteBackClick = onFootnoteBackClick,
                         imageContent = imageContent,
                         inlineImageContent = inlineImageContent,
+                        blockMathContent = blockMathContent,
+                        inlineMathContent = inlineMathContent,
                         depth = depth + 1,
                     )
                 }

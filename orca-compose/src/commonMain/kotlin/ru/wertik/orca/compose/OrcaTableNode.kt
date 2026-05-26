@@ -304,6 +304,7 @@ private fun estimateInlineTextLength(inline: OrcaInline): Int {
         is OrcaInline.Italic -> inline.content.sumOf(::estimateInlineTextLength)
         is OrcaInline.Strikethrough -> inline.content.sumOf(::estimateInlineTextLength)
         is OrcaInline.InlineCode -> inline.code.length
+        is OrcaInline.Math -> inline.source.length + 2
         is OrcaInline.Link -> {
             val labelLength = inline.content.sumOf(::estimateInlineTextLength)
             if (labelLength > 0) labelLength else inline.destination.length

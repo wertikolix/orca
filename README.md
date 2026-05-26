@@ -40,6 +40,9 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 - `orca-images-coil`
   - Optional Coil 3 + Ktor image renderer for trusted Markdown content
   - Provides block and inline image content slots without making chat-only apps pay for them
+- `orca-math-orcex` *(0.11 snapshot)*
+  - Optional native Android LaTeX renderer backed by [Orcex](https://github.com/wertikolix/Orcex)
+  - Leaves `orca-core` and `orca-compose` free from a bundled font or math engine
 - `sample-app`
   - Android demo for manual checks
 
@@ -468,6 +471,12 @@ For release-like check:
 - Maven Central artifacts are immutable after publish
 
 ## Changelog
+
+### Unreleased (`0.11.0`)
+
+- **Math AST and slots** -- parses conservative inline `$...$` and display `$$...$$` formulas with readable source fallback.
+- **Optional Orcex renderer** -- adds `orca-math-orcex` for native Android Canvas math rendering; the STIX font remains opt-in.
+- **Streaming-safe formulas** -- incomplete formula delimiters stay text until the closing delimiter arrives.
 
 ### 0.10.0
 

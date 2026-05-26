@@ -59,6 +59,7 @@ dependencies {
     implementation(project(":orca-core"))
     implementation(project(":orca-compose"))
     implementation(project(":orca-images-coil"))
+    implementation(project(":orca-math-orcex"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.androidx.core.ktx)
@@ -72,6 +73,7 @@ dependencies {
     implementation(libs.coil3.compose)
     implementation(libs.coil3.network.ktor3)
     implementation(libs.ktor.client.android)
+    implementation(libs.orcex.font.stix2.android)
 
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)

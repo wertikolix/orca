@@ -84,7 +84,8 @@ class OrcaMarkdownParser(
         val frontMatterExtraction = extractFrontMatter(input)
         val abbreviationExtraction = extractAbbreviations(frontMatterExtraction.markdown)
         val detailsExtraction = extractDetailsBlocks(abbreviationExtraction.markdown)
-        val definitionListExtraction = extractDefinitionLists(detailsExtraction.markdown)
+        val mathExtraction = extractMathBlocks(detailsExtraction.markdown)
+        val definitionListExtraction = extractDefinitionLists(mathExtraction.markdown)
         val footnoteExtraction = extractFootnoteDefinitions(definitionListExtraction.markdown)
         val root = parser.buildMarkdownTreeFromString(footnoteExtraction.markdown)
         val depthLimitReporter = DepthLimitReporter(onDepthLimitExceeded)
@@ -105,10 +106,12 @@ class OrcaMarkdownParser(
         // Replace placeholders with actual blocks.
         val defListPlaceholderRegex = Regex("""^<!--orca:deflist:(\d+)-->$""")
         val detailsPlaceholderRegex = Regex("""^<!--orca:details:(\d+)-->$""")
+        val mathPlaceholderRegex = Regex("""^<!--orca:math:(\d+)-->$""")
         val resolvedBlocks = blocks.map { block ->
             if (block is OrcaBlock.HtmlBlock) {
                 val defMatch = defListPlaceholderRegex.matchEntire(block.html)
                 val detMatch = detailsPlaceholderRegex.matchEntire(block.html)
+                val mathMatch = mathPlaceholderRegex.matchEntire(block.html)
                 when {
                     defMatch != null -> {
                         val listIndex = defMatch.groupValues[1].toInt()
@@ -134,6 +137,10 @@ class OrcaMarkdownParser(
                             )
                         } else block
                     }
+                    mathMatch != null -> mathExtraction.mathBlocks
+                        .getOrNull(mathMatch.groupValues[1].toInt())
+                        ?.let(OrcaBlock::Math)
+                        ?: block
                     else -> block
                 }
             } else {

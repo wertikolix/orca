@@ -109,6 +109,8 @@ private fun AnnotatedString.Builder.appendInline(
             append(inline.code)
         }
 
+        is OrcaInline.Math -> appendInlineContent(inlineMathId(inline.source), "\$${inline.source}\$")
+
         is OrcaInline.Link -> if (!securityPolicy.isAllowed(OrcaUrlType.LINK, inline.destination)) {
             appendLinkContent(
                 inline = inline,
@@ -313,4 +315,3 @@ private fun htmlInlineStyleForTag(tag: String, style: OrcaStyle): SpanStyle? = w
     "kbd" -> SpanStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, background = Color(0x1A000000))
     else -> null
 }
-
