@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.11.0`
+- Current stable minor: `0.11.1`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -50,10 +50,10 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.11.0")
-implementation("ru.wertik:orca-compose:0.11.0")
-implementation("ru.wertik:orca-images-coil:0.11.0") // optional images
-implementation("ru.wertik:orca-math-orcex:0.11.0") // optional Android math renderer
+implementation("ru.wertik:orca-core:0.11.1")
+implementation("ru.wertik:orca-compose:0.11.1")
+implementation("ru.wertik:orca-images-coil:0.11.1") // optional images
+implementation("ru.wertik:orca-math-orcex:0.11.1") // optional Android math renderer
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -188,7 +188,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.11.0`)
+## Supported Syntax (`0.11.1`)
 
 ### Blocks
 
@@ -472,6 +472,10 @@ For release-like check:
 - Maven Central artifacts are immutable after publish
 
 ## Changelog
+
+### 0.11.1
+
+- **Valid Maven POM** -- removes a redundant versionless AndroidX Compose UI dependency from `orca-math-orcex`; Compose UI remains supplied transitively by `orca-compose`.
 
 ### 0.11.0
 

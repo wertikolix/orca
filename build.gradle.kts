@@ -10,5 +10,5 @@ plugins {
 
 allprojects {
     group = "ru.wertik"
-    version = providers.gradleProperty("orcaVersion").orElse("0.11.0").get()
+    version = providers.gradleProperty("orcaVersion").orElse("0.11.1").get()
 }

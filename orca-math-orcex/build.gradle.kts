@@ -42,7 +42,6 @@ kotlin {
 
 dependencies {
     api(project(":orca-compose"))
-    implementation(libs.compose.ui)
     implementation(libs.orcex.render.android)
 }
 
