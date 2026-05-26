@@ -9,6 +9,7 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -92,6 +93,7 @@ fun Orca(
     inlineImageContent: OrcaImageContent? = null,
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
+    inlineMathPlaceholder: OrcaInlineMathPlaceholder? = null,
 ) {
     val parserKey = remember(parser) { parser.cacheKey() }
     val latestMarkdown by rememberUpdatedState(markdown)
@@ -168,6 +170,7 @@ fun Orca(
         inlineImageContent = inlineImageContent,
         blockMathContent = blockMathContent,
         inlineMathContent = inlineMathContent,
+        inlineMathPlaceholder = inlineMathPlaceholder,
     )
 }
 
@@ -193,6 +196,7 @@ fun Orca(
     inlineImageContent: OrcaImageContent? = null,
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
+    inlineMathPlaceholder: OrcaInlineMathPlaceholder? = null,
 ) {
     Orca(
         markdown = state.markdown,
@@ -210,6 +214,7 @@ fun Orca(
         inlineImageContent = inlineImageContent,
         blockMathContent = blockMathContent,
         inlineMathContent = inlineMathContent,
+        inlineMathPlaceholder = inlineMathPlaceholder,
     )
 }
 
@@ -245,6 +250,7 @@ fun Orca(
     inlineImageContent: OrcaImageContent? = null,
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
+    inlineMathPlaceholder: OrcaInlineMathPlaceholder? = null,
 ) {
     val renderBlocks = remember(document.blocks) {
         buildRenderBlocks(document.blocks)
@@ -299,7 +305,8 @@ fun Orca(
         scrollToSource?.invoke(sourceBlockKey)
     }
 
-    when (rootLayout) {
+    CompositionLocalProvider(LocalOrcaInlineMathPlaceholder provides inlineMathPlaceholder) {
+        when (rootLayout) {
         OrcaRootLayout.LAZY_COLUMN -> {
             val listState = rememberLazyListState()
             val wrappedLinkClick: (String) -> Unit = { url ->
@@ -457,6 +464,7 @@ fun Orca(
                     }
                 }
             }
+        }
         }
     }
 }

@@ -242,6 +242,7 @@ private fun HeadingNode(
 ) {
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
+    val inlineMathPlaceholder = LocalOrcaInlineMathPlaceholder.current
 
     val headingText = remember(
         block.content,
@@ -267,8 +268,8 @@ private fun HeadingNode(
             inlineImageContent = inlineImageContent,
         )
     }
-    val inlineMath = remember(block.content, inlineMathContent) {
-        buildInlineMathMap(block.content, inlineMathContent)
+    val inlineMath = remember(block.content, inlineMathContent, inlineMathPlaceholder) {
+        buildInlineMathMap(block.content, inlineMathContent, inlineMathPlaceholder)
     }
     InlineTextNode(
         text = headingText,
@@ -292,6 +293,7 @@ private fun ParagraphNode(
 ) {
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
+    val inlineMathPlaceholder = LocalOrcaInlineMathPlaceholder.current
 
     val paragraphText = remember(
         block.content,
@@ -317,8 +319,8 @@ private fun ParagraphNode(
             inlineImageContent = inlineImageContent,
         )
     }
-    val inlineMath = remember(block.content, inlineMathContent) {
-        buildInlineMathMap(block.content, inlineMathContent)
+    val inlineMath = remember(block.content, inlineMathContent, inlineMathPlaceholder) {
+        buildInlineMathMap(block.content, inlineMathContent, inlineMathPlaceholder)
     }
     InlineTextNode(
         text = paragraphText,
@@ -800,6 +802,7 @@ private fun DefinitionListNode(
     depth: Int = 0,
 ) {
     val dlStyle = style.definitionList
+    val inlineMathPlaceholder = LocalOrcaInlineMathPlaceholder.current
     Column(
         verticalArrangement = Arrangement.spacedBy(dlStyle.termSpacing),
     ) {
@@ -825,8 +828,8 @@ private fun DefinitionListNode(
                     inlineImageContent = inlineImageContent,
                 )
             }
-            val termInlineMath = remember(item.term, inlineMathContent) {
-                buildInlineMathMap(item.term, inlineMathContent)
+            val termInlineMath = remember(item.term, inlineMathContent, inlineMathPlaceholder) {
+                buildInlineMathMap(item.term, inlineMathContent, inlineMathPlaceholder)
             }
             InlineTextNode(
                 text = termText,

@@ -72,6 +72,7 @@ import ru.wertik.orca.core.OrcaMarkdownParser
 import ru.wertik.orca.images.coil.OrcaCoilImage
 import ru.wertik.orca.images.coil.OrcaCoilInlineImage
 import ru.wertik.orca.math.orcex.OrcaOrcexMath
+import ru.wertik.orca.math.orcex.rememberOrcaOrcexInlineMathPlaceholder
 import ru.wertik.orcex.font.stix2.StixTwoMath
 
 class OrcaSampleApplication : Application(), SingletonImageLoader.Factory {
@@ -303,6 +304,8 @@ private fun DocumentScreen(
 ) {
     val context = LocalContext.current
     val mathTypeface = remember(context) { StixTwoMath.load(context) }
+    val inlineMathFontSize = 19.sp
+    val inlineMathPlaceholder = rememberOrcaOrcexInlineMathPlaceholder(mathTypeface, inlineMathFontSize)
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
             modifier = Modifier
@@ -335,10 +338,11 @@ private fun DocumentScreen(
                     OrcaOrcexMath(
                         source = source,
                         typeface = mathTypeface,
-                        fontSize = 17.sp,
+                        fontSize = inlineMathFontSize,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
+                inlineMathPlaceholder = inlineMathPlaceholder,
                 onLinkClick = onLinkClick,
             )
         }

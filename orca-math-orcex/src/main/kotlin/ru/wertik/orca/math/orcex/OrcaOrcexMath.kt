@@ -12,10 +12,35 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
+import ru.wertik.orca.compose.OrcaInlineMathPlaceholder
 import ru.wertik.orcex.render.android.AndroidLatexEngine
 import ru.wertik.orcex.render.android.CanvasMathRenderer
+
+/** Builds exact inline bounds so tall formulas are visible without source-length gaps. */
+@Composable
+fun rememberOrcaOrcexInlineMathPlaceholder(
+    typeface: Typeface,
+    fontSize: TextUnit = 18.sp,
+): OrcaInlineMathPlaceholder {
+    val density = LocalDensity.current
+    val fontSizePx = with(density) { fontSize.toPx() }
+    val engine = remember(typeface) { AndroidLatexEngine(typeface) }
+    return remember(engine, density, fontSizePx) {
+        { source ->
+            runCatching { engine.layout(source, fontSizePx) }.getOrNull()?.let { layout ->
+                Placeholder(
+                    width = with(density) { layout.width.toSp() },
+                    height = with(density) { layout.height.toSp() },
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter,
+                )
+            }
+        }
+    }
+}
 
 /** Renders a parsed Orca math slot with Orcex's native Android Canvas backend. */
 @Composable
