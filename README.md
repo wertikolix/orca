@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.12.1`
+- Current stable minor: `0.13.0`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -192,7 +192,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.12.1`)
+## Supported Syntax (`0.13.0`)
 
 ### Blocks
 
