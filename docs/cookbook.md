@@ -83,6 +83,22 @@ Orca(document = document, style = previewStyle)
 Orca(document = document, style = fullStyle)
 ```
 
+## Material 3 theme and external scrollbar
+
+Reuse the root `LazyListState` when the host app renders a fast scrollbar or external scroll controls. In Material 3 apps, `rememberOrcaMaterialStyle()` automatically follows the active `MaterialTheme` color scheme, typography, and shapes.
+
+Add `implementation("ru.wertik:orca-compose-material3:0.13.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
+
+```kotlin
+val listState = rememberLazyListState()
+
+Orca(
+    document = document,
+    listState = listState,
+    style = rememberOrcaMaterialStyle(),
+)
+```
+
 ## Custom link handling
 
 ```kotlin
@@ -136,30 +152,14 @@ Orca(
 )
 ```
 
-## Material3 theme integration
+## Material 3 theme integration
 
-Match Orca colors to your Material3 theme:
+Follow your active Material 3 color scheme, typography, and shapes:
 
 ```kotlin
-val colorScheme = MaterialTheme.colorScheme
-
-val style = OrcaStyle(
-    typography = OrcaTypographyStyle(
-        paragraph = TextStyle(color = colorScheme.onSurface),
-        heading1 = TextStyle(color = colorScheme.onSurface, fontSize = 30.sp, fontWeight = FontWeight.Bold),
-        // ... other headings
-    ),
-    inline = OrcaInlineStyle(
-        link = SpanStyle(color = colorScheme.primary, textDecoration = TextDecoration.Underline),
-    ),
-    code = OrcaCodeBlockStyle(
-        background = colorScheme.surfaceVariant,
-        borderColor = colorScheme.outline,
-    ),
-    table = OrcaTableStyle(
-        headerBackground = colorScheme.surfaceVariant,
-        borderColor = colorScheme.outline,
-    ),
+Orca(
+    document = document,
+    style = rememberOrcaMaterialStyle(),
 )
 ```
 

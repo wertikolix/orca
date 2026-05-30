@@ -3,6 +3,7 @@ package ru.wertik.orca.compose
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -66,6 +67,7 @@ enum class OrcaRootLayout {
  * @param parseCacheKey optional cache key passed to [OrcaParser.parseCached]; when `null`, caching is bypassed.
  * @param style visual configuration for all rendered elements.
  * @param rootLayout whether to use a [LazyColumn][OrcaRootLayout.LAZY_COLUMN] or a [Column][OrcaRootLayout.COLUMN].
+ * @param listState state of the root [LazyColumn]; expose it to synchronize scrollbars or external controls.
  * @param securityPolicy URL filter applied to links and images before rendering.
  * @param onLinkClick callback invoked when a user taps a link.
  * @param onParseDiagnostics optional callback receiving parse diagnostics (errors and warnings) after each parse.
@@ -85,6 +87,7 @@ fun Orca(
     parseCacheKey: Any? = null,
     style: OrcaStyle = defaultStyle,
     rootLayout: OrcaRootLayout = OrcaRootLayout.LAZY_COLUMN,
+    listState: LazyListState = rememberLazyListState(),
     securityPolicy: OrcaSecurityPolicy = OrcaSecurityPolicies.Default,
     onLinkClick: (String) -> Unit = noOpLinkClick,
     onParseDiagnostics: ((OrcaParseDiagnostics) -> Unit)? = null,
@@ -183,6 +186,7 @@ fun Orca(
         modifier = modifier,
         style = style,
         rootLayout = rootLayout,
+        listState = listState,
         securityPolicy = securityPolicy,
         onLinkClick = onLinkClick,
         blockOverride = blockOverride,
@@ -208,6 +212,7 @@ fun Orca(
     parseCacheKey: Any? = null,
     style: OrcaStyle = defaultStyle,
     rootLayout: OrcaRootLayout = OrcaRootLayout.LAZY_COLUMN,
+    listState: LazyListState = rememberLazyListState(),
     securityPolicy: OrcaSecurityPolicy = OrcaSecurityPolicies.Default,
     onLinkClick: (String) -> Unit = noOpLinkClick,
     onParseDiagnostics: ((OrcaParseDiagnostics) -> Unit)? = null,
@@ -225,6 +230,7 @@ fun Orca(
         parseCacheKey = parseCacheKey,
         style = style,
         rootLayout = rootLayout,
+        listState = listState,
         securityPolicy = securityPolicy,
         onLinkClick = onLinkClick,
         onParseDiagnostics = onParseDiagnostics,
@@ -249,6 +255,7 @@ fun Orca(
  * @param modifier [Modifier] applied to the root layout.
  * @param style visual configuration for all rendered elements.
  * @param rootLayout whether to use a [LazyColumn][OrcaRootLayout.LAZY_COLUMN] or a [Column][OrcaRootLayout.COLUMN].
+ * @param listState state of the root [LazyColumn]; expose it to synchronize scrollbars or external controls.
  * @param securityPolicy URL filter applied to links and images before rendering.
  * @param onLinkClick callback invoked when a user taps a link.
  * @param blockOverride optional map of block types to custom composable renderers.
@@ -263,6 +270,7 @@ fun Orca(
     modifier: Modifier = Modifier,
     style: OrcaStyle = defaultStyle,
     rootLayout: OrcaRootLayout = OrcaRootLayout.LAZY_COLUMN,
+    listState: LazyListState = rememberLazyListState(),
     securityPolicy: OrcaSecurityPolicy = OrcaSecurityPolicies.Default,
     onLinkClick: (String) -> Unit = noOpLinkClick,
     blockOverride: Map<KClass<out OrcaBlock>, @Composable (OrcaBlock) -> Unit> = emptyMap(),
@@ -328,7 +336,6 @@ fun Orca(
     CompositionLocalProvider(LocalOrcaInlineMathPlaceholder provides inlineMathPlaceholder) {
         when (rootLayout) {
         OrcaRootLayout.LAZY_COLUMN -> {
-            val listState = rememberLazyListState()
             val wrappedLinkClick: (String) -> Unit = { url ->
                 if (url.startsWith("#")) {
                     val fragment = url.removePrefix("#")

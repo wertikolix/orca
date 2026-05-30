@@ -118,6 +118,30 @@ data class OrcaQuoteStyle(
     val spacing: Dp = 10.dp,
 )
 
+data class OrcaCodeLabelStyle(
+    val text: TextStyle = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.Medium,
+    ),
+    val background: Color = Color(0x12000000),
+    val shape: Shape = RoundedCornerShape(8.dp),
+    val padding: PaddingValues = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+)
+
+data class OrcaCodeActionStyle(
+    val text: TextStyle = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.Medium,
+    ),
+    val background: Color = Color(0x12000000),
+    val shape: Shape = RoundedCornerShape(8.dp),
+    val padding: PaddingValues = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+)
+
 /**
  * Appearance of fenced/indented code blocks, including syntax highlighting token styles.
  *
@@ -133,12 +157,8 @@ data class OrcaCodeBlockStyle(
         lineHeight = 20.sp,
         fontFamily = FontFamily.Monospace,
     ),
-    val languageLabel: TextStyle = TextStyle(
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        fontFamily = FontFamily.Monospace,
-        fontWeight = FontWeight.Medium,
-    ),
+    val languageLabel: OrcaCodeLabelStyle = OrcaCodeLabelStyle(),
+    val copyButton: OrcaCodeActionStyle = OrcaCodeActionStyle(),
     val lineNumber: TextStyle = TextStyle(
         fontSize = 12.sp,
         lineHeight = 20.sp,
@@ -146,7 +166,6 @@ data class OrcaCodeBlockStyle(
         color = Color(0xFF7A7A7A),
     ),
     val background: Color = Color(0xFFF3F3F3),
-    val languageLabelBackground: Color = Color(0x12000000),
     val borderColor: Color = Color(0xFFD0D7DE),
     val borderWidth: Dp = 1.dp,
     val shape: Shape = RoundedCornerShape(8.dp),
@@ -154,7 +173,6 @@ data class OrcaCodeBlockStyle(
     val showLineNumbers: Boolean = true,
     val lineNumberMinWidth: Dp = 28.dp,
     val lineNumberEndPadding: Dp = 12.dp,
-    val languageLabelPadding: PaddingValues = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
     val showCopyButton: Boolean = true,
     val syntaxHighlightingEnabled: Boolean = true,
     val highlightKeyword: SpanStyle = SpanStyle(color = Color(0xFF0B57D0), fontWeight = FontWeight.SemiBold),
@@ -181,6 +199,10 @@ data class OrcaTableStyle(
     val borderColor: Color = Color(0xFFD0D7DE),
     val borderWidth: Dp = 1.dp,
     val headerBackground: Color = Color(0xFFF7F9FB),
+    val rowBackground: Color = Color.Transparent,
+    val alternateRowBackground: Color = Color.Transparent,
+    val containerShape: Shape = RoundedCornerShape(8.dp),
+    val outerBorderColor: Color = borderColor,
 )
 
 data class OrcaThematicBreakStyle(
@@ -282,10 +304,10 @@ data class OrcaStyle(
     val listMarkerWidth: Dp get() = layout.listMarkerWidth
 
     val codeBlock: TextStyle get() = code.text
-    val codeBlockLanguageLabel: TextStyle get() = code.languageLabel
+    val codeBlockLanguageLabel: TextStyle get() = code.languageLabel.text
     val codeBlockLineNumber: TextStyle get() = code.lineNumber
     val codeBlockBackground: Color get() = code.background
-    val codeBlockLanguageLabelBackground: Color get() = code.languageLabelBackground
+    val codeBlockLanguageLabelBackground: Color get() = code.languageLabel.background
     val codeBlockBorderColor: Color get() = code.borderColor
     val codeBlockBorderWidth: Dp get() = code.borderWidth
     val codeBlockShape: Shape get() = code.shape
@@ -293,7 +315,7 @@ data class OrcaStyle(
     val codeBlockShowLineNumbers: Boolean get() = code.showLineNumbers
     val codeBlockLineNumberMinWidth: Dp get() = code.lineNumberMinWidth
     val codeBlockLineNumberEndPadding: Dp get() = code.lineNumberEndPadding
-    val codeBlockLanguageLabelPadding: PaddingValues get() = code.languageLabelPadding
+    val codeBlockLanguageLabelPadding: PaddingValues get() = code.languageLabel.padding
     val codeBlockSyntaxHighlightingEnabled: Boolean get() = code.syntaxHighlightingEnabled
     val codeBlockHighlightKeyword: SpanStyle get() = code.highlightKeyword
     val codeBlockHighlightString: SpanStyle get() = code.highlightString
@@ -312,6 +334,10 @@ data class OrcaStyle(
     val tableBorderColor: Color get() = table.borderColor
     val tableBorderWidth: Dp get() = table.borderWidth
     val tableHeaderBackground: Color get() = table.headerBackground
+    val tableRowBackground: Color get() = table.rowBackground
+    val tableAlternateRowBackground: Color get() = table.alternateRowBackground
+    val tableContainerShape: Shape get() = table.containerShape
+    val tableOuterBorderColor: Color get() = table.outerBorderColor
 
     val thematicBreakColor: Color get() = thematicBreak.color
     val thematicBreakThickness: Dp get() = thematicBreak.thickness
@@ -376,12 +402,25 @@ object OrcaDefaults {
                 fontFamily = FontFamily.Monospace,
                 color = Color(0xFFD4D4D4),
             ),
-            languageLabel = TextStyle(
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF9E9E9E),
+            languageLabel = OrcaCodeLabelStyle(
+                text = TextStyle(
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF9E9E9E),
+                ),
+                background = Color(0x1AFFFFFF),
+            ),
+            copyButton = OrcaCodeActionStyle(
+                text = TextStyle(
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFFE0E0E0),
+                ),
+                background = Color(0x1AFFFFFF),
             ),
             lineNumber = TextStyle(
                 fontSize = 12.sp,
@@ -390,7 +429,6 @@ object OrcaDefaults {
                 color = Color(0xFF616161),
             ),
             background = Color(0xFF1E1E1E),
-            languageLabelBackground = Color(0x1AFFFFFF),
             borderColor = Color(0xFF333333),
             highlightKeyword = SpanStyle(color = Color(0xFF569CD6), fontWeight = FontWeight.SemiBold),
             highlightString = SpanStyle(color = Color(0xFFCE9178)),
@@ -402,6 +440,9 @@ object OrcaDefaults {
             headerText = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE0E0E0)),
             borderColor = Color(0xFF333333),
             headerBackground = Color(0xFF252525),
+            rowBackground = Color(0xFF1E1E1E),
+            alternateRowBackground = Color(0xFF232323),
+            outerBorderColor = Color(0xFF424242),
         ),
         thematicBreak = OrcaThematicBreakStyle(
             color = Color(0xFF424242),

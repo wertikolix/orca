@@ -89,10 +89,10 @@ Span styles applied to inline markdown elements within text.
 | Property | Default | Description |
 |---|---|---|
 | `text` | 14sp, Monospace | Code text style |
-| `languageLabel` | 12sp, Monospace, Medium | Language tag style |
+| `languageLabel` | `OrcaCodeLabelStyle()` | Language tag text, background, shape, and padding |
+| `copyButton` | `OrcaCodeActionStyle()` | Copy action text, background, shape, and padding |
 | `lineNumber` | 12sp, Monospace, grey | Line number style |
 | `background` | #F3F3F3 | Container background |
-| `languageLabelBackground` | semi-transparent | Language tag background |
 | `borderColor` | #D0D7DE | Container border color |
 | `borderWidth` | 1dp | Container border width |
 | `shape` | RoundedCornerShape(8dp) | Container shape |
@@ -100,7 +100,6 @@ Span styles applied to inline markdown elements within text.
 | `showLineNumbers` | `true` | Show line numbers for multiline blocks |
 | `lineNumberMinWidth` | 28dp | Minimum width for line number column |
 | `lineNumberEndPadding` | 12dp | Space after line numbers |
-| `languageLabelPadding` | 8dp horizontal, 4dp vertical | Language tag padding |
 | `showCopyButton` | `true` | Show copy-to-clipboard button |
 | `syntaxHighlightingEnabled` | `true` | Enable keyword/string/comment coloring |
 | `highlightKeyword` | Blue (#0B57D0), SemiBold | Keyword token style |
@@ -126,6 +125,10 @@ Span styles applied to inline markdown elements within text.
 | `borderColor` | #D0D7DE | Cell border color |
 | `borderWidth` | 1dp | Cell border width |
 | `headerBackground` | #F7F9FB | Header row background |
+| `rowBackground` | transparent | Body row background |
+| `alternateRowBackground` | transparent | Alternating body row background |
+| `containerShape` | RoundedCornerShape(8dp) | Outer table shape |
+| `outerBorderColor` | `borderColor` | Outer table border color |
 
 ### Layout modes
 
@@ -204,6 +207,17 @@ GitHub-style callout blocks (`> [!NOTE]`, `> [!WARNING]`, etc.).
 
 ## Dark Theme
 
+For Material 3 apps, prefer the theme adapter so Orca follows dynamic light and dark color schemes automatically:
+
+Add `implementation("ru.wertik:orca-compose-material3:0.13.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
+
+```kotlin
+Orca(
+    document = document,
+    style = rememberOrcaMaterialStyle(),
+)
+```
+
 ```kotlin
 Orca(
     markdown = markdown,
@@ -217,6 +231,21 @@ Orca(
 - Darker code block and table backgrounds
 - Lighter admonition stripe colors
 - Adjusted link and inline code colors
+
+## Code Actions
+
+Language labels and copy actions are configured independently:
+
+```kotlin
+OrcaCodeBlockStyle(
+    languageLabel = OrcaCodeLabelStyle(...),
+    copyButton = OrcaCodeActionStyle(...),
+)
+```
+
+## Table Surfaces
+
+`OrcaTableStyle` exposes `rowBackground`, `alternateRowBackground`, `containerShape`, and `outerBorderColor` in addition to header and cell-border tokens.
 
 `OrcaDefaults.lightStyle()` returns the default `OrcaStyle()`.
 

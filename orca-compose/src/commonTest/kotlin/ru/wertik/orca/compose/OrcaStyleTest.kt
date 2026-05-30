@@ -1,5 +1,6 @@
 package ru.wertik.orca.compose
 
+import androidx.compose.ui.graphics.Color
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -26,7 +27,7 @@ class OrcaStyleTest {
         assertEquals(style.inline.footnoteReference, style.footnoteReferenceStyle)
         assertEquals(style.code.text, style.codeBlock)
         assertEquals(style.code.lineNumber, style.codeBlockLineNumber)
-        assertEquals(style.code.languageLabel, style.codeBlockLanguageLabel)
+        assertEquals(style.code.languageLabel.text, style.codeBlockLanguageLabel)
         assertEquals(style.code.showLineNumbers, style.codeBlockShowLineNumbers)
         assertEquals(style.code.syntaxHighlightingEnabled, style.codeBlockSyntaxHighlightingEnabled)
         assertEquals(style.code.highlightKeyword, style.codeBlockHighlightKeyword)
@@ -41,6 +42,10 @@ class OrcaStyleTest {
         assertEquals(style.table.maxColumnWidth, style.tableMaxColumnWidth)
         assertEquals(style.table.autoColumnCharacterWidth, style.tableAutoColumnCharacterWidth)
         assertEquals(style.table.fillAvailableWidth, style.tableFillAvailableWidth)
+        assertEquals(style.table.rowBackground, style.tableRowBackground)
+        assertEquals(style.table.alternateRowBackground, style.tableAlternateRowBackground)
+        assertEquals(style.table.containerShape, style.tableContainerShape)
+        assertEquals(style.table.outerBorderColor, style.tableOuterBorderColor)
     }
 }
 
@@ -82,6 +87,15 @@ class OrcaDefaultsTest {
         val dark = OrcaDefaults.darkStyle()
 
         assertNotEquals(light.table.borderColor, dark.table.borderColor)
+    }
+
+    @Test
+    fun darkStyleDefinesSeparateCodeActionAndTableSurfaces() {
+        val dark = OrcaDefaults.darkStyle()
+
+        assertNotEquals(dark.code.languageLabel.text.color, dark.code.copyButton.text.color)
+        assertNotEquals(Color.Transparent, dark.table.rowBackground)
+        assertNotEquals(dark.table.rowBackground, dark.table.alternateRowBackground)
     }
 
     @Test

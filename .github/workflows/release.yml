@@ -60,7 +60,7 @@ jobs:
           echo "Resolved release version: ${VERSION}"
 
       - name: Build tests and release artifacts
-        run: ./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-compose:assembleRelease :orca-images-coil:assembleRelease :orca-math-orcex:assembleRelease :orca-math-orcex:compileKotlinDesktop :orca-math-orcex:compileKotlinIosSimulatorArm64 :orca-core:jvmJar :sample-app:assembleRelease :sample-app:bundleRelease -PorcaVersion=${{ steps.release-version.outputs.version }}
+        run: ./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-compose:assembleRelease :orca-compose-material3:testDebugUnitTest :orca-compose-material3:assembleRelease :orca-images-coil:assembleRelease :orca-math-orcex:assembleRelease :orca-math-orcex:compileKotlinDesktop :orca-math-orcex:compileKotlinIosSimulatorArm64 :orca-core:jvmJar :sample-app:assembleRelease :sample-app:bundleRelease -PorcaVersion=${{ steps.release-version.outputs.version }}
 
       - name: Prepare signing key for Gradle (optional)
         if: startsWith(github.ref, 'refs/tags/')
@@ -115,6 +115,7 @@ jobs:
           ./gradlew --no-daemon --build-cache \
             :orca-core:publishAllPublicationsToCentralStagingRepository \
             :orca-compose:publishAllPublicationsToCentralStagingRepository \
+            :orca-compose-material3:publishAllPublicationsToCentralStagingRepository \
             :orca-images-coil:publishAllPublicationsToCentralStagingRepository \
             :orca-math-orcex:publishAllPublicationsToCentralStagingRepository \
             -PorcaVersion=${{ steps.release-version.outputs.version }} \
@@ -153,6 +154,7 @@ jobs:
           name: release-artifacts-${{ github.ref_name }}
           path: |
             orca-compose/build/outputs/aar/orca-compose-release.aar
+            orca-compose-material3/build/outputs/aar/orca-compose-material3-release.aar
             orca-images-coil/build/outputs/aar/orca-images-coil-release.aar
             orca-math-orcex/build/outputs/aar/orca-math-orcex-release.aar
             orca-core/build/libs/orca-core*.jar
@@ -193,6 +195,10 @@ jobs:
 
           if [[ -f orca-compose/build/outputs/aar/orca-compose-release.aar ]]; then
             assets+=(orca-compose/build/outputs/aar/orca-compose-release.aar)
+          fi
+
+          if [[ -f orca-compose-material3/build/outputs/aar/orca-compose-material3-release.aar ]]; then
+            assets+=(orca-compose-material3/build/outputs/aar/orca-compose-material3-release.aar)
           fi
 
           if [[ -f orca-images-coil/build/outputs/aar/orca-images-coil-release.aar ]]; then
@@ -238,6 +244,7 @@ jobs:
           path: |
             orca-core/build/reports/
             orca-compose/build/reports/
+            orca-compose-material3/build/reports/
             orca-images-coil/build/reports/
             orca-math-orcex/build/reports/
             sample-app/build/reports/

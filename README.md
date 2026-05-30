@@ -37,6 +37,9 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
   - Targets: Android, iOS, Desktop (JVM), wasmJs
   - Style model (`OrcaStyle`)
   - Lightweight base renderer with no mandatory image/network runtime
+- `orca-compose-material3`
+  - Optional Material 3 theme adapter for `orca-compose`
+  - Provides `rememberOrcaMaterialStyle()` without adding Material 3 to the base renderer
 - `orca-images-coil`
   - Optional Coil 3 + Ktor image renderer for trusted Markdown content
   - Provides block and inline image content slots without making chat-only apps pay for them
@@ -50,10 +53,11 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.12.1")
-implementation("ru.wertik:orca-compose:0.12.1")
-implementation("ru.wertik:orca-images-coil:0.12.1") // optional images
-implementation("ru.wertik:orca-math-orcex:0.12.1") // optional multiplatform math renderer
+implementation("ru.wertik:orca-core:0.13.0")
+implementation("ru.wertik:orca-compose:0.13.0")
+implementation("ru.wertik:orca-compose-material3:0.13.0") // optional Material 3 theme adapter
+implementation("ru.wertik:orca-images-coil:0.13.0") // optional images
+implementation("ru.wertik:orca-math-orcex:0.13.0") // optional multiplatform math renderer
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -330,6 +334,28 @@ Use `OrcaStyle` as a single configuration object:
 val style = OrcaDefaults.adaptiveStyle() // @Composable
 ```
 
+For Material 3 apps, derive colors, typography, and shapes directly from the active theme:
+
+```kotlin
+import ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle
+
+val style = rememberOrcaMaterialStyle()
+```
+
+### External scrollbar
+
+Pass the same `LazyListState` to Orca and your scrollbar or external controls:
+
+```kotlin
+val listState = rememberLazyListState()
+
+Orca(
+    document = document,
+    listState = listState,
+    style = rememberOrcaMaterialStyle(),
+)
+```
+
 ### Custom style
 
 ```kotlin
@@ -456,7 +482,7 @@ Orca(
 ## Verification
 
 ```bash
-./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :sample-app:assembleDebug
+./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-compose-material3:testDebugUnitTest :sample-app:assembleDebug
 ```
 
 For release-like check:

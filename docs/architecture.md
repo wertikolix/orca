@@ -8,11 +8,13 @@ Orca is split into lightweight core/rendering modules plus optional integrations
 |---|---|
 | **orca-core** | Parsing: markdown string → `OrcaDocument` AST. Zero Compose dependencies. |
 | **orca-compose** | Rendering: `OrcaDocument` → Compose UI. Owns styling, security, layout, and image content slots; no image/network stack. |
+| **orca-compose-material3** | Optional Material 3 adapter for deriving `OrcaStyle` from the active `MaterialTheme`. |
 | **orca-images-coil** | Optional Coil/Ktor implementation of block and inline image slots. |
+| **orca-math-orcex** | Optional Orcex implementation of block and inline math slots. |
 
-**Dependency direction:** `orca-images-coil` → `orca-compose` → `orca-core`. Consumers who only need parsing or chat rendering do not carry optional network/image dependencies.
+**Dependency direction:** optional adapters (`orca-compose-material3`, `orca-images-coil`, `orca-math-orcex`) → `orca-compose` → `orca-core`. Consumers who only need parsing or chat rendering do not carry optional theme, network/image, or math dependencies.
 
-Both modules use `commonMain` for shared logic. The only platform-specific code in the entire project is `OrcaLock` (see [Platform Targets](#platform-targets)).
+The modules use `commonMain` for shared logic. The parser's platform-specific synchronization code is isolated in `OrcaLock` (see [Platform Targets](#platform-targets)).
 
 ---
 

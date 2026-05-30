@@ -19,6 +19,7 @@ rootProject.name = "Orca"
 include(
     ":orca-core",
     ":orca-compose",
+    ":orca-compose-material3",
     ":orca-images-coil",
     ":orca-math-orcex",
     ":sample-app",

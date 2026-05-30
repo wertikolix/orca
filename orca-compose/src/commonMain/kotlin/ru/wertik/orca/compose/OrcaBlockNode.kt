@@ -592,15 +592,15 @@ private fun CodeBlockNode(
                 if (languageLabel != null) {
                     Text(
                         text = languageLabel,
-                        style = style.code.languageLabel,
+                        style = style.code.languageLabel.text,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
                             .background(
-                                color = style.code.languageLabelBackground,
-                                shape = style.code.shape,
+                                color = style.code.languageLabel.background,
+                                shape = style.code.languageLabel.shape,
                             )
-                            .padding(style.code.languageLabelPadding),
+                            .padding(style.code.languageLabel.padding),
                     )
                 } else {
                     Spacer(modifier = Modifier.width(0.dp))
@@ -659,19 +659,19 @@ private fun CopyButton(
 
     Text(
         text = if (copied) "Copied" else "Copy",
-        style = style.code.languageLabel,
+        style = style.code.copyButton.text,
         maxLines = 1,
         modifier = Modifier
             .background(
-                color = style.code.languageLabelBackground,
-                shape = style.code.shape,
+                color = style.code.copyButton.background,
+                shape = style.code.copyButton.shape,
             )
             .clickable {
                 @Suppress("DEPRECATION")
                 clipboardManager.setText(AnnotatedString(code))
                 copied = true
             }
-            .padding(style.code.languageLabelPadding),
+            .padding(style.code.copyButton.padding),
     )
 }
 

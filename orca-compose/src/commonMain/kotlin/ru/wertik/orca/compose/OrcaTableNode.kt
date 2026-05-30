@@ -20,9 +20,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -83,12 +83,13 @@ internal fun TableBlockNode(
                 sourceBlockKey = sourceBlockKey,
                 onFootnoteReferenceClick = onFootnoteReferenceClick,
             )
-            block.rows.forEach { row ->
+            block.rows.forEachIndexed { index, row ->
                 TableRowNode(
                     cells = row,
                     columnCount = columnCount,
                     columnWidths = columnWidths,
                     isHeader = false,
+                    rowIndex = index,
                     style = style,
                     onLinkClick = onLinkClick,
                     securityPolicy = securityPolicy,
@@ -106,28 +107,11 @@ private fun ColumnWithHorizontalScroll(
     style: OrcaStyle,
     content: @Composable () -> Unit,
 ) {
-    val borderWidth = style.table.borderWidth
-    val borderColor = style.table.borderColor
     Column(
         modifier = Modifier
             .horizontalScroll(rememberScrollState())
-            .drawBehind {
-                val strokePx = borderWidth.toPx()
-                // Draw bottom border
-                drawLine(
-                    color = borderColor,
-                    start = Offset(0f, size.height - strokePx / 2),
-                    end = Offset(size.width, size.height - strokePx / 2),
-                    strokeWidth = strokePx,
-                )
-                // Draw end (right) border
-                drawLine(
-                    color = borderColor,
-                    start = Offset(size.width - strokePx / 2, 0f),
-                    end = Offset(size.width - strokePx / 2, size.height),
-                    strokeWidth = strokePx,
-                )
-            },
+            .clip(style.table.containerShape)
+            .border(style.table.borderWidth, style.table.outerBorderColor, style.table.containerShape),
     ) {
         content()
     }
@@ -139,6 +123,7 @@ private fun TableRowNode(
     columnCount: Int,
     columnWidths: List<Dp>,
     isHeader: Boolean,
+    rowIndex: Int = 0,
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     securityPolicy: OrcaSecurityPolicy,
@@ -196,7 +181,13 @@ private fun TableRowNode(
                             strokeWidth = strokePx,
                         )
                     }
-                    .background(if (isHeader) style.table.headerBackground else Color.Transparent)
+                    .background(
+                        when {
+                            isHeader -> style.table.headerBackground
+                            rowIndex % 2 == 0 -> style.table.rowBackground
+                            else -> style.table.alternateRowBackground
+                        },
+                    )
                     .padding(style.table.cellPadding),
             ) {
                 Text(
