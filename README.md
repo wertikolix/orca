@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.14.0`
+- Current stable minor: `0.15.0`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -53,11 +53,11 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.14.0")
-implementation("ru.wertik:orca-compose:0.14.0")
-implementation("ru.wertik:orca-compose-material3:0.14.0") // optional Material 3 theme adapter
-implementation("ru.wertik:orca-images-coil:0.14.0") // optional images
-implementation("ru.wertik:orca-math-orcex:0.14.0") // optional multiplatform math renderer
+implementation("ru.wertik:orca-core:0.15.0")
+implementation("ru.wertik:orca-compose:0.15.0")
+implementation("ru.wertik:orca-compose-material3:0.15.0") // optional Material 3 theme adapter
+implementation("ru.wertik:orca-images-coil:0.15.0") // optional images
+implementation("ru.wertik:orca-math-orcex:0.15.0") // optional multiplatform math renderer
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -192,7 +192,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.14.0`)
+## Supported Syntax (`0.15.0`)
 
 ### Blocks
 
@@ -264,6 +264,8 @@ data class OrcaParseResult(
 - **heading anchor links** — `[link](#heading-text)` scrolls to the corresponding heading (auto-generated GitHub-style slugs)
 - **custom block renderers** — override rendering for any block type via `blockOverride` parameter
 - **interactive task lists** — pass `onTaskToggle` to receive checkbox taps (document-order index + requested state) and update your source; rendering stays stateless
+- **table of contents** — `OrcaDocument.tableOfContents()` + `orcaHeadingBlockIndex()` map headings to lazy-list indices for scroll-to-section UIs
+- **streaming cursor** — optional `streamingCursor` glyph rendered after the last block while a response streams
 - **zero-cost optional images** — base `orca-compose` displays fallback/alt text; supply `imageContent` and `inlineImageContent` only when image rendering is needed
 
 ### Admonition rendering
@@ -501,6 +503,15 @@ For release-like check:
 - Maven Central artifacts are immutable after publish
 
 ## Changelog
+
+### 0.15.0
+
+- **Incremental streaming v2** — `OrcaIncrementalParserSession` now freezes a growing prefix of blank-line separated segments (headings, closed code fences, lists, quotes, admonitions, tables, thematic breaks) instead of plain paragraphs only. Only the active tail is re-parsed per update; heading anchor slugs are re-derived so duplicate titles keep full-parse numbering. Verified by prefix-equivalence property tests against the full parser.
+- **Text selection in `LAZY_COLUMN`** — the default lazy root layout is now wrapped in a `SelectionContainer`, matching the `COLUMN` mode.
+- **Table of contents API** — `OrcaDocument.tableOfContents()` in `orca-core` plus `orcaHeadingBlockIndex()` in `orca-compose` for scroll-to-heading UIs on top of `LazyListState`.
+- **Streaming cursor** — optional `streamingCursor` glyph on all `Orca` overloads; the streaming overload shows it only while `OrcaStreamingState.isStreaming`. Applied to the parsed document, keeping incremental sessions append-only.
+- **Admonition icons** — theme-tinted monochrome glyphs before callout titles, configurable/disableable via `OrcaAdmonitionStyle` (`showIcons`, per-type icon strings).
+- **Orcex 0.5.0** — the optional math module picks up LaTeX colors (`\textcolor`, `\color`), framed results (`\boxed`) and stacked annotations (`\overset`/`\underset`), plus wasmJs artifacts of the Orcex runtime.
 
 ### 0.14.0
 

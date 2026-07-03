@@ -22,9 +22,6 @@ private data class ParsedInlineFootnote(
     val closingIndex: Int,
 )
 
-private val HTML_TAG_REGEX = Regex("</?[a-zA-Z][^>]*>")
-private val BR_TAG_REGEX = Regex("(?i)<br\\s*/?>")
-
 internal class IntellijTreeMapper(
     private val source: String,
     private val parser: MarkdownParser,
@@ -138,11 +135,7 @@ internal class IntellijTreeMapper(
     }
 
     private fun generateHeadingSlug(content: List<OrcaInline>): String {
-        val base = content.toPlainText()
-            .lowercase()
-            .replace(Regex("[^\\w\\s-]"), "")
-            .trim()
-            .replace(Regex("\\s+"), "-")
+        val base = orcaHeadingSlugBase(content)
         if (base.isEmpty()) return ""
         val count = headingSlugCounts[base] ?: 0
         headingSlugCounts[base] = count + 1
@@ -516,7 +509,7 @@ internal class IntellijTreeMapper(
             from = 1,
             to = -1,
             depth = depth + 1,
-        ).toPlainText()
+        ).orcaPlainText()
             .trim()
             .takeIf { value -> value.isNotEmpty() }
 
@@ -1048,46 +1041,4 @@ private fun String.trimIndentPrefix(count: Int): String {
 private fun String.takeLanguageOrNull(): String? {
     val firstToken = trim().split(' ').firstOrNull()?.trim()
     return firstToken?.takeIf { it.isNotEmpty() }
-}
-
-private fun List<OrcaInline>.toPlainText(): String {
-    return buildString {
-        for (inline in this@toPlainText) {
-            when (inline) {
-                is OrcaInline.Text -> append(inline.text)
-                is OrcaInline.Bold -> append(inline.content.toPlainText())
-                is OrcaInline.Italic -> append(inline.content.toPlainText())
-                is OrcaInline.Strikethrough -> append(inline.content.toPlainText())
-                is OrcaInline.InlineCode -> append(inline.code)
-                is OrcaInline.Math -> append("\$${inline.source}\$")
-                is OrcaInline.Link -> append(inline.content.toPlainText().ifEmpty { inline.destination })
-                is OrcaInline.Image -> append(inline.alt ?: "")
-                is OrcaInline.FootnoteReference -> append("[${inline.label}]")
-                is OrcaInline.Superscript -> append(inline.content.toPlainText())
-                is OrcaInline.Subscript -> append(inline.content.toPlainText())
-                is OrcaInline.Highlight -> append(inline.content.toPlainText())
-                is OrcaInline.Underline -> append(inline.content.toPlainText())
-                is OrcaInline.HtmlInline -> append(htmlInlineToPlainText(inline.html))
-                is OrcaInline.Abbreviation -> append(inline.text)
-            }
-        }
-    }
-}
-
-private fun htmlInlineToPlainText(html: String): String {
-    return decodeBasicHtmlEntities(
-        html
-            .replace(BR_TAG_REGEX, "\n")
-            .replace(HTML_TAG_REGEX, ""),
-    )
-}
-
-private fun decodeBasicHtmlEntities(text: String): String {
-    return text
-        .replace("&amp;", "&")
-        .replace("&nbsp;", " ")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
 }

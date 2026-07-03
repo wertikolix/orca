@@ -87,7 +87,7 @@ Orca(document = document, style = fullStyle)
 
 Reuse the root `LazyListState` when the host app renders a fast scrollbar or external scroll controls. In Material 3 apps, `rememberOrcaMaterialStyle()` automatically follows the active `MaterialTheme` color scheme, typography, and shapes.
 
-Add `implementation("ru.wertik:orca-compose-material3:0.14.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
+Add `implementation("ru.wertik:orca-compose-material3:0.15.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
 
 ```kotlin
 val listState = rememberLazyListState()
@@ -238,18 +238,42 @@ if (frontMatter is OrcaFrontMatter.Yaml) {
 
 ## Extracting headings for table of contents
 
+Since 0.15.0 the core module ships a TOC API, and the Compose module maps anchor
+ids to lazy-list indices for scroll-to-section UIs:
+
 ```kotlin
 val document = parser.parse(markdown)
-val headings = document.blocks
-    .filterIsInstance<OrcaBlock.Heading>()
-    .map { heading ->
-        val text = heading.content
-            .filterIsInstance<OrcaInline.Text>()
-            .joinToString("") { it.text }
-        heading.level to text
+val toc = document.tableOfContents(maxLevel = 2) // List<OrcaTocEntry>(level, title, id)
+val anchors = orcaHeadingBlockIndex(document)    // id -> top-level block index
+
+val listState = rememberLazyListState()
+val scope = rememberCoroutineScope()
+
+Row {
+    toc.forEach { entry ->
+        TextButton(onClick = {
+            anchors[entry.id]?.let { index ->
+                scope.launch { listState.animateScrollToItem(index) }
+            }
+        }) { Text(entry.title) }
     }
-// headings: List<Pair<Int, String>>
-// e.g. [(1, "Title"), (2, "Section"), (3, "Subsection")]
+}
+
+Orca(markdown = markdown, parser = parser, listState = listState)
+```
+
+## Streaming cursor for chat bubbles
+
+Show a cursor glyph after the last block while an LLM response streams. The glyph
+is applied to the parsed document — never to the source — so
+`OrcaIncrementalParserSession` keeps its append-only fast path:
+
+```kotlin
+Orca(
+    state = stream,                      // OrcaStreamingState
+    parser = remember { OrcaIncrementalParserSession(OrcaMarkdownParser()) },
+    streamingCursor = "\u258D",          // shown only while stream.isStreaming
+)
 ```
 
 ## Custom parser implementation

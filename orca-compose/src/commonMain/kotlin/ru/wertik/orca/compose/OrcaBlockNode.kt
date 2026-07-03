@@ -729,6 +729,13 @@ private fun AdmonitionNode(
         OrcaAdmonitionType.CAUTION -> admonitionStyle.cautionBackground
     }
     val title = block.title ?: block.type.name.lowercase().replaceFirstChar { it.uppercase() }
+    val icon = when (block.type) {
+        OrcaAdmonitionType.NOTE -> admonitionStyle.noteIcon
+        OrcaAdmonitionType.TIP -> admonitionStyle.tipIcon
+        OrcaAdmonitionType.IMPORTANT -> admonitionStyle.importantIcon
+        OrcaAdmonitionType.WARNING -> admonitionStyle.warningIcon
+        OrcaAdmonitionType.CAUTION -> admonitionStyle.cautionIcon
+    }.takeIf { admonitionStyle.showIcons && it.isNotEmpty() }
     val collapsible = admonitionStyle.collapsible
     var expanded by remember { mutableStateOf(!admonitionStyle.collapsedByDefault) }
 
@@ -761,6 +768,13 @@ private fun AdmonitionNode(
                 },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (icon != null) {
+                    Text(
+                        text = icon,
+                        style = admonitionStyle.titleStyle.copy(color = color),
+                        modifier = Modifier.padding(end = admonitionStyle.iconSpacing),
+                    )
+                }
                 Text(
                     text = title,
                     style = admonitionStyle.titleStyle.copy(color = color),

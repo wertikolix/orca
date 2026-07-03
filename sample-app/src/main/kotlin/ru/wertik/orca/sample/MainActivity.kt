@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -51,6 +52,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,14 +65,17 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import ru.wertik.orca.compose.Orca
 import ru.wertik.orca.compose.OrcaDefaults
 import ru.wertik.orca.compose.OrcaRootLayout
 import ru.wertik.orca.compose.OrcaSecurityPolicies
 import ru.wertik.orca.compose.OrcaStyle
+import ru.wertik.orca.compose.orcaHeadingBlockIndex
 import ru.wertik.orca.compose.rememberOrcaStreamingState
 import ru.wertik.orca.core.OrcaIncrementalParserSession
 import ru.wertik.orca.core.OrcaMarkdownParser
+import ru.wertik.orca.core.tableOfContents
 import ru.wertik.orca.images.coil.OrcaCoilImage
 import ru.wertik.orca.images.coil.OrcaCoilInlineImage
 import ru.wertik.orca.math.orcex.OrcaOrcexMath
@@ -124,7 +129,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private const val SAMPLE_VERSION_LABEL = "0.14.0"
+private const val SAMPLE_VERSION_LABEL = "0.15.0"
 
 private val LightColors = lightColorScheme(
     background = Color(0xFFF7F6F3),
@@ -333,6 +338,11 @@ private fun DocumentScreen(
     val inlineMathPlaceholder = rememberOrcaOrcexInlineMathPlaceholder(mathTypeface, inlineMathFontSize)
     // Markdown is held in state so interactive task checkboxes can rewrite the source.
     var markdown by rememberSaveable(screen) { mutableStateOf(sampleMarkdown(screen)) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val document = remember(markdown) { parser.parseCached(key = "${screen.name}-toc", input = markdown) }
+    val toc = remember(document) { document.tableOfContents(maxLevel = 2) }
+    val anchorIndex = remember(document) { orcaHeadingBlockIndex(document) }
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
             modifier = Modifier
@@ -341,11 +351,38 @@ private fun DocumentScreen(
                 .padding(horizontal = 20.dp, vertical = 18.dp),
         ) {
             SectionHeading(screen = screen, meta = "Static")
+            if (toc.size > 1) {
+                Row(
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    toc.forEach { entry ->
+                        val target = entry.id?.let { anchorIndex[it] }
+                        Surface(
+                            onClick = {
+                                if (target != null) scope.launch { listState.animateScrollToItem(target) }
+                            },
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            shape = RoundedCornerShape(999.dp),
+                        ) {
+                            Text(
+                                text = entry.title,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Orca(
                 markdown = markdown,
                 parser = parser,
                 parseCacheKey = screen.name,
+                listState = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = 18.dp),
@@ -439,6 +476,7 @@ private fun StreamingScreen(
                 imageContent = { url, description -> OrcaCoilImage(url, description, style) },
                 inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, style) },
                 onLinkClick = onLinkClick,
+                streamingCursor = "\u258D",
             )
         }
     }
@@ -540,7 +578,7 @@ The renderer supports **rich text**, *emphasis*, ~~strikethrough~~, `inline code
 
 ## Current direction
 
-Current release: 0.14.0
+Current release: 0.15.0
 
 Base renderer: `orca-compose` + `orca-core`
 
@@ -825,6 +863,22 @@ ${'$'}${'$'}
 \\int_0^1 x^2 \\, dx = \\frac{1}{3}
 ${'$'}${'$'}
 
+## Colors, frames and stacked annotations
+
+Orcex 0.5.0 adds LaTeX colors, boxed results and stacked annotations:
+
+${'$'}${'$'}
+\\boxed{E = mc^2}
+${'$'}${'$'}
+
+${'$'}${'$'}
+\\textcolor{orange}{a^2} + \\textcolor{teal}{b^2} \\overset{!}{=} \\textcolor{#8000A0}{c^2}
+${'$'}${'$'}
+
+${'$'}${'$'}
+\\underset{n \\to \\infty}{\\lim} \\left(1 + \\frac{1}{n}\\right)^n = e
+${'$'}${'$'}
+
 Unclosed formulas remain source text during streaming, then become rendered math only when the closing delimiter arrives.
 """.trimIndent()
 
@@ -883,16 +937,17 @@ The final document is exact, while live updates remain calm and readable.
 """.trimIndent()
 
 private val PLAYGROUND_DEFAULT_MARKDOWN = """
-# Orca 0.14.0
+# Orca 0.15.0
 
-This release expands the Markdown surface and fixes theme plumbing in the sample.
+This release focuses on **streaming performance** and reader UX.
 
 ## Changes
 
-- Added ++inserted text++ via `++underline++` syntax
-- Image titles now render as captions
-- Task checkboxes became interactive through `onTaskToggle`
-- `<mark>` / `<kbd>` follow the active `OrcaStyle` in dark themes
+- Incremental streaming v2: headings, fences, lists and tables reuse stable blocks
+- Text selection in the default lazy layout
+- Table of contents API (`tableOfContents` + `orcaHeadingBlockIndex`)
+- Streaming cursor for chat bubbles
+- Admonition icons and Orcex 0.5.0 math colors
 
 ## Try it here
 

@@ -187,6 +187,9 @@ GitHub-style callout blocks (`> [!NOTE]`, `> [!WARNING]`, etc.).
 | `stripeWidth` | 3dp | Left border width |
 | `spacing` | 10dp | Space between stripe and content |
 | `titleStyle` | 14sp, SemiBold | Title text style |
+| `showIcons` | `true` | Render a glyph before the title |
+| `iconSpacing` | 6dp | Gap between icon and title |
+| `noteIcon` / `tipIcon` / `importantIcon` / `warningIcon` / `cautionIcon` | ℹ ✦ ◆ ▲ ■ | Per-type icon glyphs (tinted with the type color) |
 
 ### Per-type colors (light theme)
 
@@ -215,7 +218,7 @@ GitHub-style callout blocks (`> [!NOTE]`, `> [!WARNING]`, etc.).
 
 For Material 3 apps, prefer the theme adapter so Orca follows dynamic light and dark color schemes automatically:
 
-Add `implementation("ru.wertik:orca-compose-material3:0.14.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
+Add `implementation("ru.wertik:orca-compose-material3:0.15.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
 
 ```kotlin
 Orca(

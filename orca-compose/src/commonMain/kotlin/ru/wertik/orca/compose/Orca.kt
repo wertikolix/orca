@@ -77,6 +77,9 @@ enum class OrcaRootLayout {
  * @param inlineImageContent optional composable for rendering allowed inline images. Without it, inline images render their alt text.
  * @param onTaskToggle optional callback making task-list checkboxes interactive. Receives the
  * document-order task index and the requested state; the host should update the Markdown source.
+ * @param streamingCursor optional glyph (e.g. `"\u258D"`) appended after the last block's text,
+ * typically while an LLM response is still streaming. Applied to the parsed document, never to
+ * the source, so incremental parser sessions keep their append-only fast path.
  * @see Orca
  * @see OrcaStyle
  * @see OrcaSecurityPolicy
@@ -101,6 +104,7 @@ fun Orca(
     inlineMathContent: OrcaMathContent? = null,
     inlineMathPlaceholder: OrcaInlineMathPlaceholder? = null,
     onTaskToggle: OrcaTaskToggle? = null,
+    streamingCursor: String? = null,
 ) {
     val parserKey = remember(parser) { parser.cacheKey() }
     val latestMarkdown by rememberUpdatedState(markdown)
@@ -199,6 +203,7 @@ fun Orca(
         inlineMathContent = inlineMathContent,
         inlineMathPlaceholder = inlineMathPlaceholder,
         onTaskToggle = onTaskToggle,
+        streamingCursor = streamingCursor,
     )
 }
 
@@ -206,7 +211,8 @@ fun Orca(
  * Renders Markdown from a delta-buffered [OrcaStreamingState].
  *
  * The state already paces published snapshots, so this overload parses each published value
- * immediately rather than applying a second debounce interval.
+ * immediately rather than applying a second debounce interval. When [streamingCursor] is
+ * supplied, the glyph is shown after the last block only while [OrcaStreamingState.isStreaming].
  */
 @Composable
 fun Orca(
@@ -227,6 +233,7 @@ fun Orca(
     inlineMathContent: OrcaMathContent? = null,
     inlineMathPlaceholder: OrcaInlineMathPlaceholder? = null,
     onTaskToggle: OrcaTaskToggle? = null,
+    streamingCursor: String? = null,
 ) {
     Orca(
         markdown = state.markdown,
@@ -247,6 +254,7 @@ fun Orca(
         inlineMathContent = inlineMathContent,
         inlineMathPlaceholder = inlineMathPlaceholder,
         onTaskToggle = onTaskToggle,
+        streamingCursor = streamingCursor?.takeIf { state.isStreaming },
     )
 }
 
@@ -269,6 +277,7 @@ fun Orca(
  * @param inlineImageContent optional composable for rendering allowed inline images.
  * @param onTaskToggle optional callback making task-list checkboxes interactive. Receives the
  * document-order task index and the requested state; the host should update the Markdown source.
+ * @param streamingCursor optional glyph appended after the last block's text.
  * @see OrcaDocument
  * @see OrcaStyle
  */
@@ -288,12 +297,16 @@ fun Orca(
     inlineMathContent: OrcaMathContent? = null,
     inlineMathPlaceholder: OrcaInlineMathPlaceholder? = null,
     onTaskToggle: OrcaTaskToggle? = null,
+    streamingCursor: String? = null,
 ) {
-    val renderBlocks = remember(document.blocks) {
-        buildRenderBlocks(document.blocks)
+    val displayDocument = remember(document, streamingCursor) {
+        if (streamingCursor.isNullOrEmpty()) document else document.withTrailingCursor(streamingCursor)
     }
-    val footnoteNumbers = remember(document.blocks) {
-        buildFootnoteNumbers(document.blocks)
+    val renderBlocks = remember(displayDocument.blocks) {
+        buildRenderBlocks(displayDocument.blocks)
+    }
+    val footnoteNumbers = remember(displayDocument.blocks) {
+        buildFootnoteNumbers(displayDocument.blocks)
     }
     val blockIndexByKey = remember(renderBlocks) {
         renderBlocks.mapIndexed { index, renderBlock ->
@@ -323,19 +336,19 @@ fun Orca(
         return footnoteBlockIndices.firstOrNull()?.second
     }
 
-    var activeFootnoteLabel by remember(document.blocks) { mutableStateOf<String?>(null) }
-    val footnoteSourceStack = remember(document.blocks) {
+    var activeFootnoteLabel by remember(displayDocument.blocks) { mutableStateOf<String?>(null) }
+    val footnoteSourceStack = remember(displayDocument.blocks) {
         mutableStateMapOf<String, MutableList<String>>()
     }
     val scope = rememberCoroutineScope()
 
     val latestOnTaskToggle by rememberUpdatedState(onTaskToggle)
-    val taskInteraction = remember(document.blocks, onTaskToggle != null) {
+    val taskInteraction = remember(displayDocument.blocks, onTaskToggle != null) {
         if (onTaskToggle == null) {
             null
         } else {
             OrcaTaskListInteraction(
-                indices = buildTaskIndices(document.blocks),
+                indices = buildTaskIndices(displayDocument.blocks),
                 onTaskToggle = { index, checked -> latestOnTaskToggle?.invoke(index, checked) },
             )
         }
@@ -373,11 +386,12 @@ fun Orca(
                     onLinkClick(url)
                 }
             }
-            LazyColumn(
-                state = listState,
-                modifier = modifier,
-                verticalArrangement = Arrangement.spacedBy(style.layout.blockSpacing),
-            ) {
+            SelectionContainer {
+                LazyColumn(
+                    state = listState,
+                    modifier = modifier,
+                    verticalArrangement = Arrangement.spacedBy(style.layout.blockSpacing),
+                ) {
                 items(
                     items = renderBlocks,
                     key = { item -> item.key },
@@ -427,6 +441,7 @@ fun Orca(
                             inlineMathContent = inlineMathContent,
                         )
                     }
+                }
                 }
             }
         }

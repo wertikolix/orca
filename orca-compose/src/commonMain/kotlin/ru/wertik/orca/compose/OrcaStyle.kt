@@ -237,6 +237,15 @@ data class OrcaAdmonitionStyle(
     val titleStyle: TextStyle = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
     val collapsible: Boolean = false,
     val collapsedByDefault: Boolean = false,
+    /** Whether a glyph is rendered before the admonition title. */
+    val showIcons: Boolean = true,
+    /** Gap between the icon glyph and the title text. */
+    val iconSpacing: Dp = 6.dp,
+    val noteIcon: String = "\u2139",
+    val tipIcon: String = "\u2726",
+    val importantIcon: String = "\u25C6",
+    val warningIcon: String = "\u25B2",
+    val cautionIcon: String = "\u25A0",
     val noteColor: Color = Color(0xFF1565C0),
     val tipColor: Color = Color(0xFF2E7D32),
     val importantColor: Color = Color(0xFF7B1FA2),
