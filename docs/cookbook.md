@@ -87,7 +87,7 @@ Orca(document = document, style = fullStyle)
 
 Reuse the root `LazyListState` when the host app renders a fast scrollbar or external scroll controls. In Material 3 apps, `rememberOrcaMaterialStyle()` automatically follows the active `MaterialTheme` color scheme, typography, and shapes.
 
-Add `implementation("ru.wertik:orca-compose-material3:0.13.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
+Add `implementation("ru.wertik:orca-compose-material3:0.14.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
 
 ```kotlin
 val listState = rememberLazyListState()
@@ -110,6 +110,29 @@ Orca(
             url.startsWith("myapp://") -> handleDeepLink(url)
             url.startsWith("mailto:") -> openEmail(url)
             else -> openBrowser(url)
+        }
+    },
+)
+```
+
+## Interactive task lists
+
+Task checkboxes are static by default. Pass `onTaskToggle` to make them tappable. The callback
+receives the zero-based document-order index of the task item and the requested state; rewrite
+your Markdown source and recompose — rendering stays stateless.
+
+```kotlin
+var markdown by rememberSaveable { mutableStateOf(initialMarkdown) }
+val taskMarker = Regex("""(?m)^(\s*(?:[-+*]|\d+[.)])\s+)\[( |x|X)]""")
+
+Orca(
+    markdown = markdown,
+    parser = remember { OrcaMarkdownParser() },
+    onTaskToggle = { index, checked ->
+        var current = -1
+        markdown = taskMarker.replace(markdown) { match ->
+            current += 1
+            if (current == index) "${match.groupValues[1]}[${if (checked) "x" else " "}]" else match.value
         }
     },
 )

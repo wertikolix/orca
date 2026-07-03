@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.13.0`
+- Current stable minor: `0.14.0`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -53,11 +53,11 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.13.0")
-implementation("ru.wertik:orca-compose:0.13.0")
-implementation("ru.wertik:orca-compose-material3:0.13.0") // optional Material 3 theme adapter
-implementation("ru.wertik:orca-images-coil:0.13.0") // optional images
-implementation("ru.wertik:orca-math-orcex:0.13.0") // optional multiplatform math renderer
+implementation("ru.wertik:orca-core:0.14.0")
+implementation("ru.wertik:orca-compose:0.14.0")
+implementation("ru.wertik:orca-compose-material3:0.14.0") // optional Material 3 theme adapter
+implementation("ru.wertik:orca-images-coil:0.14.0") // optional images
+implementation("ru.wertik:orca-math-orcex:0.14.0") // optional multiplatform math renderer
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -192,7 +192,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.13.0`)
+## Supported Syntax (`0.14.0`)
 
 ### Blocks
 
@@ -205,6 +205,7 @@ data class OrcaParseResult(
 - indented code block
 - thematic break (`---`)
 - standalone image block
+- **image captions** (the standard Markdown image title renders below the image)
 - GFM tables
 - HTML blocks (styled rendering with tag support)
 - footnote definitions
@@ -221,6 +222,7 @@ data class OrcaParseResult(
 - **superscript** (`^text^`)
 - **subscript** (`~text~`)
 - **highlight** (`==text==`)
+- **inserted / underline** (`++text++`)
 - inline code
 - link (with title support)
 - **inline image rendering** (actual images in text flow via InlineTextContent)
@@ -261,6 +263,7 @@ data class OrcaParseResult(
 - **accessibility** — semantic roles for headings, content descriptions for images and blocks
 - **heading anchor links** — `[link](#heading-text)` scrolls to the corresponding heading (auto-generated GitHub-style slugs)
 - **custom block renderers** — override rendering for any block type via `blockOverride` parameter
+- **interactive task lists** — pass `onTaskToggle` to receive checkbox taps (document-order index + requested state) and update your source; rendering stays stateless
 - **zero-cost optional images** — base `orca-compose` displays fallback/alt text; supply `imageContent` and `inlineImageContent` only when image rendering is needed
 
 ### Admonition rendering
@@ -498,6 +501,20 @@ For release-like check:
 - Maven Central artifacts are immutable after publish
 
 ## Changelog
+
+### 0.14.0
+
+- **Inserted/underline inline** — new `++text++` syntax produces `OrcaInline.Underline`, styled via `OrcaInlineStyle.underline`.
+- **Image captions** — the standard Markdown image title (`![alt](url "title")`) now renders as a caption below block images; configurable via `OrcaImageStyle.showCaption`, `captionText`, and `captionSpacing`.
+- **Interactive task lists** — new optional `onTaskToggle` callback on all `Orca` overloads makes `- [ ]` checkboxes tappable; the host receives the document-order task index and requested state. Rendering stays stateless and dependency-free.
+- **Theme-aware inline HTML** — `<mark>`, `<kbd>`, `<u>`/`<ins>`, `<sup>`, and `<sub>` now follow `OrcaStyle` instead of hardcoded light-theme colors, fixing unreadable spans in dark themes. `OrcaInlineStyle` gains `underline` and `kbd` fields.
+- **Material 3 adapter** — `materialStyle()` maps the new kbd and image-caption styles to color-scheme tokens.
+- **Sample app dark theme fix** — the status bar no longer stays white in dark theme: the sample follows the system theme on launch, re-applies `enableEdgeToEdge` system-bar styles on toggle, and ships a `values-night` window background.
+
+### 0.13.0
+
+- **Material 3 styles** — new optional `orca-compose-material3` module with `rememberOrcaMaterialStyle()` deriving an `OrcaStyle` from the active `MaterialTheme`.
+- **Scroll state API** — expose the root `LazyListState` for external scroll control.
 
 ### 0.12.1
 

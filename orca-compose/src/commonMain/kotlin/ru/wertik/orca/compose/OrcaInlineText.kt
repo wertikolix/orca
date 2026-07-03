@@ -6,16 +6,12 @@ import androidx.compose.ui.text.LinkInteractionListener
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
 import ru.wertik.orca.core.OrcaInline
 
 internal fun buildInlineAnnotatedString(
@@ -199,6 +195,17 @@ private fun AnnotatedString.Builder.appendInline(
             )
         }
 
+        is OrcaInline.Underline -> withStyle(style = style.inline.underline) {
+            appendInlines(
+                inlines = inline.content,
+                style = style,
+                onLinkClick = onLinkClick,
+                securityPolicy = securityPolicy,
+                footnoteNumbers = footnoteNumbers,
+                onFootnoteClick = onFootnoteClick,
+            )
+        }
+
         is OrcaInline.HtmlInline -> {
             val tag = parseHtmlInlineTag(inline.html)
             if (tag != null) {
@@ -307,11 +314,11 @@ private fun htmlInlineStyleForTag(tag: String, style: OrcaStyle): SpanStyle? = w
     "b", "strong" -> SpanStyle(fontWeight = FontWeight.Bold)
     "i", "em" -> SpanStyle(fontStyle = FontStyle.Italic)
     "s", "del", "strike" -> SpanStyle(textDecoration = TextDecoration.LineThrough)
-    "u", "ins" -> SpanStyle(textDecoration = TextDecoration.Underline)
+    "u", "ins" -> style.inline.underline
     "code" -> style.inline.inlineCode
-    "sup" -> SpanStyle(baselineShift = BaselineShift.Superscript, fontSize = 12.sp)
-    "sub" -> SpanStyle(baselineShift = BaselineShift.Subscript, fontSize = 12.sp)
-    "mark" -> SpanStyle(background = Color(0x40FFEB3B))
-    "kbd" -> SpanStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, background = Color(0x1A000000))
+    "sup" -> style.inline.superscript
+    "sub" -> style.inline.subscript
+    "mark" -> style.inline.highlight
+    "kbd" -> style.inline.kbd
     else -> null
 }

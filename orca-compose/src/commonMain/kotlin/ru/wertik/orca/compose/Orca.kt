@@ -75,6 +75,8 @@ enum class OrcaRootLayout {
  * @param blockOverride optional map of block types to custom composable renderers. When a block's class matches a key, the override is used instead of the default renderer.
  * @param imageContent optional composable for rendering allowed block images. Without it, block images render as fallback text.
  * @param inlineImageContent optional composable for rendering allowed inline images. Without it, inline images render their alt text.
+ * @param onTaskToggle optional callback making task-list checkboxes interactive. Receives the
+ * document-order task index and the requested state; the host should update the Markdown source.
  * @see Orca
  * @see OrcaStyle
  * @see OrcaSecurityPolicy
@@ -98,6 +100,7 @@ fun Orca(
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
     inlineMathPlaceholder: OrcaInlineMathPlaceholder? = null,
+    onTaskToggle: OrcaTaskToggle? = null,
 ) {
     val parserKey = remember(parser) { parser.cacheKey() }
     val latestMarkdown by rememberUpdatedState(markdown)
@@ -195,6 +198,7 @@ fun Orca(
         blockMathContent = blockMathContent,
         inlineMathContent = inlineMathContent,
         inlineMathPlaceholder = inlineMathPlaceholder,
+        onTaskToggle = onTaskToggle,
     )
 }
 
@@ -222,6 +226,7 @@ fun Orca(
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
     inlineMathPlaceholder: OrcaInlineMathPlaceholder? = null,
+    onTaskToggle: OrcaTaskToggle? = null,
 ) {
     Orca(
         markdown = state.markdown,
@@ -241,6 +246,7 @@ fun Orca(
         blockMathContent = blockMathContent,
         inlineMathContent = inlineMathContent,
         inlineMathPlaceholder = inlineMathPlaceholder,
+        onTaskToggle = onTaskToggle,
     )
 }
 
@@ -261,6 +267,8 @@ fun Orca(
  * @param blockOverride optional map of block types to custom composable renderers.
  * @param imageContent optional composable for rendering allowed block images.
  * @param inlineImageContent optional composable for rendering allowed inline images.
+ * @param onTaskToggle optional callback making task-list checkboxes interactive. Receives the
+ * document-order task index and the requested state; the host should update the Markdown source.
  * @see OrcaDocument
  * @see OrcaStyle
  */
@@ -279,6 +287,7 @@ fun Orca(
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
     inlineMathPlaceholder: OrcaInlineMathPlaceholder? = null,
+    onTaskToggle: OrcaTaskToggle? = null,
 ) {
     val renderBlocks = remember(document.blocks) {
         buildRenderBlocks(document.blocks)
@@ -320,6 +329,18 @@ fun Orca(
     }
     val scope = rememberCoroutineScope()
 
+    val latestOnTaskToggle by rememberUpdatedState(onTaskToggle)
+    val taskInteraction = remember(document.blocks, onTaskToggle != null) {
+        if (onTaskToggle == null) {
+            null
+        } else {
+            OrcaTaskListInteraction(
+                indices = buildTaskIndices(document.blocks),
+                onTaskToggle = { index, checked -> latestOnTaskToggle?.invoke(index, checked) },
+            )
+        }
+    }
+
     fun onFootnoteReferenceClick(label: String, sourceBlockKey: String, scrollToFootnotes: (() -> Unit)?) {
         footnoteSourceStack.getOrPut(label) { mutableListOf() }.add(sourceBlockKey)
         activeFootnoteLabel = label
@@ -333,7 +354,10 @@ fun Orca(
         scrollToSource?.invoke(sourceBlockKey)
     }
 
-    CompositionLocalProvider(LocalOrcaInlineMathPlaceholder provides inlineMathPlaceholder) {
+    CompositionLocalProvider(
+        LocalOrcaInlineMathPlaceholder provides inlineMathPlaceholder,
+        LocalOrcaTaskInteraction provides taskInteraction,
+    ) {
         when (rootLayout) {
         OrcaRootLayout.LAZY_COLUMN -> {
             val wrappedLinkClick: (String) -> Unit = { url ->
@@ -610,6 +634,7 @@ private fun StringBuilder.appendInlineText(inline: ru.wertik.orca.core.OrcaInlin
         is ru.wertik.orca.core.OrcaInline.Superscript -> inline.content.forEach { appendInlineText(it) }
         is ru.wertik.orca.core.OrcaInline.Subscript -> inline.content.forEach { appendInlineText(it) }
         is ru.wertik.orca.core.OrcaInline.Highlight -> inline.content.forEach { appendInlineText(it) }
+        is ru.wertik.orca.core.OrcaInline.Underline -> inline.content.forEach { appendInlineText(it) }
         is ru.wertik.orca.core.OrcaInline.Abbreviation -> append(inline.text)
     }
 }

@@ -1,6 +1,8 @@
 package ru.wertik.orca.compose
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.text.BasicText as Text
@@ -39,14 +41,29 @@ internal fun MarkdownImageNode(
     }
 
     val description = block.alt ?: "Image"
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = style.image.maxHeight)
-            .clip(style.image.shape)
-            .semantics { contentDescription = description },
+    val caption = block.title
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() && style.image.showCaption }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(style.image.captionSpacing),
     ) {
-        imageContent(safeSource, description)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = style.image.maxHeight)
+                .clip(style.image.shape)
+                .semantics { contentDescription = description },
+        ) {
+            imageContent(safeSource, description)
+        }
+        if (caption != null) {
+            Text(
+                text = caption,
+                style = style.image.captionText,
+            )
+        }
     }
 }
 

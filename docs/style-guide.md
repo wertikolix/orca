@@ -60,6 +60,9 @@ Span styles applied to inline markdown elements within text.
 | `footnoteReference` | `[^ref]` | Superscript, 12sp, grey (#455A64) |
 | `superscript` | `^text^` | Superscript baseline shift, 12sp |
 | `subscript` | `~text~` | Subscript baseline shift, 12sp |
+| `highlight` | `==text==` / `<mark>` | Semi-transparent yellow background |
+| `underline` | `++text++` / `<u>` / `<ins>` | Underline decoration |
+| `kbd` | `<kbd>` | Monospace, 13sp, subtle background |
 | `abbreviation` | `*[ABBR]: Title` | Underline, subtle background |
 
 ---
@@ -156,6 +159,9 @@ Standalone images (single image in a paragraph).
 | `background` | #F7F9FB | Placeholder background |
 | `maxHeight` | 360dp | Maximum image height |
 | `contentScale` | `ContentScale.Fit` | How image scales within bounds |
+| `showCaption` | `true` | Render the Markdown image title as a caption |
+| `captionText` | 13sp, grey | Caption text style |
+| `captionSpacing` | 6dp | Gap between image and caption |
 
 ---
 
@@ -209,7 +215,7 @@ GitHub-style callout blocks (`> [!NOTE]`, `> [!WARNING]`, etc.).
 
 For Material 3 apps, prefer the theme adapter so Orca follows dynamic light and dark color schemes automatically:
 
-Add `implementation("ru.wertik:orca-compose-material3:0.13.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
+Add `implementation("ru.wertik:orca-compose-material3:0.14.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
 
 ```kotlin
 Orca(

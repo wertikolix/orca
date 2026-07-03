@@ -89,6 +89,14 @@ data class OrcaInlineStyle(
     val highlight: SpanStyle = SpanStyle(
         background = Color(0x40FFEB3B),
     ),
+    val underline: SpanStyle = SpanStyle(
+        textDecoration = TextDecoration.Underline,
+    ),
+    val kbd: SpanStyle = SpanStyle(
+        fontFamily = FontFamily.Monospace,
+        fontSize = 13.sp,
+        background = Color(0x14000000),
+    ),
 )
 
 /**
@@ -215,6 +223,12 @@ data class OrcaImageStyle(
     val background: Color = Color(0xFFF7F9FB),
     val maxHeight: Dp = 360.dp,
     val contentScale: ContentScale = ContentScale.Fit,
+    /** Whether the Markdown image `title` renders as a caption below the image. */
+    val showCaption: Boolean = true,
+    /** Text style used for image captions. */
+    val captionText: TextStyle = TextStyle(fontSize = 13.sp, lineHeight = 18.sp, color = Color(0xFF6B7280)),
+    /** Vertical gap between the image and its caption. */
+    val captionSpacing: Dp = 6.dp,
 )
 
 data class OrcaAdmonitionStyle(
@@ -391,6 +405,11 @@ object OrcaDefaults {
             highlight = SpanStyle(
                 background = Color(0x40FFD54F),
             ),
+            kbd = SpanStyle(
+                fontFamily = FontFamily.Monospace,
+                fontSize = 13.sp,
+                background = Color(0x1FFFFFFF),
+            ),
         ),
         quote = OrcaQuoteStyle(
             stripeColor = Color(0xFF546E7A),
@@ -449,6 +468,7 @@ object OrcaDefaults {
         ),
         image = OrcaImageStyle(
             background = Color(0xFF252525),
+            captionText = TextStyle(fontSize = 13.sp, lineHeight = 18.sp, color = Color(0xFF9E9E9E)),
         ),
         admonition = OrcaAdmonitionStyle(
             noteColor = Color(0xFF64B5F6),

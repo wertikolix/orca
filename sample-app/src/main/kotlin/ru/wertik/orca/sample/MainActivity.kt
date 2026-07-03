@@ -4,14 +4,16 @@ import android.app.Application
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -88,7 +90,30 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            var isDark by rememberSaveable { mutableStateOf(true) }
+            // Follow the system theme on first launch so the window background,
+            // status bar icons and the in-app theme agree from the first frame.
+            val systemDark = isSystemInDarkTheme()
+            var isDark by rememberSaveable { mutableStateOf(systemDark) }
+
+            // Keep system bar icon appearance in sync with the in-app theme toggle.
+            // Without this, the status bar keeps the system appearance and turns
+            // unreadable (light icons on light content or vice versa) after a toggle.
+            LaunchedEffect(isDark) {
+                val transparent = android.graphics.Color.TRANSPARENT
+                enableEdgeToEdge(
+                    statusBarStyle = if (isDark) {
+                        SystemBarStyle.dark(transparent)
+                    } else {
+                        SystemBarStyle.light(transparent, transparent)
+                    },
+                    navigationBarStyle = if (isDark) {
+                        SystemBarStyle.dark(transparent)
+                    } else {
+                        SystemBarStyle.light(transparent, transparent)
+                    },
+                )
+            }
+
             OrcaSampleTheme(isDark = isDark) {
                 OrcaSampleApp(
                     isDark = isDark,
@@ -98,6 +123,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+private const val SAMPLE_VERSION_LABEL = "0.14.0"
 
 private val LightColors = lightColorScheme(
     background = Color(0xFFF7F6F3),
@@ -221,7 +248,7 @@ private fun SampleHeader(isDark: Boolean, onToggleTheme: () -> Unit) {
                 shape = RoundedCornerShape(999.dp),
             ) {
                 Text(
-                    text = "0.11 dev",
+                    text = SAMPLE_VERSION_LABEL,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -254,15 +281,13 @@ private fun ScreenTabs(
         screens.forEachIndexed { index, screen ->
             val selected = index == selectedIndex
             Surface(
+                onClick = { onSelect(index) },
                 color = if (selected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
                 shape = RoundedCornerShape(999.dp),
-                modifier = Modifier
-                    .border(
-                        width = 1.dp,
-                        color = if (selected) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant,
-                        shape = RoundedCornerShape(999.dp),
-                    )
-                    .clickable { onSelect(index) },
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = if (selected) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant,
+                ),
             ) {
                 Text(
                     text = screen.shortLabel,
@@ -306,6 +331,8 @@ private fun DocumentScreen(
     val mathTypeface = remember(context) { StixTwoMath.load(context) }
     val inlineMathFontSize = 19.sp
     val inlineMathPlaceholder = rememberOrcaOrcexInlineMathPlaceholder(mathTypeface, inlineMathFontSize)
+    // Markdown is held in state so interactive task checkboxes can rewrite the source.
+    var markdown by rememberSaveable(screen) { mutableStateOf(sampleMarkdown(screen)) }
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
             modifier = Modifier
@@ -316,7 +343,7 @@ private fun DocumentScreen(
             SectionHeading(screen = screen, meta = "Static")
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Orca(
-                markdown = sampleMarkdown(screen),
+                markdown = markdown,
                 parser = parser,
                 parseCacheKey = screen.name,
                 modifier = Modifier
@@ -344,6 +371,9 @@ private fun DocumentScreen(
                 },
                 inlineMathPlaceholder = inlineMathPlaceholder,
                 onLinkClick = onLinkClick,
+                onTaskToggle = { taskIndex, checked ->
+                    markdown = toggleMarkdownTask(markdown, taskIndex, checked)
+                },
             )
         }
     }
@@ -480,6 +510,21 @@ private fun sampleMarkdown(screen: SampleScreen): String {
     }
 }
 
+private val TASK_MARKER_REGEX = Regex("""(?m)^(\s*(?:[-+*]|\d+[.)])\s+)\[( |x|X)]""")
+
+/** Rewrites the [taskIndex]-th task checkbox in [markdown] to [checked]. */
+private fun toggleMarkdownTask(markdown: String, taskIndex: Int, checked: Boolean): String {
+    var current = -1
+    return TASK_MARKER_REGEX.replace(markdown) { match ->
+        current += 1
+        if (current == taskIndex) {
+            "${match.groupValues[1]}[${if (checked) "x" else " "}]"
+        } else {
+            match.value
+        }
+    }
+}
+
 // region Markdown content
 
 private val OVERVIEW_MARKDOWN = """
@@ -495,11 +540,13 @@ The renderer supports **rich text**, *emphasis*, ~~strikethrough~~, `inline code
 
 ## Current direction
 
-Current release: 0.10.0
+Current release: 0.14.0
 
 Base renderer: `orca-compose` + `orca-core`
 
 Optional images: `orca-images-coil`
+
+Optional math: `orca-math-orcex`
 
 ## Quick links
 
@@ -527,16 +574,19 @@ Optional images: `orca-images-coil`
 
 ## Project status
 
+Tap a checkbox — task lists are interactive since 0.14 and report the toggle back to the app.
+
 - [x] Lightweight base renderer
 - [x] Optional Coil image integration
 - [x] Paced streaming state
-- [ ] Optional LaTeX/math integration
+- [x] Optional LaTeX/math integration
+- [ ] Try tapping this checkbox
 
 ---
 
 ## Image loading
 
-![Orca image sample](https://raw.githubusercontent.com/JetBrains/kotlin-web-site/master/static/images/kotlin-logo.png)
+![Orca image sample](https://raw.githubusercontent.com/JetBrains/kotlin-web-site/master/static/images/kotlin-logo.png "The image title renders as a caption below the image.")
 """.trimIndent()
 
 private val BLOCKS_MARKDOWN = """
@@ -614,6 +664,14 @@ ORDER BY month DESC;
 
 ---
 
+## Inline decorations
+
+Orca renders ==highlighted== fragments, ++inserted text++, ~~removed text~~, x^2^ superscript and H~2~O subscript without extra modules.
+
+Keyboard hints work through inline HTML: press <kbd>Ctrl</kbd> + <kbd>K</kbd>, and <mark>marked HTML</mark> follows the highlight style of the active theme.
+
+---
+
 ## HTML block
 
 <p>Most markdown renderers handle <b>basic HTML</b> inline — things like <i>emphasis</i>, <code>code</code>, and <a href="https://kotlinlang.org">links</a> work as expected.</p>
@@ -648,7 +706,7 @@ private val TABLES_MARKDOWN = """
 
 ## Image
 
-![Kotlin logo](https://raw.githubusercontent.com/JetBrains/kotlin-web-site/master/static/images/kotlin-logo.png)
+![Kotlin logo](https://raw.githubusercontent.com/JetBrains/kotlin-web-site/master/static/images/kotlin-logo.png "Captions come from the standard Markdown image title.")
 """.trimIndent()
 
 private val ADVANCED_MARKDOWN = """
@@ -700,7 +758,7 @@ Everything below gets into practical patterns.
 
 ## Highlight & anchors
 
-This has ==highlighted text== and normal text.
+This has ==highlighted text==, ++inserted text++ and normal text.
 
 Jump to [Architecture patterns](#deep-nesting) section above.
 
@@ -825,34 +883,26 @@ The final document is exact, while live updates remain calm and readable.
 """.trimIndent()
 
 private val PLAYGROUND_DEFAULT_MARKDOWN = """
-# Orca 0.10.0
+# Orca 0.14.0
 
-This development line focuses on a **lighter base renderer** and *smoother streaming*.
+This release expands the Markdown surface and fixes theme plumbing in the sample.
 
 ## Changes
 
-- Split remote images into the optional `orca-images-coil` module
-- Added paced `OrcaStreamingState` for token deltas
-- Added conservative incremental parsing for streaming prose
-- Fixed readable table text colors in dark themes
+- Added ++inserted text++ via `++underline++` syntax
+- Image titles now render as captions
+- Task checkboxes became interactive through `onTaskToggle`
+- `<mark>` / `<kbd>` follow the active `OrcaStyle` in dark themes
 
-## Migration
+## Try it here
 
-```kotlin
-Orca(
-    markdown = text,
-    parser = parser,
-    parseCacheKey = messageId,
-    rootLayout = OrcaRootLayout.COLUMN,
-)
-```
+Edit this text — ==highlight==, ++underline++, x^2^, H~2~O.
+
+- [x] Interactive in the Reader tab
+- [ ] This one is static: playground has no `onTaskToggle`
 
 > [!NOTE]
-> LaTeX support should arrive as opt-in syntax and renderer slots, not as weight in the base artifact.
-
-- [x] Keep core rendering lightweight
-- [x] Make streaming stable
-- [ ] Add optional LaTeX/math rendering
+> The base artifact remains dependency-free: no networking, no Material, no gradients.
 """.trimIndent()
 
 // endregion

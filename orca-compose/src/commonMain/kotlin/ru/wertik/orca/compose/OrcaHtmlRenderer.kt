@@ -9,12 +9,10 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
 
 private val TAG_REGEX = Regex("""<(/?)(\w+)([^>]*)>""")
 private val HREF_REGEX = Regex("""href\s*=\s*["']([^"']*)["']""")
@@ -60,63 +58,15 @@ internal fun renderHtmlToAnnotatedString(
             if (!isClosing) {
                 when (tagName) {
                     "br" -> append("\n")
-                    "b", "strong" -> {
-                        val s = SpanStyle(fontWeight = FontWeight.Bold)
-                        pushStyle(s)
-                        builderPushCount++
-                        tagPushStack.add(tagName)
-                    }
-                    "i", "em" -> {
-                        val s = SpanStyle(fontStyle = FontStyle.Italic)
-                        pushStyle(s)
-                        builderPushCount++
-                        tagPushStack.add(tagName)
-                    }
-                    "s", "del", "strike" -> {
-                        val s = SpanStyle(textDecoration = TextDecoration.LineThrough)
-                        pushStyle(s)
-                        builderPushCount++
-                        tagPushStack.add(tagName)
-                    }
-                    "u", "ins" -> {
-                        val s = SpanStyle(textDecoration = TextDecoration.Underline)
-                        pushStyle(s)
-                        builderPushCount++
-                        tagPushStack.add(tagName)
-                    }
-                    "code" -> {
-                        val s = style.inline.inlineCode
-                        pushStyle(s)
-                        builderPushCount++
-                        tagPushStack.add(tagName)
-                    }
-                    "sup" -> {
-                        val s = SpanStyle(baselineShift = BaselineShift.Superscript, fontSize = 12.sp)
-                        pushStyle(s)
-                        builderPushCount++
-                        tagPushStack.add(tagName)
-                    }
-                    "sub" -> {
-                        val s = SpanStyle(baselineShift = BaselineShift.Subscript, fontSize = 12.sp)
-                        pushStyle(s)
-                        builderPushCount++
-                        tagPushStack.add(tagName)
-                    }
-                    "mark" -> {
-                        val s = SpanStyle(background = Color(0x40FFEB3B))
-                        pushStyle(s)
-                        builderPushCount++
-                        tagPushStack.add(tagName)
-                    }
-                    "kbd" -> {
-                        val s = SpanStyle(
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 13.sp,
-                            background = Color(0x1A000000),
-                        )
-                        pushStyle(s)
-                        builderPushCount++
-                        tagPushStack.add(tagName)
+                    "b", "strong", "i", "em", "s", "del", "strike", "u", "ins",
+                    "code", "sup", "sub", "mark", "kbd", "pre",
+                    -> {
+                        val s = styleForTag(tagName, style)
+                        if (s != null) {
+                            pushStyle(s)
+                            builderPushCount++
+                            tagPushStack.add(tagName)
+                        }
                     }
                     "a" -> {
                         val href = HREF_REGEX.find(attrs)?.groupValues?.get(1).orEmpty()
@@ -139,14 +89,16 @@ internal fun renderHtmlToAnnotatedString(
                             append("\n")
                         }
                     }
-                    "h1", "h2", "h3", "h4", "h5", "h6" -> {
+                    "h1", "h2", "h3", "h4", "h5", "h6", "blockquote" -> {
                         if (length > 0 && !endsWith("\n")) {
                             append("\n")
                         }
-                        val s = SpanStyle(fontWeight = FontWeight.Bold)
-                        pushStyle(s)
-                        builderPushCount++
-                        tagPushStack.add(tagName)
+                        val s = styleForTag(tagName, style)
+                        if (s != null) {
+                            pushStyle(s)
+                            builderPushCount++
+                            tagPushStack.add(tagName)
+                        }
                     }
                     "li" -> {
                         if (length > 0 && !endsWith("\n")) {
@@ -160,21 +112,6 @@ internal fun renderHtmlToAnnotatedString(
                         }
                         append("\u2500".repeat(20))
                         append("\n")
-                    }
-                    "blockquote" -> {
-                        if (length > 0 && !endsWith("\n")) {
-                            append("\n")
-                        }
-                        val s = SpanStyle(fontStyle = FontStyle.Italic, color = Color(0xFF6D6D6D))
-                        pushStyle(s)
-                        builderPushCount++
-                        tagPushStack.add(tagName)
-                    }
-                    "pre" -> {
-                        val s = SpanStyle(fontFamily = FontFamily.Monospace)
-                        pushStyle(s)
-                        builderPushCount++
-                        tagPushStack.add(tagName)
                     }
                 }
             } else {
@@ -295,14 +232,14 @@ private fun styleForTag(tag: String, style: OrcaStyle): SpanStyle? {
         "b", "strong" -> SpanStyle(fontWeight = FontWeight.Bold)
         "i", "em" -> SpanStyle(fontStyle = FontStyle.Italic)
         "s", "del", "strike" -> SpanStyle(textDecoration = TextDecoration.LineThrough)
-        "u", "ins" -> SpanStyle(textDecoration = TextDecoration.Underline)
+        "u", "ins" -> style.inline.underline
         "code" -> style.inline.inlineCode
-        "sup" -> SpanStyle(baselineShift = BaselineShift.Superscript, fontSize = 12.sp)
-        "sub" -> SpanStyle(baselineShift = BaselineShift.Subscript, fontSize = 12.sp)
-        "mark" -> SpanStyle(background = Color(0x40FFEB3B))
-        "kbd" -> SpanStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, background = Color(0x1A000000))
+        "sup" -> style.inline.superscript
+        "sub" -> style.inline.subscript
+        "mark" -> style.inline.highlight
+        "kbd" -> style.inline.kbd
         "h1", "h2", "h3", "h4", "h5", "h6" -> SpanStyle(fontWeight = FontWeight.Bold)
-        "blockquote" -> SpanStyle(fontStyle = FontStyle.Italic, color = Color(0xFF6D6D6D))
+        "blockquote" -> SpanStyle(fontStyle = FontStyle.Italic, color = Color(0xFF8A8A8A))
         "pre" -> SpanStyle(fontFamily = FontFamily.Monospace)
         else -> null
     }

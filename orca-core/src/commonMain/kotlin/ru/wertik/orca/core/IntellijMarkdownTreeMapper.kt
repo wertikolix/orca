@@ -826,47 +826,56 @@ internal class IntellijTreeMapper(
         }
     }
 
-    private fun parseSuperSubFromText(text: String): List<OrcaInline> {
-        val superPattern = if (enableSuperscript) """(?<!\^)\^([^\^]+)\^(?!\^)""" else null
-        val subPattern = if (enableSubscript) """(?<!~)~([^~]+)~(?!~)""" else null
-        val highlightPattern = """(?<!=)==([^=]+)==(?!=)"""
-        val combined = listOfNotNull(superPattern, subPattern, highlightPattern).joinToString("|")
-        if (combined.isEmpty()) return listOf(OrcaInline.Text(text))
+    private class InlineDecorationSpec(
+        val pattern: String,
+        val create: (String) -> OrcaInline,
+    )
 
-        val regex = Regex(combined)
+    private fun parseSuperSubFromText(text: String): List<OrcaInline> {
+        val specs = buildList {
+            add(
+                InlineDecorationSpec("""(?<!\+)\+\+([^+]+)\+\+(?!\+)""") { value ->
+                    OrcaInline.Underline(content = listOf(OrcaInline.Text(value)))
+                },
+            )
+            if (enableSuperscript) {
+                add(
+                    InlineDecorationSpec("""(?<!\^)\^([^\^]+)\^(?!\^)""") { value ->
+                        OrcaInline.Superscript(content = listOf(OrcaInline.Text(value)))
+                    },
+                )
+            }
+            if (enableSubscript) {
+                add(
+                    InlineDecorationSpec("""(?<!~)~([^~]+)~(?!~)""") { value ->
+                        OrcaInline.Subscript(content = listOf(OrcaInline.Text(value)))
+                    },
+                )
+            }
+            add(
+                InlineDecorationSpec("""(?<!=)==([^=]+)==(?!=)""") { value ->
+                    OrcaInline.Highlight(content = listOf(OrcaInline.Text(value)))
+                },
+            )
+        }
+        if (specs.isEmpty()) return listOf(OrcaInline.Text(text))
+
+        // Each spec contributes exactly one capture group, so the matched spec
+        // is identified by the first non-empty group value.
+        val regex = Regex(specs.joinToString("|") { spec -> spec.pattern })
         val result = mutableListOf<OrcaInline>()
         var lastEnd = 0
         for (match in regex.findAll(text)) {
             if (match.range.first > lastEnd) {
                 result += OrcaInline.Text(text.substring(lastEnd, match.range.first))
             }
-            // figure out which group matched
-            val groupCount = match.groupValues.size - 1
-            var handled = false
-            if (!handled && enableSuperscript) {
-                val idx = 1
-                if (idx <= groupCount && match.groupValues[idx].isNotEmpty()) {
-                    result += OrcaInline.Superscript(content = listOf(OrcaInline.Text(match.groupValues[idx])))
-                    handled = true
-                }
+            val specIndex = specs.indices.firstOrNull { index ->
+                match.groupValues.getOrNull(index + 1).orEmpty().isNotEmpty()
             }
-            if (!handled && enableSubscript) {
-                val idx = if (enableSuperscript) 2 else 1
-                if (idx <= groupCount && match.groupValues[idx].isNotEmpty()) {
-                    result += OrcaInline.Subscript(content = listOf(OrcaInline.Text(match.groupValues[idx])))
-                    handled = true
-                }
-            }
-            if (!handled) {
-                // highlight is always the last group
-                val idx = groupCount
-                if (idx >= 1 && match.groupValues[idx].isNotEmpty()) {
-                    result += OrcaInline.Highlight(content = listOf(OrcaInline.Text(match.groupValues[idx])))
-                    handled = true
-                }
-            }
-            if (!handled) {
-                result += OrcaInline.Text(match.value)
+            result += if (specIndex != null) {
+                specs[specIndex].create(match.groupValues[specIndex + 1])
+            } else {
+                OrcaInline.Text(match.value)
             }
             lastEnd = match.range.last + 1
         }
@@ -1057,6 +1066,7 @@ private fun List<OrcaInline>.toPlainText(): String {
                 is OrcaInline.Superscript -> append(inline.content.toPlainText())
                 is OrcaInline.Subscript -> append(inline.content.toPlainText())
                 is OrcaInline.Highlight -> append(inline.content.toPlainText())
+                is OrcaInline.Underline -> append(inline.content.toPlainText())
                 is OrcaInline.HtmlInline -> append(htmlInlineToPlainText(inline.html))
                 is OrcaInline.Abbreviation -> append(inline.text)
             }

@@ -86,6 +86,11 @@ fun OrcaDefaults.materialStyle(
         highlight = SpanStyle(
             background = colorScheme.secondary.copy(alpha = 0.3f),
         ),
+        kbd = SpanStyle(
+            fontFamily = FontFamily.Monospace,
+            fontSize = 13.sp,
+            background = colorScheme.surfaceVariant,
+        ),
     ),
     quote = OrcaQuoteStyle(
         stripeColor = colorScheme.outline,
@@ -140,6 +145,7 @@ fun OrcaDefaults.materialStyle(
     image = OrcaImageStyle(
         shape = shapes.medium,
         background = colorScheme.surfaceVariant,
+        captionText = typography.bodySmall.copy(color = colorScheme.onSurfaceVariant),
     ),
     admonition = OrcaAdmonitionStyle(
         noteColor = colorScheme.primary,

@@ -59,6 +59,7 @@ internal fun processInlineMathSyntax(inlines: List<OrcaInline>): List<OrcaInline
             is OrcaInline.Superscript -> listOf(inline.copy(content = processInlineMathSyntax(inline.content)))
             is OrcaInline.Subscript -> listOf(inline.copy(content = processInlineMathSyntax(inline.content)))
             is OrcaInline.Highlight -> listOf(inline.copy(content = processInlineMathSyntax(inline.content)))
+            is OrcaInline.Underline -> listOf(inline.copy(content = processInlineMathSyntax(inline.content)))
             else -> listOf(inline)
         }
     }

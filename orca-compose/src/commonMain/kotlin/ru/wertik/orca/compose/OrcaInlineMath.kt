@@ -46,6 +46,7 @@ private fun collectInlineMath(inlines: List<OrcaInline>, output: MutableList<Str
             is OrcaInline.Superscript -> collectInlineMath(inline.content, output)
             is OrcaInline.Subscript -> collectInlineMath(inline.content, output)
             is OrcaInline.Highlight -> collectInlineMath(inline.content, output)
+            is OrcaInline.Underline -> collectInlineMath(inline.content, output)
             else -> Unit
         }
     }

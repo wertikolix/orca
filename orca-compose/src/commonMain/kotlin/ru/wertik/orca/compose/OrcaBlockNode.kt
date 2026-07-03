@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.BasicText as Text
@@ -35,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -346,6 +349,7 @@ private fun ListBlockNode(
     inlineMathContent: OrcaMathContent? = null,
     depth: Int = 0,
 ) {
+    val taskInteraction = LocalOrcaTaskInteraction.current
     Column(
         verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
     ) {
@@ -357,10 +361,27 @@ private fun ListBlockNode(
                     index = index,
                     taskState = item.taskState,
                 )
+                val taskIndex = if (item.taskState != null) taskInteraction?.indexOf(item) else null
+                val markerModifier = if (taskIndex != null && taskInteraction != null) {
+                    val checked = item.taskState == OrcaTaskState.CHECKED
+                    Modifier
+                        .width(style.layout.listMarkerWidth)
+                        .toggleable(
+                            value = checked,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            role = Role.Checkbox,
+                            onValueChange = { newValue ->
+                                taskInteraction.onTaskToggle(taskIndex, newValue)
+                            },
+                        )
+                } else {
+                    Modifier.width(style.layout.listMarkerWidth)
+                }
                 Text(
                     text = marker,
                     style = style.typography.paragraph,
-                    modifier = Modifier.width(style.layout.listMarkerWidth),
+                    modifier = markerModifier,
                 )
                 Column(
                     modifier = Modifier.fillMaxWidth(),

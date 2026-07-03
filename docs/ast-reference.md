@@ -315,6 +315,30 @@ Subscript wrapping nested inlines.
 ~subscript~
 ```
 
+### Highlight
+
+Highlighted text wrapping nested inlines.
+
+| Property | Type | Description |
+|---|---|---|
+| `content` | `List<OrcaInline>` | Nested inline elements |
+
+```markdown
+==highlighted==
+```
+
+### Underline
+
+Inserted/underlined text wrapping nested inlines.
+
+| Property | Type | Description |
+|---|---|---|
+| `content` | `List<OrcaInline>` | Nested inline elements |
+
+```markdown
+++inserted++
+```
+
 ### InlineCode
 
 Inline code span.

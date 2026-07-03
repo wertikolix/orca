@@ -263,6 +263,11 @@ sealed interface OrcaInline {
         val content: List<OrcaInline>,
     ) : OrcaInline
 
+    /** Inserted/underlined text (++text++) wrapping nested inlines. */
+    data class Underline(
+        val content: List<OrcaInline>,
+    ) : OrcaInline
+
     /** Inline code span (`` `code` ``). */
     data class InlineCode(
         val code: String,
