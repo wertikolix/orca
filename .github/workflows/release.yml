@@ -163,33 +163,6 @@ jobs:
             exit 1
           fi
 
-      - name: Verify Maven Central publication
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          VERSION: ${{ steps.release-version.outputs.version }}
-        run: |
-          set -euo pipefail
-          artifacts=(orca-core orca-compose orca-compose-material3 orca-images-coil orca-math-orcex)
-          max_attempts=20
-          delay=30
-          for artifact in "${artifacts[@]}"; do
-            url="https://repo1.maven.org/maven2/ru/wertik/${artifact}/${VERSION}/${artifact}-${VERSION}.pom"
-            available=false
-            for attempt in $(seq 1 "${max_attempts}"); do
-              if curl -fsS --retry 2 --retry-delay 2 "${url}" >/dev/null; then
-                echo "Verified ${artifact}:${VERSION}."
-                available=true
-                break
-              fi
-              echo "Waiting for ${artifact}:${VERSION} (${attempt}/${max_attempts})..."
-              sleep "${delay}"
-            done
-            if [[ "${available}" != "true" ]]; then
-              echo "::error::${artifact}:${VERSION} was not visible on Maven Central after verification retries."
-              exit 1
-            fi
-          done
-
       - name: Upload release artifacts to workflow
         uses: actions/upload-artifact@v4
         with:
@@ -279,6 +252,33 @@ jobs:
           fi
 
           gh release upload "$TAG" "${assets[@]}" --clobber
+
+      - name: Verify Maven Central publication (non-blocking)
+        if: startsWith(github.ref, 'refs/tags/')
+        continue-on-error: true
+        env:
+          VERSION: ${{ steps.release-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          artifacts=(orca-core orca-compose orca-compose-material3 orca-images-coil orca-math-orcex)
+          max_attempts=60
+          delay=30
+          for artifact in "${artifacts[@]}"; do
+            url="https://repo1.maven.org/maven2/ru/wertik/${artifact}/${VERSION}/${artifact}-${VERSION}.pom"
+            available=false
+            for attempt in $(seq 1 "${max_attempts}"); do
+              if curl -fsS --retry 2 --retry-delay 2 "${url}" >/dev/null; then
+                echo "Verified ${artifact}:${VERSION}."
+                available=true
+                break
+              fi
+              echo "Waiting for ${artifact}:${VERSION} (${attempt}/${max_attempts})..."
+              sleep "${delay}"
+            done
+            if [[ "${available}" != "true" ]]; then
+              echo "::warning::${artifact}:${VERSION} is not visible on repo1.maven.org yet. Central sync can lag; check manually."
+            fi
+          done
 
       - name: Upload reports on failure
         if: failure()
