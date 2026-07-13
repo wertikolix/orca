@@ -13,6 +13,10 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.text.appendInlineContent
 import ru.wertik.orca.core.OrcaInline
+import kotlin.reflect.KClass
+
+/** Exact-class override used to replace an inline node with custom annotated text. */
+typealias OrcaInlineRenderer = (OrcaInline) -> AnnotatedString
 
 internal fun buildInlineAnnotatedString(
     inlines: List<OrcaInline>,
@@ -21,6 +25,7 @@ internal fun buildInlineAnnotatedString(
     securityPolicy: OrcaSecurityPolicy = OrcaSecurityPolicies.Default,
     footnoteNumbers: Map<String, Int> = emptyMap(),
     onFootnoteClick: ((String) -> Unit)? = null,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
 ): AnnotatedString {
     return buildAnnotatedString {
         appendInlines(
@@ -30,6 +35,7 @@ internal fun buildInlineAnnotatedString(
             securityPolicy = securityPolicy,
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = onFootnoteClick,
+            inlineOverride = inlineOverride,
         )
     }
 }
@@ -41,6 +47,7 @@ private fun AnnotatedString.Builder.appendInlines(
     securityPolicy: OrcaSecurityPolicy,
     footnoteNumbers: Map<String, Int>,
     onFootnoteClick: ((String) -> Unit)?,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer>,
     htmlTagStack: MutableList<String> = mutableListOf(),
 ) {
     inlines.forEach { inline ->
@@ -51,6 +58,7 @@ private fun AnnotatedString.Builder.appendInlines(
             securityPolicy = securityPolicy,
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = onFootnoteClick,
+            inlineOverride = inlineOverride,
             htmlTagStack = htmlTagStack,
         )
     }
@@ -63,8 +71,15 @@ private fun AnnotatedString.Builder.appendInline(
     securityPolicy: OrcaSecurityPolicy,
     footnoteNumbers: Map<String, Int>,
     onFootnoteClick: ((String) -> Unit)?,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer>,
     htmlTagStack: MutableList<String>,
 ) {
+    val override = inlineOverride[inline::class]
+    if (override != null) {
+        append(override(inline))
+        return
+    }
+
     when (inline) {
         is OrcaInline.Text -> append(inline.text)
 
@@ -76,6 +91,8 @@ private fun AnnotatedString.Builder.appendInline(
                 securityPolicy = securityPolicy,
                 footnoteNumbers = footnoteNumbers,
                 onFootnoteClick = onFootnoteClick,
+                inlineOverride = inlineOverride,
+                htmlTagStack = htmlTagStack,
             )
         }
 
@@ -87,6 +104,8 @@ private fun AnnotatedString.Builder.appendInline(
                 securityPolicy = securityPolicy,
                 footnoteNumbers = footnoteNumbers,
                 onFootnoteClick = onFootnoteClick,
+                inlineOverride = inlineOverride,
+                htmlTagStack = htmlTagStack,
             )
         }
 
@@ -98,6 +117,8 @@ private fun AnnotatedString.Builder.appendInline(
                 securityPolicy = securityPolicy,
                 footnoteNumbers = footnoteNumbers,
                 onFootnoteClick = onFootnoteClick,
+                inlineOverride = inlineOverride,
+                htmlTagStack = htmlTagStack,
             )
         }
 
@@ -115,6 +136,7 @@ private fun AnnotatedString.Builder.appendInline(
                 securityPolicy = securityPolicy,
                 footnoteNumbers = footnoteNumbers,
                 onFootnoteClick = onFootnoteClick,
+                inlineOverride = inlineOverride,
             )
         } else {
             withLink(
@@ -134,11 +156,12 @@ private fun AnnotatedString.Builder.appendInline(
                     securityPolicy = securityPolicy,
                     footnoteNumbers = footnoteNumbers,
                     onFootnoteClick = onFootnoteClick,
+                    inlineOverride = inlineOverride,
                 )
             }
         }
 
-        is OrcaInline.Image -> appendInlineContent(inlineImageId(inline.source), inline.alt ?: inline.source)
+        is OrcaInline.Image -> appendInlineContent(inlineImageId(inline.source), imageInlineFallbackText(inline))
 
         is OrcaInline.FootnoteReference -> {
             val text = footnoteReferenceText(inline.label, footnoteNumbers)
@@ -170,6 +193,8 @@ private fun AnnotatedString.Builder.appendInline(
                 securityPolicy = securityPolicy,
                 footnoteNumbers = footnoteNumbers,
                 onFootnoteClick = onFootnoteClick,
+                inlineOverride = inlineOverride,
+                htmlTagStack = htmlTagStack,
             )
         }
 
@@ -181,6 +206,8 @@ private fun AnnotatedString.Builder.appendInline(
                 securityPolicy = securityPolicy,
                 footnoteNumbers = footnoteNumbers,
                 onFootnoteClick = onFootnoteClick,
+                inlineOverride = inlineOverride,
+                htmlTagStack = htmlTagStack,
             )
         }
 
@@ -192,6 +219,8 @@ private fun AnnotatedString.Builder.appendInline(
                 securityPolicy = securityPolicy,
                 footnoteNumbers = footnoteNumbers,
                 onFootnoteClick = onFootnoteClick,
+                inlineOverride = inlineOverride,
+                htmlTagStack = htmlTagStack,
             )
         }
 
@@ -203,10 +232,18 @@ private fun AnnotatedString.Builder.appendInline(
                 securityPolicy = securityPolicy,
                 footnoteNumbers = footnoteNumbers,
                 onFootnoteClick = onFootnoteClick,
+                inlineOverride = inlineOverride,
+                htmlTagStack = htmlTagStack,
             )
         }
 
         is OrcaInline.HtmlInline -> {
+            val image = parseHtmlInlineImage(inline.html)
+            if (image != null) {
+                appendInlineContent(inlineImageId(image.source), imageInlineFallbackText(image))
+                return
+            }
+
             val tag = parseHtmlInlineTag(inline.html)
             if (tag != null) {
                 if (!tag.isClosing) {
@@ -254,6 +291,7 @@ private fun AnnotatedString.Builder.appendLinkContent(
     securityPolicy: OrcaSecurityPolicy,
     footnoteNumbers: Map<String, Int>,
     onFootnoteClick: ((String) -> Unit)?,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer>,
 ) {
     if (inline.content.isEmpty()) {
         append(inline.destination)
@@ -265,6 +303,7 @@ private fun AnnotatedString.Builder.appendLinkContent(
             securityPolicy = securityPolicy,
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = onFootnoteClick,
+            inlineOverride = inlineOverride,
         )
     }
 }

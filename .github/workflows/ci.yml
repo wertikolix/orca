@@ -48,7 +48,7 @@ jobs:
             "build-tools;36.0.0"
 
       - name: Build and test
-        run: ./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-compose-material3:testDebugUnitTest :orca-compose-material3:assembleRelease :orca-images-coil:assembleRelease :orca-math-orcex:assembleRelease :orca-math-orcex:compileKotlinDesktop :orca-math-orcex:compileKotlinIosSimulatorArm64 :sample-app:assembleDebug
+        run: ./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-compose:compileKotlinDesktop :orca-compose:compileKotlinIosSimulatorArm64 :orca-compose-material3:testDebugUnitTest :orca-compose-material3:assembleRelease :orca-compose-material3:compileKotlinDesktop :orca-compose-material3:compileKotlinIosSimulatorArm64 :orca-images-coil:assembleRelease :orca-images-coil:compileKotlinDesktop :orca-images-coil:compileKotlinIosSimulatorArm64 :orca-math-orcex:assembleRelease :orca-math-orcex:compileKotlinDesktop :orca-math-orcex:compileKotlinIosSimulatorArm64 :sample-app:assembleDebug
 
       - name: Upload reports on failure
         if: failure()

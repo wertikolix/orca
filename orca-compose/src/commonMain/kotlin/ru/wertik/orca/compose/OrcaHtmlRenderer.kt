@@ -13,9 +13,18 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.graphics.Color
+import ru.wertik.orca.core.OrcaBlock
+import ru.wertik.orca.core.OrcaInline
 
 private val TAG_REGEX = Regex("""<(/?)(\w+)([^>]*)>""")
 private val HREF_REGEX = Regex("""href\s*=\s*["']([^"']*)["']""")
+private val HTML_IMAGE_TAG_REGEX = Regex("""<img\b([^>]*)/?>""", RegexOption.IGNORE_CASE)
+private val STANDALONE_HTML_IMAGE_REGEX = Regex("""^\s*<img\b[^>]*/?>\s*$""", RegexOption.IGNORE_CASE)
+private val HTML_FIGURE_REGEX = Regex("""(?is)^\s*<figure\b[^>]*>.*</figure\s*>\s*$""")
+private val HTML_FIGCAPTION_REGEX = Regex("""(?is)<figcaption\b[^>]*>(.*?)</figcaption\s*>""")
+private val HTML_ATTRIBUTE_REGEX = Regex(
+    """([A-Za-z_:][A-Za-z0-9_:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""",
+)
 private val ENTITY_MAP = mapOf(
     "&amp;" to "&",
     "&lt;" to "<",
@@ -106,6 +115,9 @@ internal fun renderHtmlToAnnotatedString(
                         }
                         append("  \u2022 ")
                     }
+                    "img" -> parseHtmlInlineImage(match.value)?.let { image ->
+                        append(imageInlineFallbackText(image))
+                    }
                     "hr" -> {
                         if (length > 0 && !endsWith("\n")) {
                             append("\n")
@@ -182,7 +194,7 @@ private fun AnnotatedString.Builder.endsWith(suffix: String): Boolean {
 private val NUMERIC_ENTITY_DEC = Regex("""&#(\d+);""")
 private val NUMERIC_ENTITY_HEX = Regex("""&#x([0-9a-fA-F]+);""")
 
-private fun decodeHtmlEntities(text: String): String {
+internal fun decodeHtmlEntities(text: String): String {
     var result = text
     ENTITY_MAP.forEach { (entity, replacement) ->
         result = result.replace(entity, replacement)
@@ -252,4 +264,56 @@ internal fun extractHtmlPlainText(html: String): String {
             .replace(Regex("(?i)</(p|div|li|h[1-6]|blockquote|tr|table|ul|ol)>"), "\n")
             .replace(Regex("<[^>]*>"), ""),
     ).trim()
+}
+
+/** Parses an inline HTML image only when the whole inline node is an `<img>` tag. */
+internal fun parseHtmlInlineImage(html: String): OrcaInline.Image? {
+    if (!STANDALONE_HTML_IMAGE_REGEX.matches(html)) return null
+    val image = parseHtmlImageAttributes(html) ?: return null
+    return OrcaInline.Image(
+        source = image.source,
+        alt = image.alt,
+        title = image.title,
+    )
+}
+
+/** Parses standalone `<img>` and `<figure>` blocks without enabling arbitrary HTML loading. */
+internal fun parseHtmlBlockImage(html: String): OrcaBlock.Image? {
+    val isMediaOnly = STANDALONE_HTML_IMAGE_REGEX.matches(html) || HTML_FIGURE_REGEX.matches(html)
+    if (!isMediaOnly) return null
+
+    val image = parseHtmlImageAttributes(html) ?: return null
+    val figureCaption = HTML_FIGCAPTION_REGEX.find(html)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.let(::extractHtmlPlainText)
+        ?.takeIf(String::isNotBlank)
+
+    return OrcaBlock.Image(
+        source = image.source,
+        alt = image.alt,
+        title = figureCaption ?: image.title,
+    )
+}
+
+private data class HtmlImageAttributes(
+    val source: String,
+    val alt: String?,
+    val title: String?,
+)
+
+private fun parseHtmlImageAttributes(html: String): HtmlImageAttributes? {
+    val imageTag = HTML_IMAGE_TAG_REGEX.find(html) ?: return null
+    val attributes = buildMap {
+        HTML_ATTRIBUTE_REGEX.findAll(imageTag.groupValues[1]).forEach { match ->
+            val value = match.groupValues.drop(2).firstOrNull(String::isNotEmpty).orEmpty()
+            put(match.groupValues[1].lowercase(), decodeHtmlEntities(value))
+        }
+    }
+    val source = attributes["src"]?.trim()?.takeIf(String::isNotEmpty) ?: return null
+    return HtmlImageAttributes(
+        source = source,
+        alt = attributes["alt"]?.trim()?.takeIf(String::isNotEmpty),
+        title = attributes["title"]?.trim()?.takeIf(String::isNotEmpty),
+    )
 }

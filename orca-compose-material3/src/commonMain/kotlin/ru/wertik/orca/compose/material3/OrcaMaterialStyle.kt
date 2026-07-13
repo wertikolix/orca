@@ -25,6 +25,7 @@ import ru.wertik.orca.compose.OrcaInlineStyle
 import ru.wertik.orca.compose.OrcaQuoteStyle
 import ru.wertik.orca.compose.OrcaStyle
 import ru.wertik.orca.compose.OrcaTableStyle
+import ru.wertik.orca.compose.OrcaTaskStyle
 import ru.wertik.orca.compose.OrcaThematicBreakStyle
 import ru.wertik.orca.compose.OrcaTypographyStyle
 
@@ -94,6 +95,9 @@ fun OrcaDefaults.materialStyle(
     ),
     quote = OrcaQuoteStyle(
         stripeColor = colorScheme.outline,
+        background = colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        borderColor = colorScheme.outlineVariant,
+        shape = shapes.medium,
     ),
     code = OrcaCodeBlockStyle(
         text = typography.bodyMedium.copy(
@@ -138,6 +142,8 @@ fun OrcaDefaults.materialStyle(
         alternateRowBackground = colorScheme.surfaceVariant.copy(alpha = 0.35f),
         containerShape = shapes.medium,
         outerBorderColor = colorScheme.outlineVariant,
+        scrollTrackColor = colorScheme.surfaceVariant,
+        scrollIndicatorColor = colorScheme.outline,
     ),
     thematicBreak = OrcaThematicBreakStyle(
         color = colorScheme.outlineVariant,
@@ -158,6 +164,7 @@ fun OrcaDefaults.materialStyle(
         importantBackground = colorScheme.secondary.copy(alpha = 0.12f),
         warningBackground = colorScheme.tertiary.copy(alpha = 0.12f),
         cautionBackground = colorScheme.error.copy(alpha = 0.12f),
+        shape = shapes.medium,
     ),
     definitionList = OrcaDefinitionListStyle(
         termStyle = typography.bodyLarge.copy(
@@ -169,5 +176,13 @@ fun OrcaDefaults.materialStyle(
         summaryStyle = typography.titleMedium.copy(color = colorScheme.onSurface),
         borderColor = colorScheme.outlineVariant,
         background = colorScheme.surfaceVariant.copy(alpha = 0.35f),
+    ),
+    task = OrcaTaskStyle(
+        shape = shapes.extraSmall,
+        checkedBackground = colorScheme.primary,
+        uncheckedBackground = colorScheme.surface,
+        checkedBorderColor = colorScheme.primary,
+        uncheckedBorderColor = colorScheme.outline,
+        checkColor = colorScheme.onPrimary,
     ),
 )

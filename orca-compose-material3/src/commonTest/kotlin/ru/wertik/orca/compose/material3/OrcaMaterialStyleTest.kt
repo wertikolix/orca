@@ -23,5 +23,8 @@ class OrcaMaterialStyleTest {
         assertEquals(colors.surfaceVariant, style.table.headerBackground)
         assertEquals(colors.outlineVariant, style.table.outerBorderColor)
         assertEquals(colors.primary, style.admonition.noteColor)
+        assertEquals(colors.outlineVariant, style.quote.borderColor)
+        assertEquals(colors.primary, style.task.checkedBackground)
+        assertEquals(colors.outline, style.table.scrollIndicatorColor)
     }
 }

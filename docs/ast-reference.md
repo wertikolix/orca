@@ -64,6 +64,7 @@ ATX or setext heading.
 |---|---|---|
 | `level` | `Int` | Heading level (1–6) |
 | `content` | `List<OrcaInline>` | Inline elements forming the heading text |
+| `id` | `String?` | Generated anchor id, or `null` when unavailable |
 
 ```markdown
 # Heading 1
@@ -151,6 +152,20 @@ fun main() {
 ```
 ````
 
+### Math (Block)
+
+Display formula parsed from a closed `$$...$$` fence.
+
+| Property | Type | Description |
+|---|---|---|
+| `source` | `String` | Formula source without delimiters |
+
+```markdown
+$$
+\frac{1}{n} \sum_{i=1}^{n} x_i
+$$
+```
+
 ### Image (Block)
 
 Block-level image (standalone image not wrapped in a paragraph).
@@ -233,6 +248,25 @@ Term
 
 Another Term
 : Its definition
+```
+
+### Details
+
+Collapsible `<details>/<summary>` content with a rich inline summary and nested Markdown blocks.
+
+| Property | Type | Description |
+|---|---|---|
+| `summary` | `List<OrcaInline>` | Inline content shown in the interactive summary row |
+| `blocks` | `List<OrcaBlock>` | Nested body blocks |
+| `startOpen` | `Boolean` | Whether the source contains the `open` attribute |
+
+```markdown
+<details open>
+<summary>**Implementation** notes</summary>
+
+Nested Markdown content.
+
+</details>
 ```
 
 ---
@@ -349,6 +383,18 @@ Inline code span.
 
 ```markdown
 `inline code`
+```
+
+### Math (Inline)
+
+Inline formula parsed from conservative `$...$` delimiters.
+
+| Property | Type | Description |
+|---|---|---|
+| `source` | `String` | Formula source without delimiters |
+
+```markdown
+The result is $E = mc^2$.
 ```
 
 ### Link

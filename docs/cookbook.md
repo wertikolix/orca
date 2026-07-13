@@ -87,7 +87,7 @@ Orca(document = document, style = fullStyle)
 
 Reuse the root `LazyListState` when the host app renders a fast scrollbar or external scroll controls. In Material 3 apps, `rememberOrcaMaterialStyle()` automatically follows the active `MaterialTheme` color scheme, typography, and shapes.
 
-Add `implementation("ru.wertik:orca-compose-material3:0.15.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
+Add `implementation("ru.wertik:orca-compose-material3:0.20.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
 
 ```kotlin
 val listState = rememberLazyListState()
@@ -96,6 +96,47 @@ Orca(
     document = document,
     listState = listState,
     style = rememberOrcaMaterialStyle(),
+)
+```
+
+## Custom task checkbox
+
+Keep the source rewrite callback and replace only the visual checkbox when your product has its own control vocabulary:
+
+```kotlin
+Orca(
+    markdown = markdown,
+    parser = parser,
+    onTaskToggle = ::rewriteTask,
+    taskCheckboxContent = { checked, enabled, onCheckedChange ->
+        ProductCheckbox(
+            checked = checked,
+            enabled = enabled,
+            onCheckedChange = onCheckedChange,
+        )
+    },
+)
+```
+
+## Custom inline renderer
+
+`inlineOverride` uses exact AST classes and applies at every supported nesting depth, including table cells and details summaries:
+
+```kotlin
+Orca(
+    markdown = markdown,
+    parser = parser,
+    inlineOverride = mapOf(
+        OrcaInline.Abbreviation::class to { inline ->
+            val abbreviation = inline as OrcaInline.Abbreviation
+            buildAnnotatedString {
+                withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
+                    append(abbreviation.text)
+                }
+                append(" (${abbreviation.title})")
+            }
+        },
+    ),
 )
 ```
 
@@ -156,6 +197,29 @@ Orca(
     securityPolicy = policy,
     imageContent = { url, description -> OrcaCoilImage(url, description, style) },
     inlineImageContent = { url, description -> OrcaCoilInlineImage(url, description, style) },
+)
+```
+
+## Safe HTML media
+
+Standalone HTML media uses the same policy and slots as Markdown images. Orca recognizes strict `<img>` blocks, `<figure>` with `<figcaption>`, and inline `<img>` tags. Mixed or complex HTML stays in the readable HTML fallback.
+
+```markdown
+<figure>
+  <img src="https://example.com/diagram.png" alt="Architecture diagram">
+  <figcaption>Request flow through the renderer.</figcaption>
+</figure>
+
+Status <img src="https://example.com/status.png" alt="Ready"> ready.
+```
+
+```kotlin
+Orca(
+    markdown = markdown,
+    parser = parser,
+    securityPolicy = OrcaSecurityPolicies.RemoteImages,
+    imageContent = { url, description -> BlockImage(url, description) },
+    inlineImageContent = { url, description -> InlineImage(url, description) },
 )
 ```
 

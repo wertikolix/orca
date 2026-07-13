@@ -100,11 +100,11 @@ OrcaDocument
 
 ### Block types (`OrcaBlock` — sealed interface)
 
-`Heading`, `Paragraph`, `ListBlock`, `Quote`, `Admonition`, `CodeBlock`, `Image`, `ThematicBreak`, `Table`, `Footnotes`, `HtmlBlock`, `DefinitionList`
+`Heading`, `Paragraph`, `ListBlock`, `Quote`, `Admonition`, `CodeBlock`, `Math`, `Image`, `ThematicBreak`, `Table`, `Footnotes`, `HtmlBlock`, `DefinitionList`, `Details`
 
 ### Inline types (`OrcaInline` — sealed interface)
 
-`Text`, `Bold`, `Italic`, `Strikethrough`, `Superscript`, `Subscript`, `InlineCode`, `Link`, `Image`, `FootnoteReference`, `HtmlInline`, `Abbreviation`
+`Text`, `Bold`, `Italic`, `Strikethrough`, `Superscript`, `Subscript`, `Highlight`, `Underline`, `InlineCode`, `Math`, `Link`, `Image`, `FootnoteReference`, `HtmlInline`, `Abbreviation`
 
 Both are **sealed interfaces**, enabling exhaustive `when` handling — the compiler enforces that all variants are covered. This is used throughout the rendering layer (see `OrcaBlockNode`).
 
@@ -132,10 +132,11 @@ OrcaBlockNode()            ── exhaustive when-dispatch on OrcaBlock sealed v
     │
     ├── HeadingNode, ParagraphNode, ListBlockNode, QuoteBlockNode,
     │   CodeBlockNode, TableBlockNode, AdmonitionNode, FootnotesNode,
-    │   DefinitionListNode, ...
+    │   DefinitionListNode, DetailsNode, MarkdownImageNode, MarkdownMathNode, ...
     │
     └── buildInlineAnnotatedString()  ── OrcaInline list → AnnotatedString
-        (OrcaInlineText.kt)              with SpanStyles, LinkAnnotations, inline images
+        (OrcaInlineText.kt)              with SpanStyles, LinkAnnotations, inline media/math,
+                                         and exact-class inline overrides
 ```
 
 ### Key generation (`buildRenderBlocks`)
@@ -150,7 +151,7 @@ Each `OrcaBlock` gets a deterministic string key derived from its content (type 
 
 ### Block rendering (`OrcaBlockNode.kt`)
 
-A single `@Composable OrcaBlockNode(block, style, ...)` function dispatches via `when (block)` to dedicated composables. Recursive — `ListBlockNode`, `QuoteBlockNode`, `AdmonitionNode`, and `FootnotesNode` call back into `OrcaBlockNode` for nested blocks.
+A single `@Composable OrcaBlockNode(block, style, ...)` function dispatches via `when (block)` to dedicated composables. Lists, quotes, admonitions, footnotes, definition lists, and details call back into `OrcaBlockNode` for nested blocks. The complete render context is threaded through recursion: style, URL policy, media slots, math slots, footnote navigation, task interaction, and inline overrides.
 
 ### Inline rendering (`OrcaInlineText.kt`)
 
@@ -158,7 +159,20 @@ A single `@Composable OrcaBlockNode(block, style, ...)` function dispatches via 
 - `SpanStyle` for bold, italic, strikethrough, inline code, superscript, subscript
 - `LinkAnnotation.Url` for links (with `OrcaSecurityPolicy` check — disallowed URLs render as plain text)
 - `appendInlineContent()` placeholders for inline images (resolved only when `inlineImageContent` is supplied)
+- inline math placeholders resolved by `inlineMathContent` and an optional measured `OrcaInlineMathPlaceholder`
+- strict inline HTML `<img>` conversion through the same image policy and slot
+- exact-class `inlineOverride` replacements returning `AnnotatedString`
 - Footnote references rendered as superscript clickable annotations
+
+The same inline pipeline is used by paragraphs, headings, table cells, definition terms, and details summaries. This prevents nested content from silently losing media, math, security filtering, or host overrides.
+
+### Renderer extension points
+
+- `blockOverride`: exact-class composable replacement for top-level blocks.
+- `inlineOverride`: exact-class annotated-text replacement for inline nodes at any nesting depth.
+- `imageContent` / `inlineImageContent`: host-owned image loading after `OrcaSecurityPolicy` approval.
+- `blockMathContent` / `inlineMathContent`: optional math engines without a base dependency.
+- `taskCheckboxContent`: complete replacement for the default semantic task checkbox.
 
 ---
 
@@ -198,7 +212,7 @@ For LLM token streams, `OrcaStreamingState` accepts delta chunks and publishes r
 
 The underlying `Orca(markdown: String, ...)` composable handles each published snapshot as follows:
 
-1. **Background initial parse** — on first composition, raw Markdown is parsed immediately from `LaunchedEffect` on `Dispatchers.Default`; the UI thread is never blocked by document parsing.
+1. **Stable initial parse** — the first document is parsed synchronously inside `remember` so the first measured frame has the correct height and outer lazy containers do not jump.
 
 2. **Paced background re-parse** — a long-lived `snapshotFlow` conflates rapid `markdown` changes. It:
    - Waits at most one `streamingDebounceMs` interval (default: 80ms) between subsequent parses while retaining the latest input.
@@ -221,7 +235,7 @@ fun interface OrcaSecurityPolicy {
 }
 ```
 
-`OrcaUrlType` is either `LINK` or `IMAGE`. The policy is checked in `OrcaInlineText.kt` before creating `LinkAnnotation`s and before image URLs are handed to supplied content slots.
+`OrcaUrlType` is either `LINK` or `IMAGE`. The policy is checked before creating `LinkAnnotation`s and before Markdown or strict HTML image URLs are handed to supplied content slots.
 
 **If a URL is disallowed**, links render as plain text and images are not passed to a loader. If no image slot is provided, block images render fallback text and inline images render their alt text even under an opt-in policy.
 
@@ -253,6 +267,9 @@ data class OrcaStyle(
     val image: OrcaImageStyle,             // shape, background, maxHeight, contentScale
     val admonition: OrcaAdmonitionStyle,   // per-type colors and backgrounds
     val inlineImage: OrcaInlineImageStyle, // size for images embedded in text
+    val definitionList: OrcaDefinitionListStyle,
+    val details: OrcaDetailsStyle,
+    val task: OrcaTaskStyle,               // flat semantic checkbox styling
 )
 ```
 

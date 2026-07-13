@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.wertik.orca.core.OrcaBlock
 import ru.wertik.orca.core.OrcaDocument
+import ru.wertik.orca.core.OrcaInline
 import ru.wertik.orca.core.OrcaParseError
 import ru.wertik.orca.core.OrcaParseDiagnostics
 import ru.wertik.orca.core.OrcaParseResult
@@ -80,6 +81,8 @@ enum class OrcaRootLayout {
  * @param streamingCursor optional glyph (e.g. `"\u258D"`) appended after the last block's text,
  * typically while an LLM response is still streaming. Applied to the parsed document, never to
  * the source, so incremental parser sessions keep their append-only fast path.
+ * @param inlineOverride optional exact-class inline renderers producing custom annotated text.
+ * @param taskCheckboxContent optional replacement for the default flat task-list checkbox.
  * @see Orca
  * @see OrcaStyle
  * @see OrcaSecurityPolicy
@@ -105,6 +108,8 @@ fun Orca(
     inlineMathPlaceholder: OrcaInlineMathPlaceholder? = null,
     onTaskToggle: OrcaTaskToggle? = null,
     streamingCursor: String? = null,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
+    taskCheckboxContent: OrcaTaskCheckboxContent? = null,
 ) {
     val parserKey = remember(parser) { parser.cacheKey() }
     val latestMarkdown by rememberUpdatedState(markdown)
@@ -204,6 +209,8 @@ fun Orca(
         inlineMathPlaceholder = inlineMathPlaceholder,
         onTaskToggle = onTaskToggle,
         streamingCursor = streamingCursor,
+        inlineOverride = inlineOverride,
+        taskCheckboxContent = taskCheckboxContent,
     )
 }
 
@@ -234,6 +241,8 @@ fun Orca(
     inlineMathPlaceholder: OrcaInlineMathPlaceholder? = null,
     onTaskToggle: OrcaTaskToggle? = null,
     streamingCursor: String? = null,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
+    taskCheckboxContent: OrcaTaskCheckboxContent? = null,
 ) {
     Orca(
         markdown = state.markdown,
@@ -255,6 +264,8 @@ fun Orca(
         inlineMathPlaceholder = inlineMathPlaceholder,
         onTaskToggle = onTaskToggle,
         streamingCursor = streamingCursor?.takeIf { state.isStreaming },
+        inlineOverride = inlineOverride,
+        taskCheckboxContent = taskCheckboxContent,
     )
 }
 
@@ -278,6 +289,8 @@ fun Orca(
  * @param onTaskToggle optional callback making task-list checkboxes interactive. Receives the
  * document-order task index and the requested state; the host should update the Markdown source.
  * @param streamingCursor optional glyph appended after the last block's text.
+ * @param inlineOverride optional exact-class inline renderers producing custom annotated text.
+ * @param taskCheckboxContent optional replacement for the default flat task-list checkbox.
  * @see OrcaDocument
  * @see OrcaStyle
  */
@@ -298,6 +311,8 @@ fun Orca(
     inlineMathPlaceholder: OrcaInlineMathPlaceholder? = null,
     onTaskToggle: OrcaTaskToggle? = null,
     streamingCursor: String? = null,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
+    taskCheckboxContent: OrcaTaskCheckboxContent? = null,
 ) {
     val displayDocument = remember(document, streamingCursor) {
         if (streamingCursor.isNullOrEmpty()) document else document.withTrailingCursor(streamingCursor)
@@ -370,6 +385,7 @@ fun Orca(
     CompositionLocalProvider(
         LocalOrcaInlineMathPlaceholder provides inlineMathPlaceholder,
         LocalOrcaTaskInteraction provides taskInteraction,
+        LocalOrcaTaskCheckboxContent provides taskCheckboxContent,
     ) {
         when (rootLayout) {
         OrcaRootLayout.LAZY_COLUMN -> {
@@ -439,6 +455,7 @@ fun Orca(
                             inlineImageContent = inlineImageContent,
                             blockMathContent = blockMathContent,
                             inlineMathContent = inlineMathContent,
+                            inlineOverride = inlineOverride,
                         )
                     }
                 }
@@ -524,6 +541,7 @@ fun Orca(
                                     inlineImageContent = inlineImageContent,
                                     blockMathContent = blockMathContent,
                                     inlineMathContent = inlineMathContent,
+                                    inlineOverride = inlineOverride,
                                 )
                             }
                         }

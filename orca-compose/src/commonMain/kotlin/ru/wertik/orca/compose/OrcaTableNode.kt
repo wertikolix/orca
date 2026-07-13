@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,6 +24,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.semantics.CollectionInfo
+import androidx.compose.ui.semantics.CollectionItemInfo
+import androidx.compose.ui.semantics.collectionInfo
+import androidx.compose.ui.semantics.collectionItemInfo
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -31,6 +39,7 @@ import ru.wertik.orca.core.OrcaBlock
 import ru.wertik.orca.core.OrcaInline
 import ru.wertik.orca.core.OrcaTableAlignment
 import ru.wertik.orca.core.OrcaTableCell
+import kotlin.reflect.KClass
 
 @Composable
 internal fun TableBlockNode(
@@ -41,12 +50,16 @@ internal fun TableBlockNode(
     footnoteNumbers: Map<String, Int>,
     sourceBlockKey: String,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
+    inlineImageContent: OrcaImageContent? = null,
+    inlineMathContent: OrcaMathContent? = null,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
 ) {
     val columnCount = maxOf(
         block.header.size,
         block.rows.maxOfOrNull { row -> row.size } ?: 0,
     )
     if (columnCount == 0) return
+    val inlineMathPlaceholder = LocalOrcaInlineMathPlaceholder.current
 
     val contentLengths = remember(block, columnCount) {
         tableContentLengths(
@@ -70,7 +83,11 @@ internal fun TableBlockNode(
             )
         }
 
-        ColumnWithHorizontalScroll(style = style) {
+        ColumnWithHorizontalScroll(
+            style = style,
+            rowCount = block.rows.size + 1,
+            columnCount = columnCount,
+        ) {
             TableRowNode(
                 cells = block.header,
                 columnCount = columnCount,
@@ -82,6 +99,10 @@ internal fun TableBlockNode(
                 footnoteNumbers = footnoteNumbers,
                 sourceBlockKey = sourceBlockKey,
                 onFootnoteReferenceClick = onFootnoteReferenceClick,
+                inlineImageContent = inlineImageContent,
+                inlineMathContent = inlineMathContent,
+                inlineMathPlaceholder = inlineMathPlaceholder,
+                inlineOverride = inlineOverride,
             )
             block.rows.forEachIndexed { index, row ->
                 TableRowNode(
@@ -96,6 +117,10 @@ internal fun TableBlockNode(
                     footnoteNumbers = footnoteNumbers,
                     sourceBlockKey = sourceBlockKey,
                     onFootnoteReferenceClick = onFootnoteReferenceClick,
+                    inlineImageContent = inlineImageContent,
+                    inlineMathContent = inlineMathContent,
+                    inlineMathPlaceholder = inlineMathPlaceholder,
+                    inlineOverride = inlineOverride,
                 )
             }
         }
@@ -105,15 +130,49 @@ internal fun TableBlockNode(
 @Composable
 private fun ColumnWithHorizontalScroll(
     style: OrcaStyle,
+    rowCount: Int,
+    columnCount: Int,
     content: @Composable () -> Unit,
 ) {
+    val scrollState = rememberScrollState()
     Column(
         modifier = Modifier
-            .horizontalScroll(rememberScrollState())
-            .clip(style.table.containerShape)
-            .border(style.table.borderWidth, style.table.outerBorderColor, style.table.containerShape),
+            .fillMaxWidth()
+            .semantics {
+                collectionInfo = CollectionInfo(rowCount = rowCount, columnCount = columnCount)
+            },
     ) {
-        content()
+        Column(
+            modifier = Modifier
+                .horizontalScroll(scrollState)
+                .clip(style.table.containerShape)
+                .border(style.table.borderWidth, style.table.outerBorderColor, style.table.containerShape),
+        ) {
+            content()
+        }
+        if (style.table.showScrollIndicator && scrollState.maxValue > 0) {
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = style.table.scrollIndicatorSpacing)
+                    .height(style.table.scrollIndicatorHeight)
+                    .drawBehind {
+                        drawRect(color = style.table.scrollTrackColor)
+                        val viewportWidth = size.width
+                        val totalWidth = viewportWidth + scrollState.maxValue
+                        val thumbWidth = (viewportWidth * viewportWidth / totalWidth)
+                            .coerceAtLeast(style.table.scrollIndicatorMinWidth.toPx())
+                            .coerceAtMost(viewportWidth)
+                        val availableTravel = viewportWidth - thumbWidth
+                        val progress = scrollState.value.toFloat() / scrollState.maxValue.toFloat()
+                        drawRect(
+                            color = style.table.scrollIndicatorColor,
+                            topLeft = Offset(x = availableTravel * progress, y = 0f),
+                            size = Size(width = thumbWidth, height = size.height),
+                        )
+                    },
+            )
+        }
     }
 }
 
@@ -130,6 +189,10 @@ private fun TableRowNode(
     footnoteNumbers: Map<String, Int>,
     sourceBlockKey: String,
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
+    inlineImageContent: OrcaImageContent?,
+    inlineMathContent: OrcaMathContent?,
+    inlineMathPlaceholder: OrcaInlineMathPlaceholder?,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer>,
 ) {
     // Use rememberUpdatedState for callbacks so that the AnnotatedString
     // cache (keyed on cell data + style) doesn't invalidate every recomposition
@@ -143,7 +206,7 @@ private fun TableRowNode(
     ) {
         repeat(columnCount) { index ->
             val cell = cells.getOrNull(index)
-            val text = remember(cell, style, footnoteNumbers, sourceBlockKey) {
+            val text = remember(cell, style, footnoteNumbers, sourceBlockKey, inlineOverride) {
                 if (cell == null) {
                     AnnotatedString("")
                 } else {
@@ -154,8 +217,20 @@ private fun TableRowNode(
                         securityPolicy = currentSecurityPolicy,
                         footnoteNumbers = footnoteNumbers,
                         onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
+                        inlineOverride = inlineOverride,
                     )
                 }
+            }
+            val inlineImages = remember(cell, style, securityPolicy, inlineImageContent) {
+                buildInlineImageMap(
+                    inlines = cell?.content.orEmpty(),
+                    style = style,
+                    securityPolicy = securityPolicy,
+                    inlineImageContent = inlineImageContent,
+                )
+            }
+            val inlineMath = remember(cell, inlineMathContent, inlineMathPlaceholder) {
+                buildInlineMathMap(cell?.content.orEmpty(), inlineMathContent, inlineMathPlaceholder)
             }
             val align = tableCellAlignment(cell?.alignment)
             val cellBorderWidth = style.table.borderWidth
@@ -188,11 +263,21 @@ private fun TableRowNode(
                             else -> style.table.alternateRowBackground
                         },
                     )
-                    .padding(style.table.cellPadding),
+                    .padding(style.table.cellPadding)
+                    .semantics {
+                        collectionItemInfo = CollectionItemInfo(
+                            rowIndex = if (isHeader) 0 else rowIndex + 1,
+                            rowSpan = 1,
+                            columnIndex = index,
+                            columnSpan = 1,
+                        )
+                        if (isHeader) heading()
+                    },
             ) {
                 Text(
                     text = text,
                     style = (if (isHeader) style.table.headerText else style.table.text).copy(textAlign = align),
+                    inlineContent = inlineImages + inlineMath,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

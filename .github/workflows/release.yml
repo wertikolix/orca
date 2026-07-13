@@ -51,29 +51,50 @@ jobs:
         id: release-version
         run: |
           set -euo pipefail
+          PROJECT_VERSION="$(./gradlew -q properties | awk '/^version: / {print $2; exit}')"
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             VERSION="${GITHUB_REF_NAME}"
+            if [[ ! "${VERSION}" =~ ^0\.[0-9]+\.[0-9]+(-(alpha|beta|rc)([.-]?[0-9]+)?)?$ ]]; then
+              echo "::error::Release tag '${VERSION}' is not a supported semantic version."
+              exit 1
+            fi
+            if [[ "${VERSION}" != "${PROJECT_VERSION}" ]]; then
+              echo "::error::Release tag '${VERSION}' does not match project version '${PROJECT_VERSION}'."
+              exit 1
+            fi
           else
-            VERSION="$(./gradlew -q properties | awk '/^version: / {print $2; exit}')"
+            VERSION="${PROJECT_VERSION}"
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Resolved release version: ${VERSION}"
 
       - name: Build tests and release artifacts
-        run: ./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-compose:assembleRelease :orca-compose-material3:testDebugUnitTest :orca-compose-material3:assembleRelease :orca-images-coil:assembleRelease :orca-math-orcex:assembleRelease :orca-math-orcex:compileKotlinDesktop :orca-math-orcex:compileKotlinIosSimulatorArm64 :orca-core:jvmJar :sample-app:assembleRelease :sample-app:bundleRelease -PorcaVersion=${{ steps.release-version.outputs.version }}
+        run: ./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-compose:assembleRelease :orca-compose:compileKotlinDesktop :orca-compose:compileKotlinIosSimulatorArm64 :orca-compose-material3:testDebugUnitTest :orca-compose-material3:assembleRelease :orca-compose-material3:compileKotlinDesktop :orca-compose-material3:compileKotlinIosSimulatorArm64 :orca-images-coil:assembleRelease :orca-images-coil:compileKotlinDesktop :orca-images-coil:compileKotlinIosSimulatorArm64 :orca-math-orcex:assembleRelease :orca-math-orcex:compileKotlinDesktop :orca-math-orcex:compileKotlinIosSimulatorArm64 :orca-core:jvmJar :sample-app:assembleRelease :sample-app:bundleRelease -PorcaVersion=${{ steps.release-version.outputs.version }}
 
-      - name: Prepare signing key for Gradle (optional)
+      - name: Validate Maven Central release secrets
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in CENTRAL_TOKEN_USERNAME CENTRAL_TOKEN_PASSWORD GPG_PRIVATE_KEY; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Required release secret ${name} is missing."
+              missing=1
+            fi
+          done
+          exit "${missing}"
+
+      - name: Prepare signing key for Gradle
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           set -euo pipefail
-          if [[ -z "${GPG_PRIVATE_KEY}" ]]; then
-            echo "No GPG key configured, Maven Central publish will be skipped."
-            exit 0
-          fi
-
           key_material="${GPG_PRIVATE_KEY//$'\r'/}"
           if [[ "${key_material}" == *"\\n"* ]]; then
             key_material="${key_material//\\n/$'\n'}"
@@ -96,22 +117,13 @@ jobs:
             echo "SIGNING_IN_MEMORY_KEY_PASSWORD=${GPG_PASSPHRASE}" >> "$GITHUB_ENV"
           fi
 
-      - name: Publish to Maven Central (optional)
+      - name: Publish to Maven Central
         if: startsWith(github.ref, 'refs/tags/')
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
         run: |
           set -euo pipefail
-          if [[ -z "${CENTRAL_TOKEN_USERNAME}" || -z "${CENTRAL_TOKEN_PASSWORD}" ]]; then
-            echo "Central credentials are missing, skipping publish."
-            exit 0
-          fi
-          if [[ -z "${ORG_GRADLE_PROJECT_signingInMemoryKey:-}" && -z "${SIGNING_IN_MEMORY_KEY:-}" ]]; then
-            echo "Central credentials or signing key are missing, skipping publish."
-            exit 0
-          fi
-
           ./gradlew --no-daemon --build-cache \
             :orca-core:publishAllPublicationsToCentralStagingRepository \
             :orca-compose:publishAllPublicationsToCentralStagingRepository \
@@ -122,20 +134,20 @@ jobs:
             -PcentralTokenUsername=${CENTRAL_TOKEN_USERNAME} \
             -PcentralTokenPassword=${CENTRAL_TOKEN_PASSWORD}
 
-          # Trigger automatic publishing on the staging repo.
-          # The staging repo may not be ready immediately after publish, so retry up to 3 times.
-          # If all retries fail we print a warning but do NOT fail the step – the Gradle
-          # publish above is the important part.
+          # Trigger automatic publishing on the staging repo. The staging repo may not be
+          # ready immediately after upload, so retry before failing the release.
           auth="$(printf '%s' "${CENTRAL_TOKEN_USERNAME}:${CENTRAL_TOKEN_PASSWORD}" | base64 -w0)"
           publish_url="https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/ru.wertik?publishing_type=automatic"
           max_attempts=3
           delay=10
+          triggered=false
           for attempt in $(seq 1 "${max_attempts}"); do
             echo "Attempt ${attempt}/${max_attempts}: POST ${publish_url}"
             if curl -fsS -X POST \
               -H "Authorization: Bearer ${auth}" \
               "${publish_url}"; then
               echo "Automatic publishing triggered successfully."
+              triggered=true
               break
             else
               echo "::warning::Attempt ${attempt}/${max_attempts} to trigger automatic publishing failed (curl exit code: $?)."
@@ -143,8 +155,38 @@ jobs:
                 echo "Retrying in ${delay}s…"
                 sleep "${delay}"
               else
-                echo "::warning::All ${max_attempts} attempts to trigger automatic publishing failed. The staged artifacts were published to the staging repo by Gradle; you may need to release them manually from the Sonatype UI."
+                echo "::error::All ${max_attempts} attempts to trigger automatic publishing failed."
               fi
+            fi
+          done
+          if [[ "${triggered}" != "true" ]]; then
+            exit 1
+          fi
+
+      - name: Verify Maven Central publication
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          VERSION: ${{ steps.release-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          artifacts=(orca-core orca-compose orca-compose-material3 orca-images-coil orca-math-orcex)
+          max_attempts=20
+          delay=30
+          for artifact in "${artifacts[@]}"; do
+            url="https://repo1.maven.org/maven2/ru/wertik/${artifact}/${VERSION}/${artifact}-${VERSION}.pom"
+            available=false
+            for attempt in $(seq 1 "${max_attempts}"); do
+              if curl -fsS --retry 2 --retry-delay 2 "${url}" >/dev/null; then
+                echo "Verified ${artifact}:${VERSION}."
+                available=true
+                break
+              fi
+              echo "Waiting for ${artifact}:${VERSION} (${attempt}/${max_attempts})..."
+              sleep "${delay}"
+            done
+            if [[ "${available}" != "true" ]]; then
+              echo "::error::${artifact}:${VERSION} was not visible on Maven Central after verification retries."
+              exit 1
             fi
           done
 
@@ -165,6 +207,7 @@ jobs:
           retention-days: 14
 
       - name: Create or update GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -186,6 +229,7 @@ jobs:
           fi
 
       - name: Upload APK/AAB to GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

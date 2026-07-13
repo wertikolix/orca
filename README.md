@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.15.0`
+- Current stable minor: `0.20.0`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -53,11 +53,11 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.15.0")
-implementation("ru.wertik:orca-compose:0.15.0")
-implementation("ru.wertik:orca-compose-material3:0.15.0") // optional Material 3 theme adapter
-implementation("ru.wertik:orca-images-coil:0.15.0") // optional images
-implementation("ru.wertik:orca-math-orcex:0.15.0") // optional multiplatform math renderer
+implementation("ru.wertik:orca-core:0.20.0")
+implementation("ru.wertik:orca-compose:0.20.0")
+implementation("ru.wertik:orca-compose-material3:0.20.0") // optional Material 3 theme adapter
+implementation("ru.wertik:orca-images-coil:0.20.0") // optional images
+implementation("ru.wertik:orca-math-orcex:0.20.0") // optional multiplatform math renderer
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -192,7 +192,7 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.15.0`)
+## Supported Syntax (`0.20.0`)
 
 ### Blocks
 
@@ -203,11 +203,13 @@ data class OrcaParseResult(
 - quote
 - fenced code block
 - indented code block
+- display math (`$$...$$`)
 - thematic break (`---`)
 - standalone image block
 - **image captions** (the standard Markdown image title renders below the image)
 - GFM tables
 - HTML blocks (styled rendering with tag support)
+- **safe HTML media** (standalone `<img>` and `<figure>/<figcaption>` through the image slot and URL policy)
 - footnote definitions
 - **admonitions / callouts** (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`)
 - **definition lists** (`Term` + `: Definition`)
@@ -224,9 +226,11 @@ data class OrcaParseResult(
 - **highlight** (`==text==`)
 - **inserted / underline** (`++text++`)
 - inline code
+- inline math (`$...$`)
 - link (with title support)
 - **inline image rendering** (actual images in text flow via InlineTextContent)
 - inline HTML (rich styled rendering — `<kbd>`, `<mark>`, `<b>`, `<i>`, `<sup>`, `<sub>`, etc.)
+- **inline HTML images** (`<img>` through the same inline image slot and URL policy)
 - footnote references
 - inline footnotes `^[...]`
 - soft/hard line breaks (`\n`)
@@ -263,7 +267,9 @@ data class OrcaParseResult(
 - **accessibility** — semantic roles for headings, content descriptions for images and blocks
 - **heading anchor links** — `[link](#heading-text)` scrolls to the corresponding heading (auto-generated GitHub-style slugs)
 - **custom block renderers** — override rendering for any block type via `blockOverride` parameter
+- **custom inline renderers** — replace exact inline node classes with annotated text via `inlineOverride`
 - **interactive task lists** — pass `onTaskToggle` to receive checkbox taps (document-order index + requested state) and update your source; rendering stays stateless
+- **custom task checkbox slot** — replace the default flat, semantic checkbox via `taskCheckboxContent`
 - **table of contents** — `OrcaDocument.tableOfContents()` + `orcaHeadingBlockIndex()` map headings to lazy-list indices for scroll-to-section UIs
 - **streaming cursor** — optional `streamingCursor` glyph rendered after the last block while a response streams
 - **zero-cost optional images** — base `orca-compose` displays fallback/alt text; supply `imageContent` and `inlineImageContent` only when image rendering is needed
@@ -271,7 +277,7 @@ data class OrcaParseResult(
 ### Admonition rendering
 
 - GitHub-style callout blocks: NOTE, TIP, IMPORTANT, WARNING, CAUTION
-- colored left stripe + icon + title
+- full one-pixel outline, solid surface tint, icon, and semantic title
 - full content block rendering inside admonition
 - light and dark theme color presets
 - **collapsible mode** — toggle content visibility with animated expand/collapse
@@ -297,20 +303,25 @@ data class OrcaParseResult(
 
 ### Image loading
 
-- shimmer/skeleton placeholder while loading (no more raw text fallback)
-- smooth crossfade transition on load
-- error state with icon fallback
+- flat solid pulse placeholder while loading
+- no gradient, shadow, or mandatory Material dependency
+- readable error state using the configured caption style
 
 ### Table rendering
 
 - auto layout by content width (default)
 - fallback fixed layout mode available via style
 - horizontal scroll remains for wide tables
+- collection semantics for rows, columns, and headers
+- a solid position indicator appears only when content overflows
+- inline image and math slots work inside cells
 
 ### HTML rendering
 
 - block-level HTML rendered with styled AnnotatedString
 - supported tags: `<b>`, `<i>`, `<s>`, `<u>`, `<code>`, `<a>`, `<sup>`, `<sub>`, `<mark>`, `<kbd>`, `<br>`, `<p>`, `<h1>`-`<h6>`, `<li>`, `<hr>`, `<blockquote>`, `<pre>`
+- standalone `<img>` and `<figure>/<figcaption>` blocks route through `OrcaSecurityPolicy` and `imageContent`
+- inline `<img>` tags route through `OrcaSecurityPolicy` and `inlineImageContent`
 - HTML entities decoded (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&nbsp;`, numeric `&#8212;`, `&#x2714;`, etc.)
 - interleaved/malformed tags handled gracefully (e.g. `<b><i></b></i>` -- styles popped and re-pushed correctly)
 - unknown tags gracefully stripped
@@ -331,6 +342,7 @@ Use `OrcaStyle` as a single configuration object:
 - `admonition`
 - `definitionList`
 - `details`
+- `task`
 
 ### Adaptive theme
 
@@ -451,6 +463,23 @@ Orca(
 )
 ```
 
+### Custom inline renderers
+
+Replace exact inline node classes with custom annotated text. The same map is threaded through paragraphs, headings, tables, definition terms, and details summaries.
+
+```kotlin
+Orca(
+    markdown = markdown,
+    parser = remember { OrcaMarkdownParser() },
+    inlineOverride = mapOf(
+        OrcaInline.Abbreviation::class to { inline ->
+            val abbreviation = inline as OrcaInline.Abbreviation
+            AnnotatedString("${abbreviation.text} (${abbreviation.title})")
+        },
+    ),
+)
+```
+
 ### Optional image loader
 
 `orca-compose` intentionally ships without an image/network stack. Add `orca-images-coil` for the provided Coil/Ktor slots, or provide your own slots:
@@ -503,6 +532,17 @@ For release-like check:
 - Maven Central artifacts are immutable after publish
 
 ## Changelog
+
+### 0.20.0
+
+- **Renderer context completeness:** inline images, inline math, security decisions, and inline overrides now reach table cells, definition terms, and details summaries.
+- **Safe HTML media:** strict standalone `<img>` and `<figure>/<figcaption>` blocks use the existing image slots and URL policy; inline `<img>` uses the inline image slot.
+- **Inline renderer API:** every `Orca` overload accepts an exact-class `inlineOverride` map returning `AnnotatedString` content.
+- **Task renderer API:** task lists use a platform-neutral flat checkbox with proper semantics and a 40 dp interaction target; `taskCheckboxContent` allows full replacement.
+- **Flat renderer refresh:** quotes and admonitions use full outlines and solid tinted surfaces. Coil loading uses a solid pulse instead of a shimmer gradient.
+- **Table UX:** collection semantics, nested media/math, responsive auto sizing, and a solid overflow position indicator.
+- **Render lab redesign:** adaptive wide navigation, compact suite tabs, nine feature suites, controllable streaming, and a responsive source/preview playground.
+- **Release hardening:** tags must match the project version, Maven credentials and signing keys are required, and tag-only GitHub release steps are enforced.
 
 ### 0.15.0
 

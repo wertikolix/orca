@@ -1,6 +1,7 @@
 package ru.wertik.orca.compose
 
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -324,5 +325,47 @@ class OrcaInlineTextTest {
 
         assertEquals("docs", text.text)
         assertTrue(text.getLinkAnnotations(0, text.length).isEmpty())
+    }
+
+    @Test
+    fun inlineOverrideReplacesNestedExactClassNodes() {
+        val text = buildInlineAnnotatedString(
+            inlines = listOf(
+                OrcaInline.Bold(
+                    content = listOf(OrcaInline.Abbreviation(text = "KMP", title = "Kotlin Multiplatform")),
+                ),
+            ),
+            style = OrcaStyle(),
+            onLinkClick = {},
+            inlineOverride = mapOf(
+                OrcaInline.Abbreviation::class to { inline ->
+                    val abbreviation = inline as OrcaInline.Abbreviation
+                    AnnotatedString("${abbreviation.text} (${abbreviation.title})")
+                },
+            ),
+        )
+
+        assertEquals("KMP (Kotlin Multiplatform)", text.text)
+        assertTrue(text.spanStyles.any { it.item.fontWeight == FontWeight.Bold })
+    }
+
+    @Test
+    fun inlineHtmlImageUsesAltTextAndImagePlaceholder() {
+        val source = "https://example.com/orca.png"
+        val htmlImage = OrcaInline.HtmlInline(
+            "<img src=\"$source\" alt=\"Orca &amp; Compose\">",
+        )
+
+        val text = buildInlineAnnotatedString(
+            inlines = listOf(htmlImage),
+            style = OrcaStyle(),
+            onLinkClick = {},
+        )
+        val images = collectInlineImages(listOf(htmlImage))
+
+        assertEquals("Orca & Compose", text.text)
+        assertEquals(1, images.size)
+        assertEquals(source, images.single().source)
+        assertEquals("Orca & Compose", images.single().alt)
     }
 }

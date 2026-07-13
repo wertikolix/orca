@@ -1,6 +1,6 @@
 package ru.wertik.orca.images.coil
 
-import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -17,10 +17,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -47,7 +45,7 @@ fun OrcaCoilImage(
             .clip(style.image.shape)
             .background(style.image.background)
             .semantics { this.contentDescription = contentDescription ?: "Image" },
-        loading = { OrcaCoilShimmerPlaceholder(style = style) },
+        loading = { OrcaCoilLoadingPlaceholder(style = style) },
         error = { OrcaCoilImageErrorPlaceholder(style = style) },
         success = { SubcomposeAsyncImageContent() },
     )
@@ -71,35 +69,27 @@ fun OrcaCoilInlineImage(
 }
 
 @Composable
-private fun OrcaCoilShimmerPlaceholder(
+private fun OrcaCoilLoadingPlaceholder(
     style: OrcaStyle,
     modifier: Modifier = Modifier,
 ) {
-    val transition = rememberInfiniteTransition(label = "orca-coil-shimmer")
-    val translate by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
+    val transition = rememberInfiniteTransition(label = "orca-coil-loading")
+    val alpha by transition.animateFloat(
+        initialValue = 0.55f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
+            animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
         ),
-        label = "orca-coil-shimmer-translate",
-    )
-    val brush = Brush.linearGradient(
-        colors = listOf(
-            style.image.background,
-            style.image.background.copy(alpha = 0.4f),
-            style.image.background,
-        ),
-        start = Offset(translate - 200f, translate - 200f),
-        end = Offset(translate, translate),
+        label = "orca-coil-loading-alpha",
     )
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(180.dp)
             .clip(style.image.shape)
-            .background(brush),
+            .alpha(alpha)
+            .background(style.image.background),
     )
 }
 
@@ -117,8 +107,8 @@ private fun OrcaCoilImageErrorPlaceholder(
         contentAlignment = Alignment.Center,
     ) {
         BasicText(
-            text = "\u26A0 Failed to load image",
-            style = style.typography.paragraph.copy(color = Color(0xFF9E9E9E)),
+            text = "Image unavailable",
+            style = style.image.captionText,
         )
     }
 }

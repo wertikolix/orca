@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Orca.Sample" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#121311</item>
+        <item name="android:windowBackground">#141512</item>
     </style>
 </resources>

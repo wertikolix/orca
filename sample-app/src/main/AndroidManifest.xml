@@ -5,7 +5,9 @@
     <application
         android:name=".OrcaSampleApplication"
         android:allowBackup="true"
+        android:icon="@drawable/ic_orca_launcher"
         android:label="@string/app_name"
+        android:roundIcon="@drawable/ic_orca_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.Orca.Sample">
         <activity

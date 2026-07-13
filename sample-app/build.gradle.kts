@@ -14,7 +14,7 @@ android {
         applicationId = "ru.wertik.orca.sample"
         minSdk = 24
         targetSdk = 36
-        versionCode = 10
+        versionCode = 20
         versionName = rootProject.version.toString()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -44,6 +44,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
     }
 
@@ -58,6 +59,7 @@ kotlin {
 dependencies {
     implementation(project(":orca-core"))
     implementation(project(":orca-compose"))
+    implementation(project(":orca-compose-material3"))
     implementation(project(":orca-images-coil"))
     implementation(project(":orca-math-orcex"))
 

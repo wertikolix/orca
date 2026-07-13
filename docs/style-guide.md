@@ -27,6 +27,8 @@ Default: `OrcaStyle()` (light theme). Dark theme: `OrcaDefaults.darkStyle()`.
 | `admonition` | `OrcaAdmonitionStyle` | Callout block colors and layout |
 | `inlineImage` | `OrcaInlineImageStyle` | Inline image sizing |
 | `definitionList` | `OrcaDefinitionListStyle` | Definition list appearance |
+| `details` | `OrcaDetailsStyle` | Collapsible details appearance |
+| `task` | `OrcaTaskStyle` | Task-list checkbox size, colors, and interaction target |
 
 ---
 
@@ -84,6 +86,13 @@ Span styles applied to inline markdown elements within text.
 | `stripeColor` | #B0BEC5 | Left border color |
 | `stripeWidth` | 3dp | Left border width |
 | `spacing` | 10dp | Space between stripe and content |
+| `background` | subtle blue-grey tint | Full quote background |
+| `borderColor` | `stripeColor` | Full outline color |
+| `borderWidth` | 1dp | Full outline width |
+| `shape` | RoundedCornerShape(8dp) | Container shape |
+| `contentPadding` | 14dp horizontal, 12dp vertical | Space inside the outlined quote |
+
+`stripeColor`, `stripeWidth`, and `spacing` remain source-compatible style fields. The 0.20 renderer uses the full outline fields instead of a decorative side stripe.
 
 ---
 
@@ -132,6 +141,12 @@ Span styles applied to inline markdown elements within text.
 | `alternateRowBackground` | transparent | Alternating body row background |
 | `containerShape` | RoundedCornerShape(8dp) | Outer table shape |
 | `outerBorderColor` | `borderColor` | Outer table border color |
+| `showScrollIndicator` | `true` | Show a position indicator only when the table overflows |
+| `scrollTrackColor` | subtle neutral | Overflow track color |
+| `scrollIndicatorColor` | blue-grey | Overflow thumb color |
+| `scrollIndicatorHeight` | 2dp | Track and thumb height |
+| `scrollIndicatorMinWidth` | 36dp | Minimum thumb width |
+| `scrollIndicatorSpacing` | 6dp | Gap above the overflow indicator |
 
 ### Layout modes
 
@@ -190,6 +205,11 @@ GitHub-style callout blocks (`> [!NOTE]`, `> [!WARNING]`, etc.).
 | `showIcons` | `true` | Render a glyph before the title |
 | `iconSpacing` | 6dp | Gap between icon and title |
 | `noteIcon` / `tipIcon` / `importantIcon` / `warningIcon` / `cautionIcon` | ℹ ✦ ◆ ▲ ■ | Per-type icon glyphs (tinted with the type color) |
+| `borderWidth` | 1dp | Full severity-colored outline width |
+| `shape` | RoundedCornerShape(8dp) | Callout container shape |
+| `contentPadding` | 12dp | Space inside the outlined callout |
+
+The 0.20 renderer uses a full outline and solid tint. `stripeWidth` and `spacing` remain for source compatibility but no longer draw a side stripe.
 
 ### Per-type colors (light theme)
 
@@ -214,11 +234,45 @@ GitHub-style callout blocks (`> [!NOTE]`, `> [!WARNING]`, etc.).
 
 ---
 
+## Details (`OrcaDetailsStyle`)
+
+| Property | Default | Description |
+|---|---|---|
+| `summaryStyle` | 16sp, Medium | Summary text style |
+| `borderColor` | #D0D7DE | Container outline color |
+| `borderWidth` | 1dp | Container outline width |
+| `shape` | RoundedCornerShape(8dp) | Container shape |
+| `background` | subtle neutral | Summary and body surface |
+| `contentPadding` | 12dp | Summary and body padding |
+
+Inline image, math, and custom inline renderer slots are available inside the summary as of 0.20.0.
+
+---
+
+## Task Checkbox (`OrcaTaskStyle`)
+
+| Property | Default | Description |
+|---|---|---|
+| `size` | 18dp | Visible checkbox size |
+| `touchTargetSize` | 40dp | Interactive target around the visible checkbox |
+| `shape` | RoundedCornerShape(4dp) | Checkbox shape |
+| `borderWidth` | 1dp | Checkbox outline width |
+| `checkedBackground` | #1565C0 | Checked fill |
+| `uncheckedBackground` | transparent | Unchecked fill |
+| `checkedBorderColor` | #1565C0 | Checked outline |
+| `uncheckedBorderColor` | #78909C | Unchecked outline |
+| `checkColor` | #F7F9FB | Check mark color |
+| `disabledAlpha` | 0.56 | Alpha for non-interactive tasks |
+
+Pass `taskCheckboxContent` to `Orca` when the host needs a completely custom checkbox composable.
+
+---
+
 ## Dark Theme
 
 For Material 3 apps, prefer the theme adapter so Orca follows dynamic light and dark color schemes automatically:
 
-Add `implementation("ru.wertik:orca-compose-material3:0.15.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
+Add `implementation("ru.wertik:orca-compose-material3:0.20.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
 
 ```kotlin
 Orca(
@@ -238,7 +292,7 @@ Orca(
 `OrcaDefaults.darkStyle()` adjusts colors for dark backgrounds:
 - Light text colors for headings and paragraphs
 - Darker code block and table backgrounds
-- Lighter admonition stripe colors
+- Theme-aware admonition outlines and solid surface tints
 - Adjusted link and inline code colors
 
 ## Code Actions

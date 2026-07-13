@@ -1,6 +1,7 @@
 package ru.wertik.orca.compose
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -46,6 +47,10 @@ class OrcaStyleTest {
         assertEquals(style.table.alternateRowBackground, style.tableAlternateRowBackground)
         assertEquals(style.table.containerShape, style.tableContainerShape)
         assertEquals(style.table.outerBorderColor, style.tableOuterBorderColor)
+        assertEquals(1.dp, style.quote.borderWidth)
+        assertEquals(1.dp, style.admonition.borderWidth)
+        assertEquals(40.dp, style.task.touchTargetSize)
+        assertEquals(true, style.table.showScrollIndicator)
     }
 }
 

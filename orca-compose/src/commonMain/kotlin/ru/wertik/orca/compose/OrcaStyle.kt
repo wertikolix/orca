@@ -124,6 +124,11 @@ data class OrcaQuoteStyle(
     val stripeColor: Color = Color(0xFFB0BEC5),
     val stripeWidth: Dp = 3.dp,
     val spacing: Dp = 10.dp,
+    val background: Color = Color(0x0AB0BEC5),
+    val borderColor: Color = stripeColor,
+    val borderWidth: Dp = 1.dp,
+    val shape: Shape = RoundedCornerShape(8.dp),
+    val contentPadding: PaddingValues = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
 )
 
 data class OrcaCodeLabelStyle(
@@ -211,6 +216,12 @@ data class OrcaTableStyle(
     val alternateRowBackground: Color = Color.Transparent,
     val containerShape: Shape = RoundedCornerShape(8.dp),
     val outerBorderColor: Color = borderColor,
+    val showScrollIndicator: Boolean = true,
+    val scrollTrackColor: Color = Color(0x12000000),
+    val scrollIndicatorColor: Color = Color(0xFF78909C),
+    val scrollIndicatorHeight: Dp = 2.dp,
+    val scrollIndicatorMinWidth: Dp = 36.dp,
+    val scrollIndicatorSpacing: Dp = 6.dp,
 )
 
 data class OrcaThematicBreakStyle(
@@ -256,6 +267,9 @@ data class OrcaAdmonitionStyle(
     val importantBackground: Color = Color(0x0D7B1FA2),
     val warningBackground: Color = Color(0x0DEF6C00),
     val cautionBackground: Color = Color(0x0DC62828),
+    val borderWidth: Dp = 1.dp,
+    val shape: Shape = RoundedCornerShape(8.dp),
+    val contentPadding: PaddingValues = PaddingValues(12.dp),
 )
 
 data class OrcaInlineImageStyle(
@@ -263,6 +277,20 @@ data class OrcaInlineImageStyle(
     val shape: Shape = RoundedCornerShape(2.dp),
     val widthSp: TextUnit = 18.sp,
     val heightSp: TextUnit = 18.sp,
+)
+
+/** Flat checkbox styling for task-list markers. */
+data class OrcaTaskStyle(
+    val size: Dp = 18.dp,
+    val touchTargetSize: Dp = 40.dp,
+    val shape: Shape = RoundedCornerShape(4.dp),
+    val borderWidth: Dp = 1.dp,
+    val checkedBackground: Color = Color(0xFF1565C0),
+    val uncheckedBackground: Color = Color.Transparent,
+    val checkedBorderColor: Color = Color(0xFF1565C0),
+    val uncheckedBorderColor: Color = Color(0xFF78909C),
+    val checkColor: Color = Color(0xFFF7F9FB),
+    val disabledAlpha: Float = 0.56f,
 )
 
 /**
@@ -301,6 +329,7 @@ data class OrcaStyle(
     val inlineImage: OrcaInlineImageStyle = OrcaInlineImageStyle(),
     val definitionList: OrcaDefinitionListStyle = OrcaDefinitionListStyle(),
     val details: OrcaDetailsStyle = OrcaDetailsStyle(),
+    val task: OrcaTaskStyle = OrcaTaskStyle(),
 ) {
     fun heading(level: Int): TextStyle = typography.heading(level)
 
@@ -422,6 +451,8 @@ object OrcaDefaults {
         ),
         quote = OrcaQuoteStyle(
             stripeColor = Color(0xFF546E7A),
+            background = Color(0x14546E7A),
+            borderColor = Color(0xFF546E7A),
         ),
         code = OrcaCodeBlockStyle(
             text = TextStyle(
@@ -471,6 +502,8 @@ object OrcaDefaults {
             rowBackground = Color(0xFF1E1E1E),
             alternateRowBackground = Color(0xFF232323),
             outerBorderColor = Color(0xFF424242),
+            scrollTrackColor = Color(0x1AFFFFFF),
+            scrollIndicatorColor = Color(0xFF78909C),
         ),
         thematicBreak = OrcaThematicBreakStyle(
             color = Color(0xFF424242),
@@ -498,6 +531,13 @@ object OrcaDefaults {
             summaryStyle = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE0E0E0)),
             borderColor = Color(0xFF333333),
             background = Color(0x0DFFFFFF),
+        ),
+        task = OrcaTaskStyle(
+            checkedBackground = Color(0xFF82B1FF),
+            uncheckedBackground = Color.Transparent,
+            checkedBorderColor = Color(0xFF82B1FF),
+            uncheckedBorderColor = Color(0xFF78909C),
+            checkColor = Color(0xFF172027),
         ),
     )
 }

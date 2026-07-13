@@ -1,5 +1,6 @@
 package ru.wertik.orca.compose
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import ru.wertik.orca.core.OrcaBlock
 import ru.wertik.orca.core.OrcaListItem
@@ -12,6 +13,13 @@ import ru.wertik.orca.core.OrcaListItem
  * @param checked the requested new state — `true` when the user checks the box.
  */
 typealias OrcaTaskToggle = (taskIndex: Int, checked: Boolean) -> Unit
+
+/** Optional composable used to replace Orca's default task-list checkbox. */
+typealias OrcaTaskCheckboxContent = @Composable (
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) -> Unit
 
 /**
  * Internal lookup that maps rendered task-list items to their document-order index.
@@ -77,3 +85,4 @@ internal fun buildTaskIndices(blocks: List<OrcaBlock>): Map<TaskItemKey, Int> {
 }
 
 internal val LocalOrcaTaskInteraction = staticCompositionLocalOf<OrcaTaskListInteraction?> { null }
+internal val LocalOrcaTaskCheckboxContent = staticCompositionLocalOf<OrcaTaskCheckboxContent?> { null }

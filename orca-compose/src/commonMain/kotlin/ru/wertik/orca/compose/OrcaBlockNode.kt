@@ -3,21 +3,22 @@ package ru.wertik.orca.compose
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -36,7 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -49,6 +53,7 @@ import ru.wertik.orca.core.OrcaAdmonitionType
 import ru.wertik.orca.core.OrcaBlock
 import ru.wertik.orca.core.OrcaInline
 import ru.wertik.orca.core.OrcaTaskState
+import kotlin.reflect.KClass
 
 private const val MAX_RENDER_DEPTH = 32
 
@@ -67,6 +72,7 @@ internal fun OrcaBlockNode(
     inlineImageContent: OrcaImageContent? = null,
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
     depth: Int = 0,
 ) {
     // Guard against excessively nested markdown (e.g. 50-level deep quotes).
@@ -83,6 +89,7 @@ internal fun OrcaBlockNode(
             sourceBlockKey = sourceBlockKey,
             inlineImageContent = inlineImageContent,
             inlineMathContent = inlineMathContent,
+            inlineOverride = inlineOverride,
         )
 
         is OrcaBlock.Paragraph -> ParagraphNode(
@@ -95,6 +102,7 @@ internal fun OrcaBlockNode(
             sourceBlockKey = sourceBlockKey,
             inlineImageContent = inlineImageContent,
             inlineMathContent = inlineMathContent,
+            inlineOverride = inlineOverride,
         )
 
         is OrcaBlock.ListBlock -> ListBlockNode(
@@ -111,6 +119,7 @@ internal fun OrcaBlockNode(
             inlineImageContent = inlineImageContent,
             blockMathContent = blockMathContent,
             inlineMathContent = inlineMathContent,
+            inlineOverride = inlineOverride,
             depth = depth,
         )
 
@@ -128,6 +137,7 @@ internal fun OrcaBlockNode(
             inlineImageContent = inlineImageContent,
             blockMathContent = blockMathContent,
             inlineMathContent = inlineMathContent,
+            inlineOverride = inlineOverride,
             depth = depth,
         )
 
@@ -152,6 +162,9 @@ internal fun OrcaBlockNode(
             footnoteNumbers = footnoteNumbers,
             onFootnoteReferenceClick = onFootnoteReferenceClick,
             sourceBlockKey = sourceBlockKey,
+            inlineImageContent = inlineImageContent,
+            inlineMathContent = inlineMathContent,
+            inlineOverride = inlineOverride,
         )
 
         is OrcaBlock.Footnotes -> FootnotesNode(
@@ -168,6 +181,7 @@ internal fun OrcaBlockNode(
             inlineImageContent = inlineImageContent,
             blockMathContent = blockMathContent,
             inlineMathContent = inlineMathContent,
+            inlineOverride = inlineOverride,
             depth = depth,
         )
 
@@ -176,6 +190,7 @@ internal fun OrcaBlockNode(
             style = style,
             onLinkClick = onLinkClick,
             securityPolicy = securityPolicy,
+            imageContent = imageContent,
         )
 
         is OrcaBlock.Admonition -> AdmonitionNode(
@@ -192,6 +207,7 @@ internal fun OrcaBlockNode(
             inlineImageContent = inlineImageContent,
             blockMathContent = blockMathContent,
             inlineMathContent = inlineMathContent,
+            inlineOverride = inlineOverride,
             depth = depth,
         )
 
@@ -209,6 +225,7 @@ internal fun OrcaBlockNode(
             inlineImageContent = inlineImageContent,
             blockMathContent = blockMathContent,
             inlineMathContent = inlineMathContent,
+            inlineOverride = inlineOverride,
             depth = depth,
         )
 
@@ -226,6 +243,7 @@ internal fun OrcaBlockNode(
             inlineImageContent = inlineImageContent,
             blockMathContent = blockMathContent,
             inlineMathContent = inlineMathContent,
+            inlineOverride = inlineOverride,
             depth = depth,
         )
     }
@@ -242,6 +260,7 @@ private fun HeadingNode(
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     inlineImageContent: OrcaImageContent?,
     inlineMathContent: OrcaMathContent?,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer>,
 ) {
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
@@ -253,6 +272,7 @@ private fun HeadingNode(
         securityPolicy,
         footnoteNumbers,
         sourceBlockKey,
+        inlineOverride,
     ) {
         buildInlineAnnotatedString(
             inlines = block.content,
@@ -261,6 +281,7 @@ private fun HeadingNode(
             securityPolicy = securityPolicy,
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
+            inlineOverride = inlineOverride,
         )
     }
     val inlineImages = remember(block.content, style, securityPolicy, inlineImageContent) {
@@ -293,6 +314,7 @@ private fun ParagraphNode(
     onFootnoteReferenceClick: (label: String, sourceBlockKey: String) -> Unit,
     inlineImageContent: OrcaImageContent?,
     inlineMathContent: OrcaMathContent?,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer>,
 ) {
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
@@ -304,6 +326,7 @@ private fun ParagraphNode(
         securityPolicy,
         footnoteNumbers,
         sourceBlockKey,
+        inlineOverride,
     ) {
         buildInlineAnnotatedString(
             inlines = block.content,
@@ -312,6 +335,7 @@ private fun ParagraphNode(
             securityPolicy = securityPolicy,
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
+            inlineOverride = inlineOverride,
         )
     }
     val inlineImages = remember(block.content, style, securityPolicy, inlineImageContent) {
@@ -347,42 +371,52 @@ private fun ListBlockNode(
     inlineImageContent: OrcaImageContent? = null,
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
     depth: Int = 0,
 ) {
     val taskInteraction = LocalOrcaTaskInteraction.current
+    val taskCheckboxContent = LocalOrcaTaskCheckboxContent.current
     Column(
         verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
     ) {
         block.items.forEachIndexed { index, item ->
-            Row {
-                val marker = listMarkerText(
-                    ordered = block.ordered,
-                    startNumber = block.startNumber,
-                    index = index,
-                    taskState = item.taskState,
-                )
-                val taskIndex = if (item.taskState != null) taskInteraction?.indexOf(item) else null
-                val markerModifier = if (taskIndex != null && taskInteraction != null) {
+            Row(verticalAlignment = Alignment.Top) {
+                if (item.taskState != null) {
                     val checked = item.taskState == OrcaTaskState.CHECKED
-                    Modifier
-                        .width(style.layout.listMarkerWidth)
-                        .toggleable(
-                            value = checked,
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            role = Role.Checkbox,
-                            onValueChange = { newValue ->
-                                taskInteraction.onTaskToggle(taskIndex, newValue)
-                            },
-                        )
+                    val taskHandler = taskInteraction?.let { interaction ->
+                        val taskIndex = interaction.indexOf(item)
+                        if (taskIndex == null) null else { newValue: Boolean ->
+                            interaction.onTaskToggle(taskIndex, newValue)
+                        }
+                    }
+                    val onCheckedChange: (Boolean) -> Unit = taskHandler ?: {}
+                    Box(
+                        modifier = Modifier.width(maxOf(style.layout.listMarkerWidth, style.task.touchTargetSize)),
+                        contentAlignment = Alignment.TopStart,
+                    ) {
+                        if (taskCheckboxContent != null) {
+                            taskCheckboxContent(checked, taskHandler != null, onCheckedChange)
+                        } else {
+                            DefaultTaskCheckbox(
+                                checked = checked,
+                                enabled = taskHandler != null,
+                                onCheckedChange = onCheckedChange,
+                                style = style,
+                            )
+                        }
+                    }
                 } else {
-                    Modifier.width(style.layout.listMarkerWidth)
+                    Text(
+                        text = listMarkerText(
+                            ordered = block.ordered,
+                            startNumber = block.startNumber,
+                            index = index,
+                            taskState = null,
+                        ),
+                        style = style.typography.paragraph,
+                        modifier = Modifier.width(style.layout.listMarkerWidth),
+                    )
                 }
-                Text(
-                    text = marker,
-                    style = style.typography.paragraph,
-                    modifier = markerModifier,
-                )
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
@@ -402,6 +436,7 @@ private fun ListBlockNode(
                             inlineImageContent = inlineImageContent,
                             blockMathContent = blockMathContent,
                             inlineMathContent = inlineMathContent,
+                            inlineOverride = inlineOverride,
                             depth = depth + 1,
                         )
                     }
@@ -426,41 +461,36 @@ private fun QuoteBlockNode(
     inlineImageContent: OrcaImageContent? = null,
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
     depth: Int = 0,
 ) {
-    Row(
-        modifier = Modifier.height(IntrinsicSize.Min),
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(style.quote.shape)
+            .background(style.quote.background, style.quote.shape)
+            .border(style.quote.borderWidth, style.quote.borderColor, style.quote.shape)
+            .padding(style.quote.contentPadding),
+        verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
     ) {
-        Box(
-            modifier = Modifier
-                .width(style.quote.stripeWidth)
-                .fillMaxHeight()
-                .background(style.quote.stripeColor),
-        )
-        Column(
-            modifier = Modifier
-                .padding(start = style.quote.spacing)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
-        ) {
-            block.blocks.forEach { nested ->
-                OrcaBlockNode(
-                    block = nested,
-                    style = style,
-                    onLinkClick = onLinkClick,
-                    securityPolicy = securityPolicy,
-                    footnoteNumbers = footnoteNumbers,
-                    sourceBlockKey = sourceBlockKey,
-                    activeFootnoteLabel = activeFootnoteLabel,
-                    onFootnoteReferenceClick = onFootnoteReferenceClick,
-                    onFootnoteBackClick = onFootnoteBackClick,
-                    imageContent = imageContent,
-                    inlineImageContent = inlineImageContent,
-                    blockMathContent = blockMathContent,
-                    inlineMathContent = inlineMathContent,
-                    depth = depth + 1,
-                )
-            }
+        block.blocks.forEach { nested ->
+            OrcaBlockNode(
+                block = nested,
+                style = style,
+                onLinkClick = onLinkClick,
+                securityPolicy = securityPolicy,
+                footnoteNumbers = footnoteNumbers,
+                sourceBlockKey = sourceBlockKey,
+                activeFootnoteLabel = activeFootnoteLabel,
+                onFootnoteReferenceClick = onFootnoteReferenceClick,
+                onFootnoteBackClick = onFootnoteBackClick,
+                imageContent = imageContent,
+                inlineImageContent = inlineImageContent,
+                blockMathContent = blockMathContent,
+                inlineMathContent = inlineMathContent,
+                inlineOverride = inlineOverride,
+                depth = depth + 1,
+            )
         }
     }
 }
@@ -480,6 +510,7 @@ private fun FootnotesNode(
     inlineImageContent: OrcaImageContent? = null,
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
     depth: Int = 0,
 ) {
     Column(
@@ -520,6 +551,7 @@ private fun FootnotesNode(
                             inlineImageContent = inlineImageContent,
                             blockMathContent = blockMathContent,
                             inlineMathContent = inlineMathContent,
+                            inlineOverride = inlineOverride,
                             depth = depth + 1,
                         )
                     }
@@ -530,7 +562,7 @@ private fun FootnotesNode(
                             style = style.inline.link.toTextStyle(style.typography.paragraph),
                             modifier = Modifier
                                 .padding(top = 2.dp)
-                                .clickable {
+                            .clickable(role = Role.Button) {
                                     onFootnoteBackClick(definition.label)
                                 },
                         )
@@ -547,8 +579,19 @@ private fun HtmlBlockNode(
     style: OrcaStyle,
     onLinkClick: (String) -> Unit,
     securityPolicy: OrcaSecurityPolicy,
+    imageContent: OrcaImageContent?,
 ) {
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
+    val image = remember(block.html) { parseHtmlBlockImage(block.html) }
+    if (image != null) {
+        MarkdownImageNode(
+            block = image,
+            style = style,
+            securityPolicy = securityPolicy,
+            imageContent = imageContent,
+        )
+        return
+    }
 
     val rendered = remember(block.html, style, securityPolicy) {
         renderHtmlToAnnotatedString(
@@ -687,7 +730,7 @@ private fun CopyButton(
                 color = style.code.copyButton.background,
                 shape = style.code.copyButton.shape,
             )
-            .clickable {
+            .clickable(role = Role.Button) {
                 @Suppress("DEPRECATION")
                 clipboardManager.setText(AnnotatedString(code))
                 copied = true
@@ -711,6 +754,7 @@ private fun AdmonitionNode(
     inlineImageContent: OrcaImageContent? = null,
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
     depth: Int = 0,
 ) {
     val admonitionStyle = style.admonition
@@ -739,80 +783,72 @@ private fun AdmonitionNode(
     val collapsible = admonitionStyle.collapsible
     var expanded by remember { mutableStateOf(!admonitionStyle.collapsedByDefault) }
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min),
+            .clip(admonitionStyle.shape)
+            .background(background, admonitionStyle.shape)
+            .border(admonitionStyle.borderWidth, color, admonitionStyle.shape)
+            .padding(admonitionStyle.contentPadding),
+        verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
     ) {
-        Box(
-            modifier = Modifier
-                .width(admonitionStyle.stripeWidth)
-                .fillMaxHeight()
-                .background(color),
-        )
-        Spacer(modifier = Modifier.width(admonitionStyle.spacing))
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(background)
-                .padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
+        Row(
+            modifier = if (collapsible) {
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(role = Role.Button) { expanded = !expanded }
+            } else {
+                Modifier.fillMaxWidth()
+            },
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = if (collapsible) {
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { expanded = !expanded }
-                } else {
-                    Modifier.fillMaxWidth()
-                },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (icon != null) {
-                    Text(
-                        text = icon,
-                        style = admonitionStyle.titleStyle.copy(color = color),
-                        modifier = Modifier.padding(end = admonitionStyle.iconSpacing),
-                    )
-                }
+            if (icon != null) {
                 Text(
-                    text = title,
+                    text = icon,
                     style = admonitionStyle.titleStyle.copy(color = color),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.padding(end = admonitionStyle.iconSpacing),
                 )
-                if (collapsible) {
-                    Text(
-                        text = if (expanded) "\u25B2" else "\u25BC",
-                        style = admonitionStyle.titleStyle.copy(color = color),
-                    )
-                }
             }
-            AnimatedVisibility(
-                visible = expanded || !collapsible,
-                enter = expandVertically(),
-                exit = shrinkVertically(),
+            Text(
+                text = title,
+                style = admonitionStyle.titleStyle.copy(color = color),
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { heading() },
+            )
+            if (collapsible) {
+                Text(
+                    text = if (expanded) "\u25B2" else "\u25BC",
+                    style = admonitionStyle.titleStyle.copy(color = color),
+                )
+            }
+        }
+        AnimatedVisibility(
+            visible = expanded || !collapsible,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
             ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(style.layout.nestedBlockSpacing),
-                ) {
-                    block.blocks.forEach { childBlock ->
-                        OrcaBlockNode(
-                            block = childBlock,
-                            style = style,
-                            onLinkClick = onLinkClick,
-                            securityPolicy = securityPolicy,
-                            footnoteNumbers = footnoteNumbers,
-                            sourceBlockKey = sourceBlockKey,
-                            activeFootnoteLabel = activeFootnoteLabel,
-                            onFootnoteReferenceClick = onFootnoteReferenceClick,
-                            onFootnoteBackClick = onFootnoteBackClick,
-                            imageContent = imageContent,
-                            inlineImageContent = inlineImageContent,
-                            blockMathContent = blockMathContent,
-                            inlineMathContent = inlineMathContent,
-                            depth = depth + 1,
-                        )
-                    }
+                block.blocks.forEach { childBlock ->
+                    OrcaBlockNode(
+                        block = childBlock,
+                        style = style,
+                        onLinkClick = onLinkClick,
+                        securityPolicy = securityPolicy,
+                        footnoteNumbers = footnoteNumbers,
+                        sourceBlockKey = sourceBlockKey,
+                        activeFootnoteLabel = activeFootnoteLabel,
+                        onFootnoteReferenceClick = onFootnoteReferenceClick,
+                        onFootnoteBackClick = onFootnoteBackClick,
+                        imageContent = imageContent,
+                        inlineImageContent = inlineImageContent,
+                        blockMathContent = blockMathContent,
+                        inlineMathContent = inlineMathContent,
+                        inlineOverride = inlineOverride,
+                        depth = depth + 1,
+                    )
                 }
             }
         }
@@ -834,6 +870,7 @@ private fun DefinitionListNode(
     inlineImageContent: OrcaImageContent? = null,
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
     depth: Int = 0,
 ) {
     val dlStyle = style.definitionList
@@ -845,7 +882,7 @@ private fun DefinitionListNode(
             val currentOnLinkClick by rememberUpdatedState(onLinkClick)
             val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
 
-            val termText = remember(item.term, style, securityPolicy, footnoteNumbers, sourceBlockKey) {
+            val termText = remember(item.term, style, securityPolicy, footnoteNumbers, sourceBlockKey, inlineOverride) {
                 buildInlineAnnotatedString(
                     inlines = item.term,
                     style = style,
@@ -853,6 +890,7 @@ private fun DefinitionListNode(
                     securityPolicy = securityPolicy,
                     footnoteNumbers = footnoteNumbers,
                     onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
+                    inlineOverride = inlineOverride,
                 )
             }
             val termInlineImages = remember(item.term, style, securityPolicy, inlineImageContent) {
@@ -891,6 +929,7 @@ private fun DefinitionListNode(
                             inlineImageContent = inlineImageContent,
                             blockMathContent = blockMathContent,
                             inlineMathContent = inlineMathContent,
+                            inlineOverride = inlineOverride,
                             depth = depth + 1,
                         )
                     }
@@ -915,16 +954,18 @@ private fun DetailsNode(
     inlineImageContent: OrcaImageContent? = null,
     blockMathContent: OrcaMathContent? = null,
     inlineMathContent: OrcaMathContent? = null,
+    inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
     depth: Int = 0,
 ) {
     val detailsStyle = style.details
     var expanded by remember { mutableStateOf(block.startOpen) }
+    val inlineMathPlaceholder = LocalOrcaInlineMathPlaceholder.current
 
     val summaryInlines = block.summary.ifEmpty { listOf(OrcaInline.Text("Details")) }
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
 
-    val summaryText = remember(summaryInlines, style, securityPolicy, footnoteNumbers, sourceBlockKey) {
+    val summaryText = remember(summaryInlines, style, securityPolicy, footnoteNumbers, sourceBlockKey, inlineOverride) {
         buildInlineAnnotatedString(
             inlines = summaryInlines,
             style = style,
@@ -932,7 +973,14 @@ private fun DetailsNode(
             securityPolicy = securityPolicy,
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
+            inlineOverride = inlineOverride,
         )
+    }
+    val summaryInlineImages = remember(summaryInlines, style, securityPolicy, inlineImageContent) {
+        buildInlineImageMap(summaryInlines, style, securityPolicy, inlineImageContent)
+    }
+    val summaryInlineMath = remember(summaryInlines, inlineMathContent, inlineMathPlaceholder) {
+        buildInlineMathMap(summaryInlines, inlineMathContent, inlineMathPlaceholder)
     }
 
     Column(
@@ -945,7 +993,7 @@ private fun DetailsNode(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded }
+                .clickable(role = Role.Button) { expanded = !expanded }
                 .padding(detailsStyle.contentPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -957,6 +1005,7 @@ private fun DetailsNode(
             InlineTextNode(
                 text = summaryText,
                 textStyle = detailsStyle.summaryStyle,
+                inlineContent = summaryInlineImages + summaryInlineMath,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -984,7 +1033,70 @@ private fun DetailsNode(
                         inlineImageContent = inlineImageContent,
                         blockMathContent = blockMathContent,
                         inlineMathContent = inlineMathContent,
+                        inlineOverride = inlineOverride,
                         depth = depth + 1,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DefaultTaskCheckbox(
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    style: OrcaStyle,
+) {
+    val task = style.task
+    Box(
+        modifier = Modifier
+            .size(task.touchTargetSize)
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Checkbox,
+                onValueChange = onCheckedChange,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(task.size)
+                .alpha(if (enabled) 1f else task.disabledAlpha)
+                .clip(task.shape)
+                .background(
+                    if (checked) task.checkedBackground else task.uncheckedBackground,
+                    task.shape,
+                )
+                .border(
+                    width = task.borderWidth,
+                    color = if (checked) task.checkedBorderColor else task.uncheckedBorderColor,
+                    shape = task.shape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (checked) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(4.dp),
+                ) {
+                    val strokeWidth = 1.8.dp.toPx()
+                    drawLine(
+                        color = task.checkColor,
+                        start = Offset(size.width * 0.08f, size.height * 0.52f),
+                        end = Offset(size.width * 0.38f, size.height * 0.82f),
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round,
+                    )
+                    drawLine(
+                        color = task.checkColor,
+                        start = Offset(size.width * 0.38f, size.height * 0.82f),
+                        end = Offset(size.width * 0.94f, size.height * 0.18f),
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round,
                     )
                 }
             }
