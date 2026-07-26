@@ -598,6 +598,10 @@ For release-like check:
 - Pre-releases use `-alpha`, `-beta`, `-rc`
 - Maven Central artifacts are immutable after publish
 
+Releases are cut either by pushing the tag, or from **Actions -> Release -> Run workflow** with
+`publish = true`. The manual path validates the version against `orcaVersion`, creates the tag on
+the built commit, and then publishes; without `publish` a manual run is a build-and-test dry run.
+
 ## Changelog
 
 ### 0.30.0
@@ -612,7 +616,7 @@ For release-like check:
 - **Plain text export** — `OrcaDocument.plainText()`, `OrcaBlock.plainText()`, and `List<OrcaInline>.plainText()` are public.
 - **Material 3 adapter refresh** — `rememberOrcaMaterialStyle()` maps the color scheme into an `OrcaPalette` via `OrcaDefaults.materialPalette()` and builds the style through `orcaFlatStyle`, with `density` and `headingRules` options.
 - **Render lab** — ten suites, a shared token system between app chrome and renderer, in-document search with match navigation, live document statistics, palette/density switches, a design-token suite, and snippet insertion in the playground.
-- **Release workflow** — longer Maven Central publish window: job and step timeouts raised, exponential retry on the staging publish trigger, and a single bounded sync-verification window.
+- **Release workflow** — longer Maven Central publish window: job and step timeouts raised, exponential retry on the staging publish trigger, and a single bounded sync-verification window. Releases can now also be started manually from the Actions tab (`publish = true`), which validates the version, creates the tag on the built commit, and publishes.
 
 ### 0.20.0
 

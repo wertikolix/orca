@@ -5,6 +5,15 @@ on:
     tags:
       - "0.*"
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to Maven Central and create the GitHub release"
+        type: boolean
+        default: false
+      version:
+        description: "Version to release. Must match orcaVersion (e.g. 0.30.0). Defaults to the project version."
+        type: string
+        required: false
 
 concurrency:
   group: release-${{ github.ref }}
@@ -51,31 +60,73 @@ jobs:
 
       - name: Resolve release version
         id: release-version
+        env:
+          DISPATCH_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish || false }}
+          DISPATCH_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
         run: |
           set -euo pipefail
+          semver='^0\.[0-9]+\.[0-9]+(-(alpha|beta|rc)([.-]?[0-9]+)?)?$'
           PROJECT_VERSION="$(./gradlew -q properties | awk '/^version: / {print $2; exit}')"
+          PUBLISH=false
+
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            # Tag push: the tag is the release and must match the project version.
             VERSION="${GITHUB_REF_NAME}"
-            if [[ ! "${VERSION}" =~ ^0\.[0-9]+\.[0-9]+(-(alpha|beta|rc)([.-]?[0-9]+)?)?$ ]]; then
-              echo "::error::Release tag '${VERSION}' is not a supported semantic version."
+            PUBLISH=true
+          elif [[ "${DISPATCH_PUBLISH}" == "true" ]]; then
+            # Manual release: an explicit opt-in from the Actions tab, for environments where
+            # pushing a tag is not possible. The workflow creates the tag itself below.
+            VERSION="${DISPATCH_VERSION:-${PROJECT_VERSION}}"
+            PUBLISH=true
+          else
+            # Dry run: build and test only, no publish and no release.
+            VERSION="${PROJECT_VERSION}"
+          fi
+
+          if [[ "${PUBLISH}" == "true" ]]; then
+            if [[ ! "${VERSION}" =~ ${semver} ]]; then
+              echo "::error::Release version '${VERSION}' is not a supported semantic version."
               exit 1
             fi
             if [[ "${VERSION}" != "${PROJECT_VERSION}" ]]; then
-              echo "::error::Release tag '${VERSION}' does not match project version '${PROJECT_VERSION}'."
+              echo "::error::Release version '${VERSION}' does not match project version '${PROJECT_VERSION}'."
               exit 1
             fi
-          else
-            VERSION="${PROJECT_VERSION}"
           fi
+
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Resolved release version: ${VERSION}"
+          echo "publish=${PUBLISH}" >> "$GITHUB_OUTPUT"
+          echo "Resolved release version: ${VERSION} (publish=${PUBLISH})"
 
       - name: Build tests and release artifacts
         timeout-minutes: 60
         run: ./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-compose:assembleRelease :orca-compose:compileKotlinDesktop :orca-compose:compileKotlinIosSimulatorArm64 :orca-compose-material3:testDebugUnitTest :orca-compose-material3:assembleRelease :orca-compose-material3:compileKotlinDesktop :orca-compose-material3:compileKotlinIosSimulatorArm64 :orca-images-coil:assembleRelease :orca-images-coil:compileKotlinDesktop :orca-images-coil:compileKotlinIosSimulatorArm64 :orca-math-orcex:assembleRelease :orca-math-orcex:compileKotlinDesktop :orca-math-orcex:compileKotlinIosSimulatorArm64 :orca-core:jvmJar :sample-app:assembleRelease :sample-app:bundleRelease -PorcaVersion=${{ steps.release-version.outputs.version }}
 
+      - name: Create release tag
+        if: steps.release-version.outputs.publish == 'true' && github.ref_type != 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          existing="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${VERSION}" --jq '.object.sha' 2>/dev/null || true)"
+          if [[ -n "${existing}" ]]; then
+            # Re-running a manual release is fine, releasing a different commit under the same
+            # version is not: Maven Central artifacts are immutable.
+            if [[ "${existing}" != "${GITHUB_SHA}" ]]; then
+              echo "::error::Tag ${VERSION} already points at ${existing}, not at ${GITHUB_SHA}."
+              exit 1
+            fi
+            echo "Tag ${VERSION} already points at ${GITHUB_SHA}."
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f "ref=refs/tags/${VERSION}" \
+              -f "sha=${GITHUB_SHA}" >/dev/null
+            echo "Created tag ${VERSION} at ${GITHUB_SHA}."
+          fi
+
       - name: Validate Maven Central release secrets
-        if: startsWith(github.ref, 'refs/tags/')
+        if: steps.release-version.outputs.publish == 'true'
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
@@ -92,7 +143,7 @@ jobs:
           exit "${missing}"
 
       - name: Prepare signing key for Gradle
-        if: startsWith(github.ref, 'refs/tags/')
+        if: steps.release-version.outputs.publish == 'true'
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -121,7 +172,7 @@ jobs:
           fi
 
       - name: Publish to Maven Central
-        if: startsWith(github.ref, 'refs/tags/')
+        if: steps.release-version.outputs.publish == 'true'
         timeout-minutes: 75
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
@@ -176,7 +227,7 @@ jobs:
       - name: Upload release artifacts to workflow
         uses: actions/upload-artifact@v4
         with:
-          name: release-artifacts-${{ github.ref_name }}
+          name: release-artifacts-${{ steps.release-version.outputs.version }}
           path: |
             orca-compose/build/outputs/aar/orca-compose-release.aar
             orca-compose-material3/build/outputs/aar/orca-compose-material3-release.aar
@@ -190,12 +241,12 @@ jobs:
           retention-days: 14
 
       - name: Create or update GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: steps.release-version.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${{ steps.release-version.outputs.version }}"
           NOTES_FILE="docs/releases/${TAG}.md"
 
           prerelease_flag=""
@@ -212,12 +263,12 @@ jobs:
           fi
 
       - name: Upload APK/AAB to GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: steps.release-version.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${{ steps.release-version.outputs.version }}"
           assets=()
 
           if [[ -f orca-compose/build/outputs/aar/orca-compose-release.aar ]]; then
@@ -264,7 +315,7 @@ jobs:
           gh release upload "$TAG" "${assets[@]}" --clobber
 
       - name: Verify Maven Central publication (non-blocking)
-        if: startsWith(github.ref, 'refs/tags/')
+        if: steps.release-version.outputs.publish == 'true'
         continue-on-error: true
         timeout-minutes: 35
         env:
