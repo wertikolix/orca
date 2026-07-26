@@ -10,7 +10,9 @@ Orca(
 )
 ```
 
-Default: `OrcaStyle()` (light theme). Dark theme: `OrcaDefaults.darkStyle()`.
+Default: `OrcaDefaults.lightStyle()` (flat light). Dark theme: `OrcaDefaults.darkStyle()`.
+
+Since 0.30 every built-in style is generated from flat tokens — see [Flat design system](#flat-design-system).
 
 ## OrcaStyle fields
 
@@ -245,7 +247,7 @@ The 0.20 renderer uses a full outline and solid tint. `stripeWidth` and `spacing
 | `background` | subtle neutral | Summary and body surface |
 | `contentPadding` | 12dp | Summary and body padding |
 
-Inline image, math, and custom inline renderer slots are available inside the summary as of 0.20.0.
+Inline image, math, and custom inline renderer slots are available inside the summary as of 0.20.0. Search highlighting reaches summaries as of 0.30.0.
 
 ---
 
@@ -272,7 +274,7 @@ Pass `taskCheckboxContent` to `Orca` when the host needs a completely custom che
 
 For Material 3 apps, prefer the theme adapter so Orca follows dynamic light and dark color schemes automatically:
 
-Add `implementation("ru.wertik:orca-compose-material3:0.20.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
+Add `implementation("ru.wertik:orca-compose-material3:0.30.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
 
 ```kotlin
 Orca(
@@ -310,7 +312,87 @@ OrcaCodeBlockStyle(
 
 `OrcaTableStyle` exposes `rowBackground`, `alternateRowBackground`, `containerShape`, and `outerBorderColor` in addition to header and cell-border tokens.
 
-`OrcaDefaults.lightStyle()` returns the default `OrcaStyle()`.
+`OrcaDefaults.lightStyle()` returns `orcaFlatStyle(OrcaPalettes.FlatLight)`. The raw `OrcaStyle()`
+constructor still exposes the pre-0.30 per-field defaults, also available as
+`OrcaDefaults.legacyLightStyle()`.
+
+## Flat design system
+
+`orcaFlatStyle` turns an `OrcaPalette` into a complete `OrcaStyle`. There is no elevation,
+gradient, or shadow token in the system: containers are a solid fill plus a one-pixel outline.
+
+```kotlin
+val style = orcaFlatStyle(
+    palette = OrcaPalettes.FlatDark,
+    density = OrcaDensity.COMFORTABLE,
+    cornerRadius = 10.dp,
+    headingRuleLevels = setOf(1, 2),
+    showLineNumbers = true,
+    zebraTables = true,
+)
+```
+
+Presets: `OrcaPalettes.FlatLight`, `FlatDark`, `ContrastLight`, `ContrastDark`. Brand a preset with
+`copy()`:
+
+```kotlin
+val palette = OrcaPalettes.FlatLight.copy(
+    accent = Color(0xFF1F5FA8),
+    signal = OrcaPalettes.FlatLight.signal.copy(caution = Color(0xFFB3261E)),
+)
+```
+
+### Palette tokens
+
+| Token | Applied to |
+|:--|:--|
+| `background` | page background, table rows |
+| `surface` | quotes, details, zebra rows |
+| `surfaceMuted` | table headers, image placeholders |
+| `surfaceStrong` | inline code, keyboard hints, abbreviations |
+| `outline` | strong outlines, unchecked task boxes |
+| `outlineMuted` | container outlines, thematic breaks, heading rules |
+| `text` / `textMuted` | primary and secondary text |
+| `accent` / `onAccent` | links, footnote markers, checkboxes, scroll indicator |
+| `highlight` | `==marked==` text |
+| `searchMatch` | `OrcaTextHighlight` matches |
+| `syntax.*` | code surface, code text, line numbers, token colors |
+| `signal.*` | one color per admonition type plus the shared surface alpha |
+
+### Density
+
+`OrcaDensity` scales spacing and padding only; text metrics stay identical.
+
+| Mode | Scale | Use |
+|:--|:--|:--|
+| `COMPACT` | 0.78x | chat transcripts, side panels |
+| `COMFORTABLE` | 1.0x | documentation, default |
+| `SPACIOUS` | 1.25x | large screens, presentations |
+
+### Heading rules
+
+```kotlin
+OrcaHeadingRuleStyle(
+    levels = setOf(1, 2),
+    color = palette.outlineMuted,
+    thickness = 1.dp,
+    spacing = 8.dp,
+)
+```
+
+Pass `headingRuleLevels = emptySet()` to `orcaFlatStyle` to disable the rules.
+
+### Search highlighting
+
+`OrcaInlineStyle.searchMatch` styles the spans produced by `OrcaTextHighlight`:
+
+```kotlin
+Orca(
+    document = document,
+    style = style,
+    highlight = OrcaTextHighlight(query, wholeWord = true),
+)
+```
 
 ---
 

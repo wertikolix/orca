@@ -26,6 +26,7 @@ internal fun buildInlineAnnotatedString(
     footnoteNumbers: Map<String, Int> = emptyMap(),
     onFootnoteClick: ((String) -> Unit)? = null,
     inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
+    highlight: OrcaTextHighlight? = null,
 ): AnnotatedString {
     return buildAnnotatedString {
         appendInlines(
@@ -37,7 +38,7 @@ internal fun buildInlineAnnotatedString(
             onFootnoteClick = onFootnoteClick,
             inlineOverride = inlineOverride,
         )
-    }
+    }.withSearchHighlight(highlight, style.inline.searchMatch)
 }
 
 private fun AnnotatedString.Builder.appendInlines(

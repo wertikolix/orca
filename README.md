@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.20.0`
+- Current stable minor: `0.30.0`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -39,7 +39,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
   - Lightweight base renderer with no mandatory image/network runtime
 - `orca-compose-material3`
   - Optional Material 3 theme adapter for `orca-compose`
-  - Provides `rememberOrcaMaterialStyle()` without adding Material 3 to the base renderer
+  - Provides `rememberOrcaMaterialStyle(density = …)` without adding Material 3 to the base renderer
 - `orca-images-coil`
   - Optional Coil 3 + Ktor image renderer for trusted Markdown content
   - Provides block and inline image content slots without making chat-only apps pay for them
@@ -53,11 +53,11 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.20.0")
-implementation("ru.wertik:orca-compose:0.20.0")
-implementation("ru.wertik:orca-compose-material3:0.20.0") // optional Material 3 theme adapter
-implementation("ru.wertik:orca-images-coil:0.20.0") // optional images
-implementation("ru.wertik:orca-math-orcex:0.20.0") // optional multiplatform math renderer
+implementation("ru.wertik:orca-core:0.30.0")
+implementation("ru.wertik:orca-compose:0.30.0")
+implementation("ru.wertik:orca-compose-material3:0.30.0") // optional Material 3 theme adapter
+implementation("ru.wertik:orca-images-coil:0.30.0") // optional images
+implementation("ru.wertik:orca-math-orcex:0.30.0") // optional multiplatform math renderer
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -192,7 +192,18 @@ data class OrcaParseResult(
 )
 ```
 
-## Supported Syntax (`0.20.0`)
+Document utilities (`orca-core`):
+
+```kotlin
+val document = parser.parse(markdown)
+
+document.tableOfContents(maxLevel = 2)   // headings with anchors
+document.stats()                         // words, reading time, block and task counts
+document.findMatches("streaming")        // hits with top-level block indices
+document.plainText()                     // markup-free projection
+```
+
+## Supported Syntax (`0.30.0`)
 
 ### Blocks
 
@@ -343,21 +354,77 @@ Use `OrcaStyle` as a single configuration object:
 - `definitionList`
 - `details`
 - `task`
+- `headingRule`
+
+### Flat design system
+
+Since `0.30`, every built-in style is generated from flat color tokens. There is no elevation,
+gradient, or shadow anywhere in the render tree: structure comes from solid fills, one-pixel
+outlines, and typography.
+
+```kotlin
+import ru.wertik.orca.compose.OrcaDensity
+import ru.wertik.orca.compose.OrcaPalettes
+import ru.wertik.orca.compose.orcaFlatStyle
+
+val style = orcaFlatStyle(
+    palette = OrcaPalettes.FlatDark,      // FlatLight, FlatDark, ContrastLight, ContrastDark
+    density = OrcaDensity.COMPACT,        // COMPACT, COMFORTABLE, SPACIOUS
+    headingRuleLevels = setOf(1, 2),      // one-pixel rules under H1/H2
+)
+```
+
+`OrcaPalette` is the token surface: `background`, `surface`, `surfaceMuted`, `surfaceStrong`,
+`outline`, `outlineMuted`, `text`, `textMuted`, `accent`, `onAccent`, `accentSurface`,
+`highlight`, `searchMatch`, plus a `syntax` palette for code and a `signal` palette with one color
+per admonition type. Copy a preset to brand it:
+
+```kotlin
+val brand = OrcaPalettes.FlatLight.copy(accent = Color(0xFF1F5FA8))
+```
+
+Density scales spacing and padding only; text metrics stay identical across the three modes.
 
 ### Adaptive theme
 
 ```kotlin
-// Automatically picks light or dark style based on system theme
-val style = OrcaDefaults.adaptiveStyle() // @Composable
+// Automatically picks the flat light or flat dark style based on the system theme
+val style = OrcaDefaults.adaptiveStyle()                       // @Composable
+val dense = OrcaDefaults.adaptiveStyle(OrcaDensity.COMPACT)    // @Composable
+val a11y = OrcaDefaults.adaptiveContrastStyle()                // @Composable
 ```
+
+`OrcaDefaults.legacyLightStyle()` and `OrcaDefaults.legacyDarkStyle()` keep the pre-0.30 visuals
+for applications that pinned screenshots to them.
 
 For Material 3 apps, derive colors, typography, and shapes directly from the active theme:
 
 ```kotlin
 import ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle
 
-val style = rememberOrcaMaterialStyle()
+val style = rememberOrcaMaterialStyle(density = OrcaDensity.COMFORTABLE)
 ```
+
+### Search highlighting
+
+```kotlin
+import ru.wertik.orca.compose.OrcaTextHighlight
+import ru.wertik.orca.core.findMatches
+
+val matches = document.findMatches(query)
+
+Orca(
+    document = document,
+    listState = listState,
+    highlight = OrcaTextHighlight(query),
+)
+
+// matches[i].blockIndex maps directly to listState.animateScrollToItem(...)
+```
+
+Matches are shaded with `OrcaInlineStyle.searchMatch` across headings, paragraphs, list items,
+table cells, definition terms, details summaries, and footnote bodies. Code blocks keep their
+syntax colors.
 
 ### External scrollbar
 
@@ -532,6 +599,20 @@ For release-like check:
 - Maven Central artifacts are immutable after publish
 
 ## Changelog
+
+### 0.30.0
+
+- **Flat design system** — `OrcaPalette`, `OrcaPalettes` (flat light/dark plus high-contrast light/dark), `OrcaSyntaxPalette`, `OrcaSignalPalette`, and `orcaFlatStyle()` build a complete `OrcaStyle` from tokens. No gradients, shadows, or elevation overlays exist in the render tree.
+- **Density scale** — `OrcaDensity.COMPACT | COMFORTABLE | SPACIOUS` scales spacing and padding without touching text metrics. Accepted by `orcaFlatStyle`, `OrcaDefaults.*Style()`, and `rememberOrcaMaterialStyle()`.
+- **New defaults** — `OrcaDefaults.lightStyle()` / `darkStyle()` now return the flat styles, and `adaptiveContrastStyle()` is available for accessibility surfaces. `legacyLightStyle()` / `legacyDarkStyle()` preserve the pre-0.30 look.
+- **Heading rules** — `OrcaHeadingRuleStyle` draws a one-pixel rule under selected heading levels (H1/H2 by default in flat styles).
+- **Document search** — `OrcaDocument.findMatches()` / `countMatches()` with case, whole-word, limit, and snippet options; each match carries its top-level block index and nearest heading anchor.
+- **Search highlighting** — `OrcaTextHighlight` on every `Orca` overload shades matches with `OrcaInlineStyle.searchMatch` across all inline surfaces.
+- **Document statistics** — `OrcaDocument.stats()` returns words, characters, reading time, per-block-type counts, and task progress in one pass.
+- **Plain text export** — `OrcaDocument.plainText()`, `OrcaBlock.plainText()`, and `List<OrcaInline>.plainText()` are public.
+- **Material 3 adapter refresh** — `rememberOrcaMaterialStyle()` maps the color scheme into an `OrcaPalette` via `OrcaDefaults.materialPalette()` and builds the style through `orcaFlatStyle`, with `density` and `headingRules` options.
+- **Render lab** — ten suites, a shared token system between app chrome and renderer, in-document search with match navigation, live document statistics, palette/density switches, a design-token suite, and snippet insertion in the playground.
+- **Release workflow** — longer Maven Central publish window: job and step timeouts raised, exponential retry on the staging publish trigger, and a single bounded sync-verification window.
 
 ### 0.20.0
 

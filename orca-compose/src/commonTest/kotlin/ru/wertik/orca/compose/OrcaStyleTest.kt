@@ -57,8 +57,12 @@ class OrcaStyleTest {
 class OrcaDefaultsTest {
 
     @Test
-    fun lightStyleIsDefaultOrcaStyle() {
-        assertEquals(OrcaStyle(), OrcaDefaults.lightStyle())
+    fun lightStyleIsBuiltFromTheFlatLightPalette() {
+        val light = OrcaDefaults.lightStyle()
+
+        assertEquals(orcaFlatStyle(OrcaPalettes.FlatLight), light)
+        assertEquals(OrcaPalettes.FlatLight.accent, light.inline.link.color)
+        assertEquals(OrcaPalettes.FlatLight.text, light.typography.paragraph.color)
     }
 
     @Test

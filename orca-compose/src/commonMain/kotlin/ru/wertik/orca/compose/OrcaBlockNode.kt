@@ -265,6 +265,7 @@ private fun HeadingNode(
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
     val inlineMathPlaceholder = LocalOrcaInlineMathPlaceholder.current
+    val highlight = LocalOrcaTextHighlight.current
 
     val headingText = remember(
         block.content,
@@ -273,6 +274,7 @@ private fun HeadingNode(
         footnoteNumbers,
         sourceBlockKey,
         inlineOverride,
+        highlight,
     ) {
         buildInlineAnnotatedString(
             inlines = block.content,
@@ -282,6 +284,7 @@ private fun HeadingNode(
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
             inlineOverride = inlineOverride,
+            highlight = highlight,
         )
     }
     val inlineImages = remember(block.content, style, securityPolicy, inlineImageContent) {
@@ -295,12 +298,24 @@ private fun HeadingNode(
     val inlineMath = remember(block.content, inlineMathContent, inlineMathPlaceholder) {
         buildInlineMathMap(block.content, inlineMathContent, inlineMathPlaceholder)
     }
-    InlineTextNode(
-        text = headingText,
-        textStyle = style.heading(block.level),
-        inlineContent = inlineImages + inlineMath,
-        modifier = Modifier.semantics { heading() },
-    )
+    val rule = style.headingRule
+    Column(modifier = Modifier.fillMaxWidth()) {
+        InlineTextNode(
+            text = headingText,
+            textStyle = style.heading(block.level),
+            inlineContent = inlineImages + inlineMath,
+            modifier = Modifier.semantics { heading() },
+        )
+        if (rule.hasRule(block.level)) {
+            Spacer(modifier = Modifier.height(rule.spacing))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(rule.thickness)
+                    .background(rule.color),
+            )
+        }
+    }
 }
 
 @Composable
@@ -319,6 +334,7 @@ private fun ParagraphNode(
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
     val inlineMathPlaceholder = LocalOrcaInlineMathPlaceholder.current
+    val highlight = LocalOrcaTextHighlight.current
 
     val paragraphText = remember(
         block.content,
@@ -327,6 +343,7 @@ private fun ParagraphNode(
         footnoteNumbers,
         sourceBlockKey,
         inlineOverride,
+        highlight,
     ) {
         buildInlineAnnotatedString(
             inlines = block.content,
@@ -336,6 +353,7 @@ private fun ParagraphNode(
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
             inlineOverride = inlineOverride,
+            highlight = highlight,
         )
     }
     val inlineImages = remember(block.content, style, securityPolicy, inlineImageContent) {
@@ -875,6 +893,7 @@ private fun DefinitionListNode(
 ) {
     val dlStyle = style.definitionList
     val inlineMathPlaceholder = LocalOrcaInlineMathPlaceholder.current
+    val highlight = LocalOrcaTextHighlight.current
     Column(
         verticalArrangement = Arrangement.spacedBy(dlStyle.termSpacing),
     ) {
@@ -882,7 +901,7 @@ private fun DefinitionListNode(
             val currentOnLinkClick by rememberUpdatedState(onLinkClick)
             val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
 
-            val termText = remember(item.term, style, securityPolicy, footnoteNumbers, sourceBlockKey, inlineOverride) {
+            val termText = remember(item.term, style, securityPolicy, footnoteNumbers, sourceBlockKey, inlineOverride, highlight) {
                 buildInlineAnnotatedString(
                     inlines = item.term,
                     style = style,
@@ -891,6 +910,7 @@ private fun DefinitionListNode(
                     footnoteNumbers = footnoteNumbers,
                     onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
                     inlineOverride = inlineOverride,
+                    highlight = highlight,
                 )
             }
             val termInlineImages = remember(item.term, style, securityPolicy, inlineImageContent) {
@@ -960,12 +980,13 @@ private fun DetailsNode(
     val detailsStyle = style.details
     var expanded by remember { mutableStateOf(block.startOpen) }
     val inlineMathPlaceholder = LocalOrcaInlineMathPlaceholder.current
+    val highlight = LocalOrcaTextHighlight.current
 
     val summaryInlines = block.summary.ifEmpty { listOf(OrcaInline.Text("Details")) }
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
 
-    val summaryText = remember(summaryInlines, style, securityPolicy, footnoteNumbers, sourceBlockKey, inlineOverride) {
+    val summaryText = remember(summaryInlines, style, securityPolicy, footnoteNumbers, sourceBlockKey, inlineOverride, highlight) {
         buildInlineAnnotatedString(
             inlines = summaryInlines,
             style = style,
@@ -974,6 +995,7 @@ private fun DetailsNode(
             footnoteNumbers = footnoteNumbers,
             onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
             inlineOverride = inlineOverride,
+            highlight = highlight,
         )
     }
     val summaryInlineImages = remember(summaryInlines, style, securityPolicy, inlineImageContent) {

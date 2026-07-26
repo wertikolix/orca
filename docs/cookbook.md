@@ -87,7 +87,7 @@ Orca(document = document, style = fullStyle)
 
 Reuse the root `LazyListState` when the host app renders a fast scrollbar or external scroll controls. In Material 3 apps, `rememberOrcaMaterialStyle()` automatically follows the active `MaterialTheme` color scheme, typography, and shapes.
 
-Add `implementation("ru.wertik:orca-compose-material3:0.20.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
+Add `implementation("ru.wertik:orca-compose-material3:0.30.0")` and import `ru.wertik.orca.compose.material3.rememberOrcaMaterialStyle`.
 
 ```kotlin
 val listState = rememberLazyListState()
@@ -463,4 +463,70 @@ document.blocks
         val termText = item.term.filterIsInstance<OrcaInline.Text>().joinToString("") { it.text }
         println("Term: $termText, definitions: ${item.definitions.size}")
     }
+```
+
+## In-document search with highlighting
+
+```kotlin
+val document = remember(markdown) { parser.parse(markdown) }
+val matches = remember(document, query) {
+    if (query.isBlank()) emptyList() else document.findMatches(query)
+}
+var cursor by remember(query) { mutableIntStateOf(0) }
+val listState = rememberLazyListState()
+val scope = rememberCoroutineScope()
+
+fun jump(index: Int) {
+    if (matches.isEmpty()) return
+    cursor = ((index % matches.size) + matches.size) % matches.size
+    scope.launch { listState.animateScrollToItem(matches[cursor].blockIndex) }
+}
+
+Orca(
+    document = document,
+    listState = listState,
+    highlight = query.takeIf { it.isNotBlank() }?.let(::OrcaTextHighlight),
+)
+```
+
+`OrcaSearchOptions` controls case sensitivity, whole-word matching, the result limit, and the
+snippet radius. Every match also carries `headingId` / `headingTitle` for the nearest heading above
+it, which is enough to render grouped results.
+
+## Reading time and document statistics
+
+```kotlin
+val stats = remember(document) { document.stats() }
+
+Text("${stats.words} words · ${stats.readingMinutes} min read")
+Text("Tasks: ${stats.completedTasks}/${stats.tasks}")
+```
+
+Counters include nested content, so a table inside a quote inside a list item is still counted once.
+
+## Sharing a document as plain text
+
+```kotlin
+val plain = document.plainText()          // whole document
+val firstBlock = document.blocks.first().plainText()
+```
+
+## Switching palette and density at runtime
+
+```kotlin
+var density by remember { mutableStateOf(OrcaDensity.COMFORTABLE) }
+var highContrast by remember { mutableStateOf(false) }
+
+val palette = when {
+    highContrast && isSystemInDarkTheme() -> OrcaPalettes.ContrastDark
+    highContrast -> OrcaPalettes.ContrastLight
+    isSystemInDarkTheme() -> OrcaPalettes.FlatDark
+    else -> OrcaPalettes.FlatLight
+}
+
+Orca(
+    markdown = markdown,
+    parser = parser,
+    style = remember(palette, density) { orcaFlatStyle(palette, density) },
+)
 ```

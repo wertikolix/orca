@@ -2,6 +2,7 @@ package ru.wertik.orca.sample
 
 internal fun sampleMarkdown(screen: SampleScreen): String = when (screen) {
     SampleScreen.OVERVIEW -> OVERVIEW_MARKDOWN
+    SampleScreen.DESIGN -> DESIGN_MARKDOWN
     SampleScreen.BLOCKS -> BLOCKS_MARKDOWN
     SampleScreen.TABLES -> TABLES_MARKDOWN
     SampleScreen.MEDIA -> MEDIA_MARKDOWN
@@ -26,9 +27,18 @@ internal fun toggleMarkdownTask(markdown: String, taskIndex: Int, checked: Boole
 }
 
 private val OVERVIEW_MARKDOWN = """
-    # Orca 0.20
+    # Orca 0.30
 
     A Compose Multiplatform Markdown renderer built for documents, chat responses, and live previews. The core stays small while image, Material, and native math integrations remain opt-in.
+
+    ## What is new in 0.30
+
+    - **Flat design system:** `orcaFlatStyle` builds a full style from an `OrcaPalette`, with four presets and a three-step density scale.
+    - **Document search:** `findMatches()` reports every hit with its top-level block index; `OrcaTextHighlight` shades them in place.
+    - **Document stats:** `stats()` returns words, reading time, block counts, and task progress in a single pass.
+    - **Plain text export:** `plainText()` flattens any document or block for search, sharing, and analytics.
+
+    Use the search field above to try highlighting, or open the Design suite to inspect the tokens this page is rendered with.
 
     ## Rendering contract
 
@@ -46,8 +56,9 @@ private val OVERVIEW_MARKDOWN = """
     Orca(
         markdown = source,
         parser = parser,
-        style = rememberOrcaMaterialStyle(),
+        style = OrcaDefaults.adaptiveStyle(density = OrcaDensity.COMFORTABLE),
         securityPolicy = OrcaSecurityPolicies.Default,
+        highlight = query?.let(::OrcaTextHighlight),
     )
     ```
 
@@ -56,6 +67,7 @@ private val OVERVIEW_MARKDOWN = """
     - [x] Pick a stable parser instance
     - [x] Match the renderer to the app theme
     - [x] Keep remote media opt-in
+    - [x] Choose a palette and a density
     - [ ] Tap this task to test source rewriting
 
     ## Navigation
@@ -69,7 +81,7 @@ private val BLOCKS_MARKDOWN = """
     ## Admonitions
 
     > [!NOTE]
-    > Callouts now use a full one-pixel outline, a quiet surface tint, and a semantic title. There is no elevation or decorative side stripe.
+    > Callouts use a full one-pixel outline, a solid surface tint, and a semantic title. There is no elevation, gradient, or decorative side stripe anywhere in the render tree.
 
     > [!TIP]
     > Keep one `OrcaMarkdownParser` per document surface or share it across message rows to reuse the parser cache.
@@ -103,7 +115,8 @@ private val BLOCKS_MARKDOWN = """
       "surface": "flat",
       "gradients": false,
       "shadows": false,
-      "selection": true
+      "outlines": "1dp",
+      "density": "compact | comfortable | spacious"
     }
     ```
 
@@ -251,7 +264,7 @@ private val ADVANCED_MARKDOWN = """
 private val RENDERERS_MARKDOWN = """
     # Renderer extensions
 
-    Version 0.20 adds an exact-class `inlineOverride` API beside the existing composable `blockOverride` map. Overrides receive the source AST node and return annotated text; every nested renderer uses the same map.
+    Orca exposes an exact-class `inlineOverride` API beside the composable `blockOverride` map. Overrides receive the source AST node and return annotated text; every nested renderer uses the same map.
 
     *[AST]: Abstract Syntax Tree
     *[KMP]: Kotlin Multiplatform
@@ -320,18 +333,19 @@ internal val STREAMING_DEMO_MARKDOWN = """
 """.trimIndent()
 
 internal val PLAYGROUND_DEFAULT_MARKDOWN = """
-    # Orca 0.20 playground
+    # Orca 0.30 playground
 
     Edit the source and inspect a live preview. Wide screens keep both panes visible; compact screens preserve space with a focused Source/Preview switch.
 
     ## Try the renderer
 
     - [x] Flat checkbox renderer
+    - [x] Snippet insertion from the toolbar
     - [ ] Interactive source rewrite
     - [ ] Add your own Markdown
 
     > [!NOTE]
-    > Orca uses outlines, solid surfaces, and typography. The sample contains no gradients or shadows.
+    > Orca uses outlines, solid surfaces, and typography. Neither the library nor this sample draws a gradient or a shadow.
 
     | Surface | State |
     |:--|:--:|
@@ -339,4 +353,44 @@ internal val PLAYGROUND_DEFAULT_MARKDOWN = """
     | Preview | Live |
 
     Use **bold**, `code`, ==highlight==, ++underline++, or [open the project](https://github.com/wertikolix/orca).
+""".trimIndent()
+
+internal val DESIGN_MARKDOWN = """
+    # Flat by construction
+
+    The 0.30 style system has no elevation, gradient, or shadow token. Structure comes from three
+    ingredients only: solid fills, one-pixel outlines, and typography.
+
+    ## Build a style
+
+    ```kotlin
+    val style = orcaFlatStyle(
+        palette = OrcaPalettes.FlatDark,
+        density = OrcaDensity.COMPACT,
+        headingRuleLevels = setOf(1, 2),
+    )
+    ```
+
+    ## Token roles
+
+    | Token | Applied to |
+    |:--|:--|
+    | `surface` | quotes, details, zebra rows |
+    | `surfaceMuted` | table headers |
+    | `surfaceStrong` | inline code and chips |
+    | `outlineMuted` | container outlines, rules, dividers |
+    | `accent` | links, checkboxes, indicators |
+    | `signal.*` | one color per admonition type |
+
+    > [!NOTE]
+    > The heading rule under H1 and H2 is a one-pixel line, not a shadow. Switch the palette in the
+    > command bar and every surface on this page follows it.
+
+    ## Density
+
+    Density scales spacing and padding, never text metrics, so line length stays predictable.
+
+    - `COMPACT` for chat transcripts and side panels
+    - `COMFORTABLE` for documentation
+    - `SPACIOUS` for large screens
 """.trimIndent()

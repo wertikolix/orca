@@ -39,7 +39,7 @@ import kotlin.reflect.KClass
 private const val PARSE_LOG_TAG = "Orca"
 private const val DEFAULT_STREAMING_DEBOUNCE_MS = 80L
 
-private val defaultStyle: OrcaStyle = OrcaStyle()
+private val defaultStyle: OrcaStyle = OrcaDefaults.lightStyle()
 private val noOpLinkClick: (String) -> Unit = {}
 
 /**
@@ -83,6 +83,8 @@ enum class OrcaRootLayout {
  * the source, so incremental parser sessions keep their append-only fast path.
  * @param inlineOverride optional exact-class inline renderers producing custom annotated text.
  * @param taskCheckboxContent optional replacement for the default flat task-list checkbox.
+ * @param highlight optional search query shaded in rendered inline text with
+ * [OrcaInlineStyle.searchMatch]. Pair it with `OrcaDocument.findMatches()` for match navigation.
  * @see Orca
  * @see OrcaStyle
  * @see OrcaSecurityPolicy
@@ -110,6 +112,7 @@ fun Orca(
     streamingCursor: String? = null,
     inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
     taskCheckboxContent: OrcaTaskCheckboxContent? = null,
+    highlight: OrcaTextHighlight? = null,
 ) {
     val parserKey = remember(parser) { parser.cacheKey() }
     val latestMarkdown by rememberUpdatedState(markdown)
@@ -211,6 +214,7 @@ fun Orca(
         streamingCursor = streamingCursor,
         inlineOverride = inlineOverride,
         taskCheckboxContent = taskCheckboxContent,
+        highlight = highlight,
     )
 }
 
@@ -243,6 +247,7 @@ fun Orca(
     streamingCursor: String? = null,
     inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
     taskCheckboxContent: OrcaTaskCheckboxContent? = null,
+    highlight: OrcaTextHighlight? = null,
 ) {
     Orca(
         markdown = state.markdown,
@@ -266,6 +271,7 @@ fun Orca(
         streamingCursor = streamingCursor?.takeIf { state.isStreaming },
         inlineOverride = inlineOverride,
         taskCheckboxContent = taskCheckboxContent,
+        highlight = highlight,
     )
 }
 
@@ -291,6 +297,7 @@ fun Orca(
  * @param streamingCursor optional glyph appended after the last block's text.
  * @param inlineOverride optional exact-class inline renderers producing custom annotated text.
  * @param taskCheckboxContent optional replacement for the default flat task-list checkbox.
+ * @param highlight optional search query shaded in rendered inline text.
  * @see OrcaDocument
  * @see OrcaStyle
  */
@@ -313,6 +320,7 @@ fun Orca(
     streamingCursor: String? = null,
     inlineOverride: Map<KClass<out OrcaInline>, OrcaInlineRenderer> = emptyMap(),
     taskCheckboxContent: OrcaTaskCheckboxContent? = null,
+    highlight: OrcaTextHighlight? = null,
 ) {
     val displayDocument = remember(document, streamingCursor) {
         if (streamingCursor.isNullOrEmpty()) document else document.withTrailingCursor(streamingCursor)
@@ -386,6 +394,7 @@ fun Orca(
         LocalOrcaInlineMathPlaceholder provides inlineMathPlaceholder,
         LocalOrcaTaskInteraction provides taskInteraction,
         LocalOrcaTaskCheckboxContent provides taskCheckboxContent,
+        LocalOrcaTextHighlight provides highlight?.takeIf { it.isActive },
     ) {
         when (rootLayout) {
         OrcaRootLayout.LAZY_COLUMN -> {

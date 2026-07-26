@@ -200,13 +200,14 @@ private fun TableRowNode(
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val currentSecurityPolicy by rememberUpdatedState(securityPolicy)
     val currentOnFootnoteReferenceClick by rememberUpdatedState(onFootnoteReferenceClick)
+    val highlight = LocalOrcaTextHighlight.current
 
     Row(
         modifier = Modifier.height(IntrinsicSize.Min),
     ) {
         repeat(columnCount) { index ->
             val cell = cells.getOrNull(index)
-            val text = remember(cell, style, footnoteNumbers, sourceBlockKey, inlineOverride) {
+            val text = remember(cell, style, footnoteNumbers, sourceBlockKey, inlineOverride, highlight) {
                 if (cell == null) {
                     AnnotatedString("")
                 } else {
@@ -218,6 +219,7 @@ private fun TableRowNode(
                         footnoteNumbers = footnoteNumbers,
                         onFootnoteClick = { label -> currentOnFootnoteReferenceClick(label, sourceBlockKey) },
                         inlineOverride = inlineOverride,
+                        highlight = highlight,
                     )
                 }
             }

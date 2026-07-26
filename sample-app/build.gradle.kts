@@ -14,7 +14,7 @@ android {
         applicationId = "ru.wertik.orca.sample"
         minSdk = 24
         targetSdk = 36
-        versionCode = 20
+        versionCode = 30
         versionName = rootProject.version.toString()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

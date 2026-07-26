@@ -270,19 +270,36 @@ data class OrcaStyle(
     val definitionList: OrcaDefinitionListStyle,
     val details: OrcaDetailsStyle,
     val task: OrcaTaskStyle,               // flat semantic checkbox styling
+    val headingRule: OrcaHeadingRuleStyle, // one-pixel rules under selected heading levels
 )
 ```
+
+Since 0.30 the built-in styles are generated rather than hand-written: `orcaFlatStyle(palette,
+density, …)` (`OrcaFlatStyle.kt`) maps an `OrcaPalette` — surfaces, outlines, text, accent, plus
+nested `OrcaSyntaxPalette` and `OrcaSignalPalette` — onto every sub-style. The token set has no
+elevation, gradient, or shadow entry, so no renderer can draw one.
 
 ### How it flows
 
 1. Passed to the root `Orca(... style = style ...)` composable.
 2. Threaded as a parameter to every `OrcaBlockNode` and from there to individual block composables (`HeadingNode`, `CodeBlockNode`, etc.).
 3. Inline rendering reads `style.inline.*` for `SpanStyle`s and `style.typography.paragraph` for base text style.
-4. No CompositionLocal — explicit parameter passing throughout.
+4. Style itself is passed explicitly throughout. A small set of cross-cutting render options —
+   inline math placeholders, task interaction, task checkbox slot, and the active
+   `OrcaTextHighlight` — travel as CompositionLocals provided once by the root composable.
 
 ### Presets
 
-`OrcaDefaults.lightStyle()` and `OrcaDefaults.darkStyle()` provide sensible defaults. All sub-styles have default values, so `OrcaStyle()` works out of the box.
+`OrcaDefaults.lightStyle()`, `darkStyle()`, `contrastLightStyle()`, and `contrastDarkStyle()` are
+thin wrappers over `orcaFlatStyle` with the matching `OrcaPalettes` preset and an optional
+`OrcaDensity`. `legacyLightStyle()` / `legacyDarkStyle()` keep the pre-0.30 visuals. All sub-styles
+still have default values, so `OrcaStyle()` works out of the box.
+
+### Document utilities
+
+`orca-core` exposes read-only projections over a parsed document: `tableOfContents()`, `stats()`,
+`findMatches()` / `countMatches()`, and `plainText()`. They are pure functions over the AST with a
+depth guard, so they are safe to call on untrusted input and cheap enough to recompute per edit.
 
 ---
 

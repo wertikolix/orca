@@ -97,7 +97,32 @@ data class OrcaInlineStyle(
         fontSize = 13.sp,
         background = Color(0x14000000),
     ),
+    /** Applied to text matching an active [OrcaTextHighlight] query. */
+    val searchMatch: SpanStyle = SpanStyle(
+        background = Color(0x452F6263),
+        fontWeight = FontWeight.Medium,
+    ),
 )
+
+/**
+ * One-pixel rules drawn underneath selected heading levels.
+ *
+ * Flat documents separate sections with a rule instead of elevation. Defaults to no rules;
+ * [orcaFlatStyle] enables them for H1 and H2.
+ *
+ * @property levels heading levels (1–6) that render a rule.
+ * @property color rule color.
+ * @property thickness rule thickness.
+ * @property spacing gap between the heading text and the rule.
+ */
+data class OrcaHeadingRuleStyle(
+    val levels: Set<Int> = emptySet(),
+    val color: Color = Color(0xFFDCDAD1),
+    val thickness: Dp = 1.dp,
+    val spacing: Dp = 8.dp,
+) {
+    fun hasRule(level: Int): Boolean = thickness > 0.dp && level in levels
+}
 
 /**
  * Spacing and sizing for block-level layout.
@@ -330,6 +355,7 @@ data class OrcaStyle(
     val definitionList: OrcaDefinitionListStyle = OrcaDefinitionListStyle(),
     val details: OrcaDetailsStyle = OrcaDetailsStyle(),
     val task: OrcaTaskStyle = OrcaTaskStyle(),
+    val headingRule: OrcaHeadingRuleStyle = OrcaHeadingRuleStyle(),
 ) {
     fun heading(level: Int): TextStyle = typography.heading(level)
 
@@ -404,15 +430,47 @@ object OrcaDefaults {
 
     /**
      * Returns [lightStyle] or [darkStyle] based on the system theme.
+     *
+     * @param density spacing scale applied to the resulting style.
      */
     @Composable
-    fun adaptiveStyle(): OrcaStyle {
-        return if (isSystemInDarkTheme()) darkStyle() else lightStyle()
+    fun adaptiveStyle(density: OrcaDensity = OrcaDensity.COMFORTABLE): OrcaStyle {
+        return if (isSystemInDarkTheme()) darkStyle(density) else lightStyle(density)
     }
 
-    fun lightStyle(): OrcaStyle = OrcaStyle()
+    /**
+     * Returns [contrastLightStyle] or [contrastDarkStyle] based on the system theme.
+     */
+    @Composable
+    fun adaptiveContrastStyle(density: OrcaDensity = OrcaDensity.COMFORTABLE): OrcaStyle {
+        return if (isSystemInDarkTheme()) contrastDarkStyle(density) else contrastLightStyle(density)
+    }
 
-    fun darkStyle(): OrcaStyle = OrcaStyle(
+    /** Flat light style built from [OrcaPalettes.FlatLight]. */
+    fun lightStyle(density: OrcaDensity = OrcaDensity.COMFORTABLE): OrcaStyle =
+        orcaFlatStyle(palette = OrcaPalettes.FlatLight, density = density)
+
+    /** Flat dark style built from [OrcaPalettes.FlatDark]. */
+    fun darkStyle(density: OrcaDensity = OrcaDensity.COMFORTABLE): OrcaStyle =
+        orcaFlatStyle(palette = OrcaPalettes.FlatDark, density = density)
+
+    /** High-contrast light style built from [OrcaPalettes.ContrastLight]. */
+    fun contrastLightStyle(density: OrcaDensity = OrcaDensity.COMFORTABLE): OrcaStyle =
+        orcaFlatStyle(palette = OrcaPalettes.ContrastLight, density = density)
+
+    /** High-contrast dark style built from [OrcaPalettes.ContrastDark]. */
+    fun contrastDarkStyle(density: OrcaDensity = OrcaDensity.COMFORTABLE): OrcaStyle =
+        orcaFlatStyle(palette = OrcaPalettes.ContrastDark, density = density)
+
+    /**
+     * The pre-0.30 light style, kept for applications that pinned their visuals to it.
+     *
+     * Equivalent to the raw [OrcaStyle] field defaults.
+     */
+    fun legacyLightStyle(): OrcaStyle = OrcaStyle()
+
+    /** The pre-0.30 dark style. */
+    fun legacyDarkStyle(): OrcaStyle = OrcaStyle(
         typography = OrcaTypographyStyle(
             heading1 = TextStyle(fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE0E0E0)),
             heading2 = TextStyle(fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE0E0E0)),
