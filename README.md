@@ -598,9 +598,14 @@ For release-like check:
 - Pre-releases use `-alpha`, `-beta`, `-rc`
 - Maven Central artifacts are immutable after publish
 
-Releases are cut either by pushing the tag, or from **Actions -> Release -> Run workflow** with
-`publish = true`. The manual path validates the version against `orcaVersion`, creates the tag on
-the built commit, and then publishes; without `publish` a manual run is a build-and-test dry run.
+A release can be cut three ways, all of which validate the version against `orcaVersion` and end
+with a real `0.x.y` tag on the released commit:
+
+- push the tag `0.30.0`;
+- push the branch `release/0.30.0` (the workflow creates the tag and deletes the branch afterwards);
+- **Actions -> Release -> Run workflow** with `publish = true`.
+
+A manual run without `publish` is a build-and-test dry run.
 
 ## Changelog
 

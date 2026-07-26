@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "0.*"
+    branches:
+      # Pushing release/<version> cuts the release for <version>; see "Resolve release version".
+      - "release/0.*"
   workflow_dispatch:
     inputs:
       publish:
@@ -72,6 +75,11 @@ jobs:
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             # Tag push: the tag is the release and must match the project version.
             VERSION="${GITHUB_REF_NAME}"
+            PUBLISH=true
+          elif [[ "${GITHUB_REF_NAME}" == release/* ]]; then
+            # Release branch: for environments that can push a branch but not a tag. The version
+            # comes from the branch name and the workflow creates the tag itself below.
+            VERSION="${GITHUB_REF_NAME#release/}"
             PUBLISH=true
           elif [[ "${DISPATCH_PUBLISH}" == "true" ]]; then
             # Manual release: an explicit opt-in from the Actions tab, for environments where
@@ -345,6 +353,15 @@ jobs:
               echo "::warning::${artifact}:${VERSION} is not visible on repo1.maven.org yet. Central sync can lag; check manually."
             fi
           done
+
+      - name: Delete release branch
+        if: success() && steps.release-version.outputs.publish == 'true' && startsWith(github.ref, 'refs/heads/release/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${GITHUB_REF_NAME}" >/dev/null
+          echo "Deleted release branch ${GITHUB_REF_NAME}; the release lives on tag ${{ steps.release-version.outputs.version }}."
 
       - name: Upload reports on failure
         if: failure()
