@@ -117,7 +117,11 @@ jobs:
           VERSION: ${{ steps.release-version.outputs.version }}
         run: |
           set -euo pipefail
-          existing="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${VERSION}" --jq '.object.sha' 2>/dev/null || true)"
+          # gh prints its error body on stdout, so only read the sha when the call actually succeeds.
+          existing=""
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${VERSION}" > /tmp/release-tag-ref.json 2>/dev/null; then
+            existing="$(jq -r '.object.sha // empty' /tmp/release-tag-ref.json)"
+          fi
           if [[ -n "${existing}" ]]; then
             # Re-running a manual release is fine, releasing a different commit under the same
             # version is not: Maven Central artifacts are immutable.
