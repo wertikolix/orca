@@ -16,6 +16,12 @@ internal data class DetailsSource(
 
 private val DETAILS_OPEN_REGEX = Regex("""^\s*<details(\s[^>]*)?>""", RegexOption.IGNORE_CASE)
 private val DETAILS_CLOSE_REGEX = Regex("""^\s*</details\s*>""", RegexOption.IGNORE_CASE)
+
+/** Whether [line] opens a `<details>` region for [extractDetailsBlocks]. */
+internal fun lineOpensDetails(line: String): Boolean = DETAILS_OPEN_REGEX.containsMatchIn(line)
+
+/** Whether [line] closes a `<details>` region for [extractDetailsBlocks]. */
+internal fun lineClosesDetails(line: String): Boolean = DETAILS_CLOSE_REGEX.containsMatchIn(line)
 private val SUMMARY_REGEX = Regex("""<summary>(.*?)</summary>""", RegexOption.IGNORE_CASE)
 private val OPEN_ATTR_REGEX = Regex("""\bopen\b""", RegexOption.IGNORE_CASE)
 

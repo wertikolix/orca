@@ -43,6 +43,7 @@ import ru.wertik.orca.compose.Orca
 import ru.wertik.orca.compose.OrcaStyle
 import ru.wertik.orca.compose.rememberOrcaStreamingState
 import ru.wertik.orca.core.OrcaDocumentStats
+import ru.wertik.orca.core.OrcaIncrementalParseStats
 import ru.wertik.orca.core.OrcaIncrementalParserSession
 import ru.wertik.orca.core.OrcaMarkdownParser
 import ru.wertik.orca.core.stats
@@ -81,14 +82,18 @@ internal fun StreamingScreen(
     // Sampling keeps the measurement strip live without parsing the transcript on the UI thread
     // for every token batch.
     var liveStats by remember { mutableStateOf(OrcaDocumentStats()) }
+    var parseStats by remember { mutableStateOf(OrcaIncrementalParseStats()) }
     LaunchedEffect(runId, parser) {
         snapshotFlow { stream.markdown }
             .conflate()
             .collect { text ->
                 liveStats = withContext(Dispatchers.Default) { parser.parse(text).stats() }
+                parseStats = incrementalParser.stats
                 delay(220L)
             }
     }
+    val totalParses = parseStats.fullParses + parseStats.incrementalParses
+    val reuseShare = if (totalParses == 0) 0 else parseStats.incrementalParses * 100 / totalParses
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val horizontalPadding = if (maxWidth >= 720.dp) 32.dp else 18.dp
@@ -117,7 +122,7 @@ internal fun StreamingScreen(
                     stats = listOf(
                         SampleStat("Blocks", liveStats.blocks.toString()),
                         SampleStat("Words", liveStats.words.toString()),
-                        SampleStat("Code", liveStats.codeBlocks.toString()),
+                        SampleStat("Reuse", "$reuseShare%"),
                         SampleStat("Progress", "${(progress * 100).toInt()}%"),
                     ),
                     columns = statColumns,

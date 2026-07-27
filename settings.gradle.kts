@@ -17,6 +17,7 @@ dependencyResolutionManagement {
 rootProject.name = "Orca"
 
 include(
+    ":orca-benchmarks",
     ":orca-core",
     ":orca-compose",
     ":orca-compose-material3",

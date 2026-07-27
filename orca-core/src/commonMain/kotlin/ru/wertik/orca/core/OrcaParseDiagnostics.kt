@@ -42,6 +42,20 @@ sealed interface OrcaParseWarning {
         val maxTreeDepth: Int,
         val exceededDepth: Int,
     ) : OrcaParseWarning
+
+    /**
+     * One or more blocks carried more unmatched `[` than the inline scanner is allowed
+     * to backtrack over, and were kept as plain text instead of being parsed.
+     *
+     * @property maxInlineBracketDepth The configured maximum run of unmatched openers.
+     * @property exceededDepth The deepest run that was found.
+     * @property guardedBlocks How many blocks were kept as plain text.
+     */
+    data class InlineBracketLimitExceeded(
+        val maxInlineBracketDepth: Int,
+        val exceededDepth: Int,
+        val guardedBlocks: Int,
+    ) : OrcaParseWarning
 }
 
 /** Fatal error that prevented the parser from producing a complete document. */

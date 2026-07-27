@@ -12,6 +12,7 @@ internal data class ParserCacheKey(
     val maxTreeDepth: Int,
     val enableSuperscript: Boolean = true,
     val enableSubscript: Boolean = true,
+    val maxInlineBracketDepth: Int = DEFAULT_MAX_INLINE_BRACKET_DEPTH,
 )
 
 internal class DepthLimitReporter(

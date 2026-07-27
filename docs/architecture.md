@@ -11,6 +11,7 @@ Orca is split into lightweight core/rendering modules plus optional integrations
 | **orca-compose-material3** | Optional Material 3 adapter for deriving `OrcaStyle` from the active `MaterialTheme`. |
 | **orca-images-coil** | Optional Coil/Ktor implementation of block and inline image slots. |
 | **orca-math-orcex** | Optional Orcex implementation of block and inline math slots. |
+| **orca-benchmarks** | JVM-only, not published. Parser/streaming benchmarks with scaling checks, run in CI. |
 
 **Dependency direction:** optional adapters (`orca-compose-material3`, `orca-images-coil`, `orca-math-orcex`) → `orca-compose` → `orca-core`. Consumers who only need parsing or chat rendering do not carry optional theme, network/image, or math dependencies.
 
@@ -31,31 +32,43 @@ markdown string
 1. extractFrontMatter()          ── strips YAML (---) or TOML (+++) front matter
     │
     ▼
-2. extractAbbreviations()        ── pulls *[ABBR]: Title definitions, stores map
+2. extractInlineGuardedRegions() ── pulls blocks with a pathological run of unmatched [
     │
     ▼
-3. extractDefinitionLists()      ── pulls Term / : Definition blocks, inserts placeholders
+3. extractAbbreviations()        ── pulls *[ABBR]: Title definitions, stores map
     │
     ▼
-4. extractFootnoteDefinitions()  ── pulls [^label]: blocks out of the body
+4. extractDetailsBlocks()        ── pulls <details> regions, inserts placeholders
     │
     ▼
-5. MarkdownParser.buildMarkdownTreeFromString()   ── intellij-markdown AST
+5. extractMathBlocks()           ── pulls $$ … $$ blocks, inserts placeholders
     │
     ▼
-6. IntellijTreeMapper.mapBlock() ── recursive walk converting ASTNode → OrcaBlock/OrcaInline
+6. extractDefinitionLists()      ── pulls Term / : Definition blocks, inserts placeholders
+    │
+    ▼
+7. extractFootnoteDefinitions()  ── pulls [^label]: blocks out of the body
+    │
+    ▼
+8. MarkdownParser.buildMarkdownTreeFromString()   ── intellij-markdown AST
+    │
+    ▼
+9. IntellijTreeMapper.mapBlock() ── recursive walk converting ASTNode → OrcaBlock/OrcaInline
     │  ├─ emoji shortcodes       ── replaceEmojiShortcodes() on OrcaInline.Text nodes
     │  ├─ footnote syntax        ── processFootnoteSyntax() parses [^ref] and ^[inline] from text
     │  └─ super/subscript        ── processSuperSubScript() parses ^text^ and ~text~
     │
     ▼
-7. Placeholder resolution        ── definition list placeholders → OrcaBlock.DefinitionList
+10. Placeholder resolution       ── deflist / details / math placeholders → real blocks
     │
     ▼
-8. applyAbbreviations()          ── replaces abbreviation matches in inline content
+11. applyAbbreviations()         ── replaces abbreviation matches in inline content
     │
     ▼
-9. OrcaDocument(blocks, frontMatter)
+12. resolveRawTextPlaceholders() ── guarded blocks → plain text paragraphs
+    │
+    ▼
+13. OrcaDocument(blocks, frontMatter)
 ```
 
 ### Stage details
@@ -63,19 +76,24 @@ markdown string
 **1. Front matter extraction** (`IntellijMarkdownFrontMatter.kt`)
 Runs before the markdown parser sees the input. Detects `---`/`...` (YAML) or `+++` (TOML) delimiters at the start of the source. Parses simple `key: value` / `key = value` entries into `OrcaFrontMatter.Yaml` or `OrcaFrontMatter.Toml`. The remaining markdown body is passed downstream.
 
-**2. Abbreviation extraction** (`IntellijMarkdownAbbreviations.kt`)
-Scans for `*[ABBR]: Full Title` definition lines. Removes them from the body and stores a `Map<String, String>` of abbreviation → expansion. The map is applied as a post-processing step after all blocks are parsed (step 8).
+**2. Inline guard** (`IntellijMarkdownInlineGuard.kt`)
+The inline scanner resolves link openers by backtracking, so a block with *N* unmatched `[` costs O(N²): 25 600 of them is not a slow parse, it is a hang. The guard counts unclosed openers per block and swaps any block above `maxInlineBracketDepth` (default 512) for a `<!--orca:rawtext:N-->` placeholder, resolved in step 12 into a plain text paragraph and reported as `OrcaParseWarning.InlineBracketLimitExceeded`. Fenced code and `$$` math are skipped: their content never reaches the inline scanner.
 
-**3. Definition list extraction** (`IntellijMarkdownDefinitionList.kt`)
+**3. Abbreviation extraction** (`IntellijMarkdownAbbreviations.kt`)
+Scans for `*[ABBR]: Full Title` definition lines. Removes them from the body and stores a `Map<String, String>` of abbreviation → expansion. The map is applied as a post-processing step after all blocks are parsed (step 11).
+
+**6. Definition list extraction** (`IntellijMarkdownDefinitionList.kt`)
 Scans for `Term` + `: Definition` patterns. Replaces them with HTML comment placeholders (`<!--orca:deflist:N-->`) so the intellij-markdown parser doesn't misinterpret them. After tree mapping, placeholders are resolved back into `OrcaBlock.DefinitionList` nodes with fully parsed inline terms and block-level definitions.
 
-**4. Footnote extraction** (`IntellijMarkdownFootnotes.kt`)
+The scan is linear. Definition lines are located in one pass (`DefinitionLineIndex`), and a list is only attempted on the single line that could open one binding to the next definition line. Probing every line, as the first implementation did, is quadratic on a document that is one long paragraph — which is most documents.
+
+**7. Footnote extraction** (`IntellijMarkdownFootnotes.kt`)
 Scans for `[^label]: content` definition blocks (with continuation-indent support). Removes them from the body so the intellij-markdown parser doesn't misinterpret them. Extracted `FootnoteSourceDefinition`s are parsed into `OrcaFootnoteDefinition`s after the main tree mapping completes.
 
-**5. IntelliJ markdown AST**
+**8. IntelliJ markdown AST**
 Uses `MarkdownParser(GFMFlavourDescriptor())` — GitHub-Flavored Markdown with tables, task lists, strikethrough, and autolinks.
 
-**6. Tree mapping** (`IntellijMarkdownTreeMapper.kt`)
+**9. Tree mapping** (`IntellijMarkdownTreeMapper.kt`)
 `IntellijTreeMapper` walks the intellij-markdown `ASTNode` tree and produces `OrcaBlock`/`OrcaInline` nodes. Key post-processing steps applied during inline mapping:
 
 - **Emoji shortcodes** — `replaceEmojiShortcodes()` converts `:rocket:` → 🚀 on `OrcaInline.Text` nodes. Uses a static map of ~150 common shortcodes (`OrcaEmojiShortcodes.kt`).
@@ -208,7 +226,15 @@ Thread safety is provided by `OrcaLock.withLock {}` around all map operations. T
 
 ## Streaming
 
-For LLM token streams, `OrcaStreamingState` accepts delta chunks and publishes renderable snapshots at `frameIntervalMs`. `Orca(state = ..., ...)` avoids a second debounce interval because pacing already happened at the state boundary. `OrcaIncrementalParserSession` supplies a conservative parser fast path: completed standalone prose paragraphs are retained as stable AST blocks while only the active tail is reparsed; rich/document-scoped Markdown constructs use the exact full-parser path.
+For LLM token streams, `OrcaStreamingState` accepts delta chunks and publishes renderable snapshots at `frameIntervalMs`. `Orca(state = ..., ...)` avoids a second debounce interval because pacing already happened at the state boundary. `OrcaIncrementalParserSession` supplies a conservative parser fast path: completed blocks are retained as stable AST nodes while only the active tail is reparsed; document-scoped Markdown constructs use the exact full-parser path.
+
+The session is built on three ideas:
+
+- **Segmentation is append-only.** Segments are only ever completed on a terminated line, which makes the completed prefix final and lets the scan resume from the last cut instead of re-reading the stream on every token. Cut points are blank lines *and* column-zero fenced code blocks: the text before an open ``` block is frozen while the block is still streaming, and the block itself is frozen the moment its closing line arrives.
+- **An open fence tail is rebuilt, not re-parsed.** While a fence is open the tail is exactly one code block, so the session constructs it from the raw text. Because the delegate is an interface, the shortcut is checked against it once per fence header before it is used, and it is refused for content the delegate's raw-source pre-passes would react to.
+- **A cut has to be safe for the pre-passes too.** `<details>` and `$$` extraction run over the raw source before the parser and do not share the scanner's view of fenced code, so the scanner mirrors their state and refuses to cut while either is mid-region.
+
+Heading slugs are assigned from a running counter as blocks freeze, so duplicate titles get the same `-N` suffixes a full parse produces while frozen blocks keep their identity (and therefore their Compose recomposition scopes).
 
 The underlying `Orca(markdown: String, ...)` composable handles each published snapshot as follows:
 

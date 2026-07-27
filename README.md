@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.30.0`
+- Current stable minor: `0.31.0`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -48,16 +48,18 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
   - Leaves `orca-core` and `orca-compose` free from a bundled font or math engine
 - `sample-app`
   - Android demo for manual checks
+- `orca-benchmarks` *(not published)*
+  - JVM parser benchmarks with scaling checks, run in CI on every push and pull request
 
 ## Maven
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.30.0")
-implementation("ru.wertik:orca-compose:0.30.0")
-implementation("ru.wertik:orca-compose-material3:0.30.0") // optional Material 3 theme adapter
-implementation("ru.wertik:orca-images-coil:0.30.0") // optional images
-implementation("ru.wertik:orca-math-orcex:0.30.0") // optional multiplatform math renderer
+implementation("ru.wertik:orca-core:0.31.0")
+implementation("ru.wertik:orca-compose:0.31.0")
+implementation("ru.wertik:orca-compose-material3:0.31.0") // optional Material 3 theme adapter
+implementation("ru.wertik:orca-images-coil:0.31.0") // optional images
+implementation("ru.wertik:orca-math-orcex:0.31.0") // optional multiplatform math renderer
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -156,7 +158,9 @@ Orca(
 )
 ```
 
-`OrcaIncrementalParserSession` reuses stable completed paragraph blocks and reparses only the active tail for ordinary prose streams. Rich constructs that can affect earlier content (lists, tables, headings, fences, definitions, footnotes, and HTML blocks) conservatively fall back to the full parser. The initial parse and subsequent parses run on `Dispatchers.Default`.
+`OrcaIncrementalParserSession` freezes completed blocks and reparses only the active tail. Segments are cut at blank lines *and* at completed top-level structures, so a column-zero ``` block is frozen the moment its closing fence arrives, and everything before an *open* fence is frozen while the block is still streaming. While a fence is open the tail is a single code block, which the session rebuilds directly — after verifying once against the delegate that this matches — instead of re-parsing the growing block on every token. Constructs whose meaning depends on the whole document (link/footnote/abbreviation definitions, inline footnotes, front matter, definition lists) fall back to the full parser, as do cuts that would land inside an HTML, `<details>`, or display-math region. The initial parse and subsequent parses run on `Dispatchers.Default`.
+
+On a typical assistant answer (prose, a 60-line fence, a list, a second fence) streamed in 16-character chunks, the session is ~7x faster than re-parsing every prefix and feeds the parser under 2% of the characters. `session.stats` reports `fullParses`, `incrementalParses`, `reusedStableBlocks`, and `codeFenceFastPaths`.
 
 ## Public API
 
@@ -175,13 +179,20 @@ fun interface OrcaParser {
 OrcaMarkdownParser(
     maxTreeDepth = 64,
     cacheSize = 64,
-    enableSuperscript = true,  // set false to disable ^text^ parsing
-    enableSubscript = true,    // set false to disable ~text~ parsing
+    enableSuperscript = true,      // set false to disable ^text^ parsing
+    enableSubscript = true,        // set false to disable ~text~ parsing
+    maxInlineBracketDepth = 512,   // unmatched `[` per block before it is kept as plain text
     onDepthLimitExceeded = { depth ->
         // observe depth truncation if needed
     },
 )
 ```
+
+`maxInlineBracketDepth` bounds the inline scanner. Resolving link openers backtracks over
+every unmatched `[` in a block, which is quadratic: 25 600 of them in one paragraph used to
+look like a deadlock. A block above the limit is kept verbatim as a plain text paragraph and
+reported as `OrcaParseWarning.InlineBracketLimitExceeded`; the rest of the document parses
+normally. Fenced code and `$$` math never reach the inline scanner and are never affected.
 
 Diagnostics model:
 
@@ -203,7 +214,7 @@ document.findMatches("streaming")        // hits with top-level block indices
 document.plainText()                     // markup-free projection
 ```
 
-## Supported Syntax (`0.30.0`)
+## Supported Syntax (`0.31.0`)
 
 ### Blocks
 
@@ -586,6 +597,15 @@ Orca(
 ./gradlew --no-daemon --build-cache :orca-core:jvmTest :orca-compose:testDebugUnitTest :orca-compose-material3:testDebugUnitTest :sample-app:assembleDebug
 ```
 
+Parser performance is guarded separately, by scaling checks rather than absolute timings, so
+the same limits hold on a laptop and on a CI runner:
+
+```bash
+./gradlew :orca-benchmarks:run --args="--check"          # full run, fails on a regression
+./gradlew :orca-benchmarks:run --args="--quick"          # shorter local sanity run
+./gradlew :orca-benchmarks:run --args="--check --markdown report.md --json report.json"
+```
+
 For release-like check:
 
 ```bash
@@ -601,13 +621,21 @@ For release-like check:
 A release can be cut three ways, all of which validate the version against `orcaVersion` and end
 with a real `0.x.y` tag on the released commit:
 
-- push the tag `0.30.0`;
-- push the branch `release/0.30.0` (the workflow creates the tag and deletes the branch afterwards);
+- push the tag `0.31.0`;
+- push the branch `release/0.31.0` (the workflow creates the tag and deletes the branch afterwards);
 - **Actions -> Release -> Run workflow** with `publish = true`.
 
 A manual run without `publish` is a build-and-test dry run.
 
 ## Changelog
+
+### 0.31.0
+
+- **Linear definition-list scanning** — `extractDefinitionLists()` locates definition lines up front and only probes the one line that can open a list, instead of probing every line. A document that is one long paragraph (the common case) went from quadratic to linear: 8 000 lines now take 2 ms instead of 4.4 s, and a full parse of a 4 000-line document is ~5x faster.
+- **Streaming boundaries understand code fences** — the incremental session cuts segments at completed top-level structures, not only at blank lines. Text before an open ``` block is frozen while the block streams, and the block itself is frozen as soon as its closing fence arrives. An open fence tail is rebuilt directly instead of being re-parsed, after a one-time equivalence check against the delegate. A streamed assistant answer is now ~7-13x faster than re-parsing each prefix (it was *slower* than full re-parsing on code-heavy answers), feeding the parser under 2% of the characters.
+- **Inline scanner guard** — `maxInlineBracketDepth` (default 512) bounds the quadratic link-opener backtracking. A block with more unmatched `[` is kept as a plain text paragraph and reported via `OrcaParseWarning.InlineBracketLimitExceeded`. `[` x 25 600 went from an apparent hang to 2 ms; fenced code and display math are never affected.
+- **Streaming correctness fixes** — a ```` ``` ```` line with backticks in its info string is no longer treated as a fence opener, a list starting part way into a segment now blocks a cut after it, and cuts are refused where the delegate's `<details>`/`$$` pre-passes would still be mid-region. Each of these could make a streamed prefix differ from a full parse.
+- **Benchmarks in CI** — the new `orca-benchmarks` module measures parsing, guarding, and streaming, and fails the build on scaling regressions (ratio based, so the limits hold on any machine). CI publishes the table as a job summary and keeps the report as an artifact.
 
 ### 0.30.0
 

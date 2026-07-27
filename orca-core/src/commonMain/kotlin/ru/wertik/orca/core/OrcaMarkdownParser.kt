@@ -14,6 +14,10 @@ import org.intellij.markdown.parser.MarkdownParser
  * @param cacheSize Maximum number of cached parse results (LRU). Defaults to [DEFAULT_PARSE_CACHE_SIZE].
  * @param enableSuperscript Whether to parse `^text^` as superscript. Defaults to `true`.
  * @param enableSubscript Whether to parse `~text~` as subscript. Defaults to `true`.
+ * @param maxInlineBracketDepth Longest run of unmatched `[` a single block may contain
+ *   before it is kept as plain text instead of being scanned for links. Guards against
+ *   the quadratic backtracking of the inline scanner. Defaults to
+ *   [DEFAULT_MAX_INLINE_BRACKET_DEPTH].
  * @see OrcaParser
  */
 class OrcaMarkdownParser(
@@ -23,15 +27,23 @@ class OrcaMarkdownParser(
     cacheSize: Int = DEFAULT_PARSE_CACHE_SIZE,
     private val enableSuperscript: Boolean = true,
     private val enableSubscript: Boolean = true,
+    private val maxInlineBracketDepth: Int = DEFAULT_MAX_INLINE_BRACKET_DEPTH,
 ) : OrcaParser {
     private val cache = OrcaParserCache(maxEntries = cacheSize)
 
     init {
         require(maxTreeDepth > 0) { "maxTreeDepth must be greater than 0" }
         require(cacheSize > 0) { "cacheSize must be greater than 0" }
+        require(maxInlineBracketDepth > 0) { "maxInlineBracketDepth must be greater than 0" }
     }
 
-    override fun cacheKey(): Any = ParserCacheKey(parser, maxTreeDepth, enableSuperscript, enableSubscript)
+    override fun cacheKey(): Any = ParserCacheKey(
+        parser = parser,
+        maxTreeDepth = maxTreeDepth,
+        enableSuperscript = enableSuperscript,
+        enableSubscript = enableSubscript,
+        maxInlineBracketDepth = maxInlineBracketDepth,
+    )
 
     override fun parse(input: String): OrcaDocument {
         return parseInternal(input).document
@@ -82,7 +94,11 @@ class OrcaMarkdownParser(
 
     private fun parseInternal(input: String): OrcaParseResult {
         val frontMatterExtraction = extractFrontMatter(input)
-        val abbreviationExtraction = extractAbbreviations(frontMatterExtraction.markdown)
+        val inlineGuardExtraction = extractInlineGuardedRegions(
+            markdown = frontMatterExtraction.markdown,
+            maxBracketDepth = maxInlineBracketDepth,
+        )
+        val abbreviationExtraction = extractAbbreviations(inlineGuardExtraction.markdown)
         val detailsExtraction = extractDetailsBlocks(abbreviationExtraction.markdown)
         val mathExtraction = extractMathBlocks(detailsExtraction.markdown)
         val definitionListExtraction = extractDefinitionLists(mathExtraction.markdown)
@@ -164,7 +180,10 @@ class OrcaMarkdownParser(
         }
 
         // Apply abbreviation replacements to inline content.
-        val finalBlocks = applyAbbreviations(resolvedBlocks, abbreviationExtraction.abbreviations)
+        val finalBlocks = resolveRawTextPlaceholders(
+            blocks = applyAbbreviations(resolvedBlocks, abbreviationExtraction.abbreviations),
+            rawRegions = inlineGuardExtraction.rawRegions,
+        )
 
         val warnings = buildList {
             val exceededDepth = depthLimitReporter.exceededDepth()
@@ -173,6 +192,15 @@ class OrcaMarkdownParser(
                     OrcaParseWarning.DepthLimitExceeded(
                         maxTreeDepth = maxTreeDepth,
                         exceededDepth = exceededDepth,
+                    ),
+                )
+            }
+            if (inlineGuardExtraction.rawRegions.isNotEmpty()) {
+                add(
+                    OrcaParseWarning.InlineBracketLimitExceeded(
+                        maxInlineBracketDepth = maxInlineBracketDepth,
+                        exceededDepth = inlineGuardExtraction.exceededDepth,
+                        guardedBlocks = inlineGuardExtraction.rawRegions.size,
                     ),
                 )
             }
