@@ -18,6 +18,10 @@ import org.intellij.markdown.parser.MarkdownParser
  *   before it is kept as plain text instead of being scanned for links. Guards against
  *   the quadratic backtracking of the inline scanner. Defaults to
  *   [DEFAULT_MAX_INLINE_BRACKET_DEPTH].
+ * @param maxBlockNestingDepth Deepest block nesting (quote markers plus list indentation)
+ *   a single block may reach before it is kept as plain text. Guards against the block
+ *   parser recursing until the stack runs out. Defaults to
+ *   [DEFAULT_MAX_BLOCK_NESTING_DEPTH].
  * @see OrcaParser
  */
 class OrcaMarkdownParser(
@@ -28,6 +32,7 @@ class OrcaMarkdownParser(
     private val enableSuperscript: Boolean = true,
     private val enableSubscript: Boolean = true,
     private val maxInlineBracketDepth: Int = DEFAULT_MAX_INLINE_BRACKET_DEPTH,
+    private val maxBlockNestingDepth: Int = DEFAULT_MAX_BLOCK_NESTING_DEPTH,
 ) : OrcaParser {
     private val cache = OrcaParserCache(maxEntries = cacheSize)
 
@@ -35,6 +40,7 @@ class OrcaMarkdownParser(
         require(maxTreeDepth > 0) { "maxTreeDepth must be greater than 0" }
         require(cacheSize > 0) { "cacheSize must be greater than 0" }
         require(maxInlineBracketDepth > 0) { "maxInlineBracketDepth must be greater than 0" }
+        require(maxBlockNestingDepth > 0) { "maxBlockNestingDepth must be greater than 0" }
     }
 
     override fun cacheKey(): Any = ParserCacheKey(
@@ -43,6 +49,7 @@ class OrcaMarkdownParser(
         enableSuperscript = enableSuperscript,
         enableSubscript = enableSubscript,
         maxInlineBracketDepth = maxInlineBracketDepth,
+        maxBlockNestingDepth = maxBlockNestingDepth,
     )
 
     override fun parse(input: String): OrcaDocument {
@@ -97,6 +104,7 @@ class OrcaMarkdownParser(
         val inlineGuardExtraction = extractInlineGuardedRegions(
             markdown = frontMatterExtraction.markdown,
             maxBracketDepth = maxInlineBracketDepth,
+            maxNestingDepth = maxBlockNestingDepth,
         )
         val abbreviationExtraction = extractAbbreviations(inlineGuardExtraction.markdown)
         val detailsExtraction = extractDetailsBlocks(abbreviationExtraction.markdown)
@@ -195,12 +203,21 @@ class OrcaMarkdownParser(
                     ),
                 )
             }
-            if (inlineGuardExtraction.rawRegions.isNotEmpty()) {
+            if (inlineGuardExtraction.bracketGuardedBlocks > 0) {
                 add(
                     OrcaParseWarning.InlineBracketLimitExceeded(
                         maxInlineBracketDepth = maxInlineBracketDepth,
-                        exceededDepth = inlineGuardExtraction.exceededDepth,
-                        guardedBlocks = inlineGuardExtraction.rawRegions.size,
+                        exceededDepth = inlineGuardExtraction.exceededBracketDepth,
+                        guardedBlocks = inlineGuardExtraction.bracketGuardedBlocks,
+                    ),
+                )
+            }
+            if (inlineGuardExtraction.nestingGuardedBlocks > 0) {
+                add(
+                    OrcaParseWarning.BlockNestingLimitExceeded(
+                        maxBlockNestingDepth = maxBlockNestingDepth,
+                        exceededDepth = inlineGuardExtraction.exceededNestingDepth,
+                        guardedBlocks = inlineGuardExtraction.nestingGuardedBlocks,
                     ),
                 )
             }

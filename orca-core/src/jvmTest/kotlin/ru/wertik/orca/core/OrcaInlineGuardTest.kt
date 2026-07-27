@@ -111,4 +111,84 @@ class OrcaInlineGuardTest {
             assertTrue(guarded.blocks.isNotEmpty(), pattern)
         }
     }
+
+    @Test
+    fun deeplyNestedBlocksBecomePlainTextWithAWarning() {
+        val quotes = "> ".repeat(1_000) + "text"
+        val result = parser.parseWithDiagnostics(quotes)
+
+        assertEquals(listOf(OrcaBlock.Paragraph(listOf(OrcaInline.Text(quotes)))), result.document.blocks)
+        assertEquals(
+            listOf(
+                OrcaParseWarning.BlockNestingLimitExceeded(
+                    maxBlockNestingDepth = DEFAULT_MAX_BLOCK_NESTING_DEPTH,
+                    exceededDepth = 1_000,
+                    guardedBlocks = 1,
+                ),
+            ),
+            result.diagnostics.warnings,
+        )
+    }
+
+    @Test
+    fun ordinaryNestingIsParsedAndStillReportsTheTreeDepthLimit() {
+        // 64 levels is far past anything real but well inside the guard, so the existing
+        // maxTreeDepth contract (truncated tree plus a warning) has to keep working.
+        val result = OrcaMarkdownParser(cacheSize = 1, maxTreeDepth = 8)
+            .parseWithDiagnostics("> ".repeat(64) + "deep")
+
+        assertTrue(result.document.blocks.first() is OrcaBlock.Quote)
+        assertTrue(result.diagnostics.warnings.single() is OrcaParseWarning.DepthLimitExceeded)
+    }
+
+    @Test
+    fun nestingGuardIgnoresIndentedCodeAndFencedContent() {
+        val indented = " ".repeat(400) + "code line"
+        assertEquals(emptyList(), parser.parseWithDiagnostics(indented).diagnostics.warnings)
+        assertTrue(parser.parse(indented).blocks.single() is OrcaBlock.CodeBlock)
+
+        val fenced = "```\n" + "> ".repeat(1_000) + "\n```"
+        assertEquals(emptyList(), parser.parseWithDiagnostics(fenced).diagnostics.warnings)
+        assertTrue(parser.parse(fenced).blocks.single() is OrcaBlock.CodeBlock)
+    }
+
+    @Test
+    fun realisticNestingIsNotGuarded() {
+        val document = buildString {
+            repeat(12) { level -> append(" ".repeat(level * 2)).append("- item $level\n") }
+            append("\n")
+            repeat(6) { append("> ") }
+            append("quoted\n")
+        }
+        val result = parser.parseWithDiagnostics(document)
+
+        assertEquals(emptyList(), result.diagnostics.warnings)
+        assertTrue(result.document.blocks.first() is OrcaBlock.ListBlock)
+    }
+
+    /**
+     * Deep nesting recurses in the block parser and used to exhaust a 1 MB stack (or run
+     * for minutes on nested list items) long before any AST depth limit was reached.
+     */
+    @JUnitTest(timeout = 30_000)
+    fun pathologicalNestingStaysFast() {
+        val quotes = "> ".repeat(25_600) + "text"
+        val lists = (0 until 4_096).joinToString("\n") { level -> " ".repeat(level * 2) + "- item" }
+
+        listOf(quotes, lists).forEach { document ->
+            var failure: Throwable? = null
+            val worker = Thread(
+                null,
+                { OrcaMarkdownParser(cacheSize = 1).parse(document) },
+                "guard-small-stack",
+                1L * 1024 * 1024,
+            )
+            worker.setUncaughtExceptionHandler { _, error -> failure = error }
+            worker.start()
+            worker.join(20_000)
+
+            assertTrue(!worker.isAlive, "parse did not finish")
+            assertEquals(null, failure?.let { error -> error::class.simpleName })
+        }
+    }
 }

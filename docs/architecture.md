@@ -76,8 +76,8 @@ markdown string
 **1. Front matter extraction** (`IntellijMarkdownFrontMatter.kt`)
 Runs before the markdown parser sees the input. Detects `---`/`...` (YAML) or `+++` (TOML) delimiters at the start of the source. Parses simple `key: value` / `key = value` entries into `OrcaFrontMatter.Yaml` or `OrcaFrontMatter.Toml`. The remaining markdown body is passed downstream.
 
-**2. Inline guard** (`IntellijMarkdownInlineGuard.kt`)
-The inline scanner resolves link openers by backtracking, so a block with *N* unmatched `[` costs O(N²): 25 600 of them is not a slow parse, it is a hang. The guard counts unclosed openers per block and swaps any block above `maxInlineBracketDepth` (default 512) for a `<!--orca:rawtext:N-->` placeholder, resolved in step 12 into a plain text paragraph and reported as `OrcaParseWarning.InlineBracketLimitExceeded`. Fenced code and `$$` math are skipped: their content never reaches the inline scanner.
+**2. Block guard** (`IntellijMarkdownInlineGuard.kt`)
+Two shapes make the upstream parser superlinear, and one scan catches both. *Unmatched `[`*: link openers are resolved by backtracking, so a block with *N* of them costs O(N²) — 25 600 is not a slow parse, it is a hang. *Block nesting*: quote markers and list indentation each add a level of recursion, which can exhaust the stack (or run for minutes on nested list items) before any AST depth limit is reached. A block past `maxInlineBracketDepth` (default 512) or `maxBlockNestingDepth` (default 128) is swapped for a `<!--orca:rawtext:N-->` placeholder, resolved in step 12 into a plain text paragraph and reported as `InlineBracketLimitExceeded` / `BlockNestingLimitExceeded`. Fenced code, indented code, and `$$` math are never counted.
 
 **3. Abbreviation extraction** (`IntellijMarkdownAbbreviations.kt`)
 Scans for `*[ABBR]: Full Title` definition lines. Removes them from the body and stores a `Map<String, String>` of abbreviation → expansion. The map is applied as a post-processing step after all blocks are parsed (step 11).
@@ -102,6 +102,8 @@ Uses `MarkdownParser(GFMFlavourDescriptor())` — GitHub-Flavored Markdown with 
 - **Admonition detection** — `tryMapAdmonition()` checks if a blockquote's first paragraph starts with `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, or `[!CAUTION]` and converts the quote into `OrcaBlock.Admonition`.
 
 A configurable `maxTreeDepth` (default: 64) guards against pathological nesting. When exceeded, subtrees are dropped and a `OrcaParseWarning.DepthLimitExceeded` diagnostic is emitted.
+
+This stage dominates the parse (75% of it before 0.32.0), so the inline rewrites are written to do nothing quickly. The decoration pattern (`++u++`, `^sup^`, `~sub~`, `==hl==`) is compiled once per option combination rather than per text node — compiling it costs as much as running it — and every pass checks for the character it reacts to before rebuilding a list. Passes that find nothing return the list they were handed, so prose walks through the chain without allocating.
 
 ---
 

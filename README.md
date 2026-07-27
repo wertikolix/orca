@@ -7,7 +7,7 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ## Status
 
-- Current stable minor: `0.31.0`
+- Current stable minor: `0.32.0`
 - Maturity: lightweight production-ready core subset (Markdown-first)
 
 ## Documentation
@@ -55,11 +55,11 @@ Compose Multiplatform Markdown renderer. Targets **Android**, **iOS**, **Desktop
 
 ```kotlin
 // Kotlin Multiplatform (commonMain)
-implementation("ru.wertik:orca-core:0.31.0")
-implementation("ru.wertik:orca-compose:0.31.0")
-implementation("ru.wertik:orca-compose-material3:0.31.0") // optional Material 3 theme adapter
-implementation("ru.wertik:orca-images-coil:0.31.0") // optional images
-implementation("ru.wertik:orca-math-orcex:0.31.0") // optional multiplatform math renderer
+implementation("ru.wertik:orca-core:0.32.0")
+implementation("ru.wertik:orca-compose:0.32.0")
+implementation("ru.wertik:orca-compose-material3:0.32.0") // optional Material 3 theme adapter
+implementation("ru.wertik:orca-images-coil:0.32.0") // optional images
+implementation("ru.wertik:orca-math-orcex:0.32.0") // optional multiplatform math renderer
 ```
 
 Gradle resolves platform-specific artifacts automatically (`orca-core-jvm`, `orca-compose-android`, etc.).
@@ -182,6 +182,7 @@ OrcaMarkdownParser(
     enableSuperscript = true,      // set false to disable ^text^ parsing
     enableSubscript = true,        // set false to disable ~text~ parsing
     maxInlineBracketDepth = 512,   // unmatched `[` per block before it is kept as plain text
+    maxBlockNestingDepth = 128,    // quote/list nesting per block before it is kept as plain text
     onDepthLimitExceeded = { depth ->
         // observe depth truncation if needed
     },
@@ -190,9 +191,13 @@ OrcaMarkdownParser(
 
 `maxInlineBracketDepth` bounds the inline scanner. Resolving link openers backtracks over
 every unmatched `[` in a block, which is quadratic: 25 600 of them in one paragraph used to
-look like a deadlock. A block above the limit is kept verbatim as a plain text paragraph and
-reported as `OrcaParseWarning.InlineBracketLimitExceeded`; the rest of the document parses
-normally. Fenced code and `$$` math never reach the inline scanner and are never affected.
+look like a deadlock. `maxBlockNestingDepth` does the same for the block parser, which
+recurses once per quote marker or list level and can exhaust the stack before any AST depth
+limit is reached.
+
+A block above either limit is kept verbatim as a plain text paragraph and reported as
+`OrcaParseWarning.InlineBracketLimitExceeded` / `BlockNestingLimitExceeded`; the rest of the
+document parses normally. Fenced code, indented code, and `$$` math are never counted.
 
 Diagnostics model:
 
@@ -214,7 +219,7 @@ document.findMatches("streaming")        // hits with top-level block indices
 document.plainText()                     // markup-free projection
 ```
 
-## Supported Syntax (`0.31.0`)
+## Supported Syntax (`0.32.0`)
 
 ### Blocks
 
@@ -621,13 +626,19 @@ For release-like check:
 A release can be cut three ways, all of which validate the version against `orcaVersion` and end
 with a real `0.x.y` tag on the released commit:
 
-- push the tag `0.31.0`;
-- push the branch `release/0.31.0` (the workflow creates the tag and deletes the branch afterwards);
+- push the tag `0.32.0`;
+- push the branch `release/0.32.0` (the workflow creates the tag and deletes the branch afterwards);
 - **Actions -> Release -> Run workflow** with `publish = true`.
 
 A manual run without `publish` is a build-and-test dry run.
 
 ## Changelog
+
+### 0.32.0
+
+- **Inline mapping is ~7x faster** — the `++underline++` / `^sup^` / `~sub~` / `==highlight==` pattern was compiled from scratch for every text node, and the admonition and code-span patterns once per block. They are now compiled once, and every inline rewrite pass first checks whether the node can possibly contain what it looks for, returning the list it was given instead of rebuilding an identical one. Tree mapping of a 1.3 MB document went from 366 ms to 49 ms, a full parse from 488 ms to 172 ms, and Orca's cost over the upstream parser from 5.0x to 1.8x. AST output is byte-identical.
+- **Block nesting guard** — `maxBlockNestingDepth` (default 128) bounds block-parser recursion. Quote markers and list indentation past the limit keep the block as a plain text paragraph and report `OrcaParseWarning.BlockNestingLimitExceeded`. `>` x 25 600 went from an out-of-memory or stack overflow (depending on stack size) to 33 ms, and 4 096 nested list levels from over 20 s to 137 ms. Indented code and fenced content are never counted, and the existing `maxTreeDepth` truncation behaviour is untouched.
+- **Benchmarks normalise by bytes** — scaling checks compare cost *per byte* between input sizes, so shapes whose byte count does not grow linearly with the generator's parameter are measured correctly. The limit tightened from 7.0x to 1.75x as a result, and the suite covers nesting and Orca-versus-upstream overhead as well.
 
 ### 0.31.0
 

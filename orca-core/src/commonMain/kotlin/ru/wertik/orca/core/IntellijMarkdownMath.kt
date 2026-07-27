@@ -49,6 +49,8 @@ internal fun extractMathBlocks(markdown: String): MathBlockExtraction {
 }
 
 internal fun processInlineMathSyntax(inlines: List<OrcaInline>): List<OrcaInline> {
+    if (!inlines.needsRewrite { text -> text.contains('$') }) return inlines
+
     return inlines.flatMap { inline ->
         when (inline) {
             is OrcaInline.Text -> parseInlineMathText(inline.text)

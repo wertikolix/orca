@@ -1,5 +1,7 @@
 package ru.wertik.orca.benchmarks
 
+import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
+import org.intellij.markdown.parser.MarkdownParser
 import ru.wertik.orca.core.OrcaDocument
 import ru.wertik.orca.core.OrcaIncrementalParserSession
 import ru.wertik.orca.core.OrcaMarkdownParser
@@ -17,13 +19,18 @@ data class BenchmarkReport(
 /** Input growth factor used by every scaling case. */
 private const val SIZE_FACTOR = 4
 
+/** The parser Orca builds on, measured on its own as the baseline for overhead. */
+private val upstreamParser = MarkdownParser(GFMFlavourDescriptor())
+
 /**
- * Ratio limit for a [SIZE_FACTOR]x input growth.
+ * How much more a byte of input may cost when the document grows [SIZE_FACTOR]x.
  *
- * Linear work lands at ~4, quadratic at ~16. Anything above this limit means an
- * accidental rescan crept back into a pre-pass or into the inline scanner.
+ * Linear work lands at ~1.0 (the healthy cases measure 0.75-1.05). Work that is
+ * quadratic in the document lands at the byte growth factor, so anything above this
+ * limit means an accidental rescan crept back into a pre-pass, the mapper, or the
+ * inline scanner.
  */
-private const val LINEAR_RATIO_LIMIT = 7.0
+private const val LINEAR_RATIO_LIMIT = 1.75
 
 fun runBenchmarks(quick: Boolean): BenchmarkReport {
     val harness = Harness(quick = quick)
@@ -49,7 +56,6 @@ fun runBenchmarks(quick: Boolean): BenchmarkReport {
             name = "$name scales linearly",
             small = small,
             large = large,
-            sizeFactor = SIZE_FACTOR,
             maxRatio = ratioLimit,
         )
     }
@@ -61,6 +67,9 @@ fun runBenchmarks(quick: Boolean): BenchmarkReport {
     scalingFamily("parse/code-blocks", smallSize = 500, document = Corpus::codeBlocks)
     scalingFamily("guard/bracket-bomb", smallSize = 6_400, document = Corpus::bracketBomb)
     scalingFamily("guard/balanced-brackets", smallSize = 6_400, document = Corpus::balancedBrackets)
+    scalingFamily("guard/nested-quotes", smallSize = 6_400, document = Corpus::nestedQuotes)
+    // Nesting levels grow the document quadratically, which the per-byte check handles.
+    scalingFamily("guard/nested-lists", smallSize = 512, document = Corpus::nestedLists)
 
     // The guard must keep a pathological block near the cost of ordinary text.
     val bomb = measurements.first { measurement -> measurement.name == "guard/bracket-bomb/4x" }
@@ -71,6 +80,22 @@ fun runBenchmarks(quick: Boolean): BenchmarkReport {
             "balanced ones (limit x8.0, ${format(bomb.bestMillis)}ms vs ${format(balanced.bestMillis)}ms)",
         value = bomb.bestNanos.toDouble() / balanced.bestNanos,
         limit = 8.0,
+    )
+
+    // Overhead of everything Orca does on top of building the upstream AST. Kept as a
+    // ratio so it tracks the mapper and the pre-passes, not the machine.
+    val document = Corpus.realisticDocument(240)
+    val upstream = harness.measure(name = "parse/upstream-tree-only", bytesPerOp = document.length) {
+        upstreamParser.buildMarkdownTreeFromString(document)
+    }
+    measurements += upstream
+    val orca = parseCase("parse/orca-full", document)
+    checks += ratioCheck(
+        name = "parse/orca-full stays close to the upstream parser",
+        detail = "x${format(orca.bestNanos.toDouble() / upstream.bestNanos)} of the upstream tree build " +
+            "(limit x3.0, ${format(upstream.bestMillis)}ms -> ${format(orca.bestMillis)}ms)",
+        value = orca.bestNanos.toDouble() / upstream.bestNanos,
+        limit = 3.0,
     )
 
     checks += streamingBenchmarks(harness, measurements)

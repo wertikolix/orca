@@ -78,8 +78,7 @@ internal class IntellijTreeMapper(
         val firstText = firstParagraph.content.firstOrNull() as? OrcaInline.Text ?: return null
         val text = firstText.text.trimStart()
 
-        val admonitionRegex = Regex("""^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)](.*)""", RegexOption.IGNORE_CASE)
-        val match = admonitionRegex.matchEntire(text) ?: return null
+        val match = ADMONITION_REGEX.matchEntire(text) ?: return null
 
         val typeName = match.groupValues[1].uppercase()
         val type = OrcaAdmonitionType.valueOf(typeName)
@@ -361,13 +360,7 @@ internal class IntellijTreeMapper(
         val withFootnotes = processFootnoteSyntax(raw, depth + 1)
             .mergeAdjacentText()
         val withMath = processInlineMathSyntax(withFootnotes)
-        val withEmoji = withMath.map { inline ->
-            if (inline is OrcaInline.Text) {
-                OrcaInline.Text(replaceEmojiShortcodes(inline.text))
-            } else {
-                inline
-            }
-        }
+        val withEmoji = withMath.replaceChangedText { text -> replaceEmojiShortcodes(text) }
         val withSuperSub = if (enableSuperscript || enableSubscript) {
             processSuperSubScript(withEmoji)
         } else {
@@ -596,7 +589,7 @@ internal class IntellijTreeMapper(
         val raw = node.children
             .subList(1, node.children.size - 1)
             .joinToString(separator = "") { child -> child.getTextInNode(source).toString() }
-            .replace("\\r\\n?|\\n".toRegex(), " ")
+            .replace(CODE_SPAN_EOL_REGEX, " ")
         return if (raw.isBlank()) raw else raw.removeSurrounding(" ", " ")
     }
 
@@ -605,6 +598,11 @@ internal class IntellijTreeMapper(
         depth: Int,
     ): List<OrcaInline> {
         if (isDepthExceeded(depth)) {
+            return inlines
+        }
+        // Both footnote forms need a `[` and a `^`; without them the rewrite below would
+        // rebuild the whole list to return exactly what it was given.
+        if (!inlines.needsRewrite { text -> text.contains('[') && text.contains('^') }) {
             return inlines
         }
 
@@ -648,6 +646,10 @@ internal class IntellijTreeMapper(
         text: String,
         depth: Int,
     ): List<OrcaInline> {
+        if (!text.contains('[') || !text.contains('^')) {
+            return listOf(OrcaInline.Text(text))
+        }
+
         val result = mutableListOf<OrcaInline>()
         val buffer = StringBuilder()
         var index = 0
@@ -808,6 +810,12 @@ internal class IntellijTreeMapper(
     }
 
     private fun processSuperSubScript(inlines: List<OrcaInline>): List<OrcaInline> {
+        val decorations = inlineDecorationsFor(
+            superscript = enableSuperscript,
+            subscript = enableSubscript,
+        )
+        if (!inlines.needsRewrite(decorations::mayApplyTo)) return inlines
+
         return inlines.flatMap { inline ->
             when (inline) {
                 is OrcaInline.Text -> parseSuperSubFromText(inline.text)
@@ -819,43 +827,19 @@ internal class IntellijTreeMapper(
         }
     }
 
-    private class InlineDecorationSpec(
-        val pattern: String,
-        val create: (String) -> OrcaInline,
-    )
-
     private fun parseSuperSubFromText(text: String): List<OrcaInline> {
-        val specs = buildList {
-            add(
-                InlineDecorationSpec("""(?<!\+)\+\+([^+]+)\+\+(?!\+)""") { value ->
-                    OrcaInline.Underline(content = listOf(OrcaInline.Text(value)))
-                },
-            )
-            if (enableSuperscript) {
-                add(
-                    InlineDecorationSpec("""(?<!\^)\^([^\^]+)\^(?!\^)""") { value ->
-                        OrcaInline.Superscript(content = listOf(OrcaInline.Text(value)))
-                    },
-                )
-            }
-            if (enableSubscript) {
-                add(
-                    InlineDecorationSpec("""(?<!~)~([^~]+)~(?!~)""") { value ->
-                        OrcaInline.Subscript(content = listOf(OrcaInline.Text(value)))
-                    },
-                )
-            }
-            add(
-                InlineDecorationSpec("""(?<!=)==([^=]+)==(?!=)""") { value ->
-                    OrcaInline.Highlight(content = listOf(OrcaInline.Text(value)))
-                },
-            )
-        }
-        if (specs.isEmpty()) return listOf(OrcaInline.Text(text))
+        val decorations = inlineDecorationsFor(
+            superscript = enableSuperscript,
+            subscript = enableSubscript,
+        )
+        // Scanning for the four delimiter characters is ~30x cheaper than running the
+        // combined pattern, and almost no text node contains any of them.
+        if (!decorations.mayApplyTo(text)) return listOf(OrcaInline.Text(text))
 
+        val specs = decorations.specs
         // Each spec contributes exactly one capture group, so the matched spec
         // is identified by the first non-empty group value.
-        val regex = Regex(specs.joinToString("|") { spec -> spec.pattern })
+        val regex = decorations.regex
         val result = mutableListOf<OrcaInline>()
         var lastEnd = 0
         for (match in regex.findAll(text)) {
@@ -948,8 +932,139 @@ private fun parseTableAlignments(separatorRow: String): List<OrcaTableAlignment?
     }
 }
 
+private val ADMONITION_REGEX = Regex(
+    """^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)](.*)""",
+    RegexOption.IGNORE_CASE,
+)
+private val CODE_SPAN_EOL_REGEX = Regex("""\r\n?|\n""")
+
+private class InlineDecorationSpec(
+    val pattern: String,
+    val create: (String) -> OrcaInline,
+)
+
+/**
+ * The `++underline++`, `^superscript^`, `~subscript~`, and `==highlight==` patterns,
+ * combined into one alternation.
+ *
+ * Compiled once per option combination instead of once per text node: building this
+ * `Regex` costs about as much as running it, and the mapper reaches every text node in
+ * the document.
+ */
+private class InlineDecorations(
+    val specs: List<InlineDecorationSpec>,
+    val regex: Regex,
+    private val superscript: Boolean,
+    private val subscript: Boolean,
+) {
+    /** Whether [text] carries any delimiter the active specs could match. */
+    fun mayApplyTo(text: String): Boolean {
+        for (character in text) {
+            val trigger = when (character) {
+                '+', '=' -> true
+                '^' -> superscript
+                '~' -> subscript
+                else -> false
+            }
+            if (trigger) return true
+        }
+        return false
+    }
+}
+
+private fun buildInlineDecorations(superscript: Boolean, subscript: Boolean): InlineDecorations {
+    val specs = buildList {
+        add(
+            InlineDecorationSpec("""(?<!\+)\+\+([^+]+)\+\+(?!\+)""") { value ->
+                OrcaInline.Underline(content = listOf(OrcaInline.Text(value)))
+            },
+        )
+        if (superscript) {
+            add(
+                InlineDecorationSpec("""(?<!\^)\^([^\^]+)\^(?!\^)""") { value ->
+                    OrcaInline.Superscript(content = listOf(OrcaInline.Text(value)))
+                },
+            )
+        }
+        if (subscript) {
+            add(
+                InlineDecorationSpec("""(?<!~)~([^~]+)~(?!~)""") { value ->
+                    OrcaInline.Subscript(content = listOf(OrcaInline.Text(value)))
+                },
+            )
+        }
+        add(
+            InlineDecorationSpec("""(?<!=)==([^=]+)==(?!=)""") { value ->
+                OrcaInline.Highlight(content = listOf(OrcaInline.Text(value)))
+            },
+        )
+    }
+    return InlineDecorations(
+        specs = specs,
+        regex = Regex(specs.joinToString("|") { spec -> spec.pattern }),
+        superscript = superscript,
+        subscript = subscript,
+    )
+}
+
+private val INLINE_DECORATIONS = listOf(
+    buildInlineDecorations(superscript = false, subscript = false),
+    buildInlineDecorations(superscript = false, subscript = true),
+    buildInlineDecorations(superscript = true, subscript = false),
+    buildInlineDecorations(superscript = true, subscript = true),
+)
+
+private fun inlineDecorationsFor(superscript: Boolean, subscript: Boolean): InlineDecorations {
+    return INLINE_DECORATIONS[(if (superscript) 2 else 0) + (if (subscript) 1 else 0)]
+}
+
+/**
+ * Whether a rewriting pass has anything to do: either a text node the pass reacts to, or
+ * a container it would have to walk into. Passes that answer `false` return the list they
+ * were given instead of rebuilding an identical one, which is the common case for prose.
+ */
+internal inline fun List<OrcaInline>.needsRewrite(textNeedsWork: (String) -> Boolean): Boolean {
+    for (inline in this) {
+        val needed = when (inline) {
+            is OrcaInline.Text -> textNeedsWork(inline.text)
+            is OrcaInline.Bold,
+            is OrcaInline.Italic,
+            is OrcaInline.Strikethrough,
+            is OrcaInline.Link,
+            is OrcaInline.Superscript,
+            is OrcaInline.Subscript,
+            is OrcaInline.Highlight,
+            is OrcaInline.Underline,
+                -> true
+
+            else -> false
+        }
+        if (needed) return true
+    }
+    return false
+}
+
+/** Applies [transform] to text nodes, keeping the original list when nothing changed. */
+private inline fun List<OrcaInline>.replaceChangedText(transform: (String) -> String): List<OrcaInline> {
+    var result: MutableList<OrcaInline>? = null
+    for (index in indices) {
+        val inline = this[index]
+        val replacement = if (inline is OrcaInline.Text) {
+            transform(inline.text).takeIf { updated -> updated != inline.text }
+        } else {
+            null
+        }
+        if (replacement != null && result == null) {
+            result = ArrayList<OrcaInline>(size).apply { addAll(this@replaceChangedText.subList(0, index)) }
+        }
+        result?.add(if (replacement != null) OrcaInline.Text(replacement) else inline)
+    }
+    return result ?: this
+}
+
 private fun List<OrcaInline>.mergeAdjacentText(): List<OrcaInline> {
     if (isEmpty()) return emptyList()
+    if (!needsTextMerge()) return this
 
     val result = mutableListOf<OrcaInline>()
     var textBuffer: StringBuilder? = null
@@ -978,6 +1093,25 @@ private fun List<OrcaInline>.mergeAdjacentText(): List<OrcaInline> {
     }
     flush()
     return result
+}
+
+/**
+ * Whether [mergeAdjacentText] would change anything: two mergeable text nodes in a row,
+ * or an empty text node (which the merge drops).
+ */
+private fun List<OrcaInline>.needsTextMerge(): Boolean {
+    var previousWasMergeable = false
+    for (inline in this) {
+        if (inline !is OrcaInline.Text) {
+            previousWasMergeable = false
+            continue
+        }
+        if (inline.text.isEmpty()) return true
+        val mergeable = inline.text != "\n"
+        if (mergeable && previousWasMergeable) return true
+        previousWasMergeable = mergeable
+    }
+    return false
 }
 
 private fun List<OrcaInline>.trimEdgeWhitespace(): List<OrcaInline> {

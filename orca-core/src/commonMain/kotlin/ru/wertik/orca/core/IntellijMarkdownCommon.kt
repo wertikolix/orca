@@ -13,6 +13,7 @@ internal data class ParserCacheKey(
     val enableSuperscript: Boolean = true,
     val enableSubscript: Boolean = true,
     val maxInlineBracketDepth: Int = DEFAULT_MAX_INLINE_BRACKET_DEPTH,
+    val maxBlockNestingDepth: Int = DEFAULT_MAX_BLOCK_NESTING_DEPTH,
 )
 
 internal class DepthLimitReporter(

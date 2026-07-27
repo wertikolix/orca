@@ -94,24 +94,28 @@ data class Check(
 )
 
 /**
- * Compares how a case scales when its input grows by [sizeFactor].
+ * Compares the cost *per byte* of the same case on a small and a large input.
  *
  * Ratios are used instead of absolute budgets on purpose: they say the same thing on a
- * laptop and on a shared CI runner. Linear work lands near [sizeFactor]; quadratic work
- * lands near `sizeFactor * sizeFactor`, which is what the limit is set to catch.
+ * laptop and on a shared CI runner. Normalising by bytes rather than by the generator's
+ * size parameter keeps the check meaningful for shapes whose byte count does not grow
+ * linearly with it (nesting levels, for one). Linear work lands near 1.0; work that is
+ * quadratic in the input lands near the byte growth factor, which is what this catches.
  */
 fun scalingCheck(
     name: String,
     small: Measurement,
     large: Measurement,
-    sizeFactor: Int,
     maxRatio: Double,
 ): Check {
-    val ratio = large.bestNanos.toDouble() / small.bestNanos.toDouble()
+    val smallPerByte = small.bestNanos.toDouble() / small.bytesPerOp
+    val largePerByte = large.bestNanos.toDouble() / large.bytesPerOp
+    val ratio = largePerByte / smallPerByte
+    val byteGrowth = large.bytesPerOp.toDouble() / small.bytesPerOp
     return Check(
         name = name,
-        detail = "x$sizeFactor input took x${format(ratio)} time (limit x${format(maxRatio)}, " +
-            "${format(small.bestMillis)}ms -> ${format(large.bestMillis)}ms)",
+        detail = "x${format(byteGrowth)} input cost x${format(ratio)} per byte " +
+            "(limit x${format(maxRatio)}, ${format(small.bestMillis)}ms -> ${format(large.bestMillis)}ms)",
         passed = ratio <= maxRatio,
     )
 }

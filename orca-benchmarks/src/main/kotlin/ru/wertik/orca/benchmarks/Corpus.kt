@@ -70,6 +70,13 @@ object Corpus {
     /** Unmatched link openers: the inline scanner's worst case. */
     fun bracketBomb(openers: Int): String = "[".repeat(openers)
 
+    /** Blockquote nesting: one level of block-parser recursion per marker. */
+    fun nestedQuotes(levels: Int): String = "> ".repeat(levels) + "text"
+
+    /** List nesting, which costs the block parser far more than quotes do. */
+    fun nestedLists(levels: Int): String =
+        (0 until levels).joinToString("\n") { level -> " ".repeat(level * 2) + "- item" }
+
     /** Same size, but balanced, so the scanner has nothing to backtrack over. */
     fun balancedBrackets(pairs: Int): String = "[]".repeat(pairs)
 

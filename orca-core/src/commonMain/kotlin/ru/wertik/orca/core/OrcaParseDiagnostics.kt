@@ -56,6 +56,20 @@ sealed interface OrcaParseWarning {
         val exceededDepth: Int,
         val guardedBlocks: Int,
     ) : OrcaParseWarning
+
+    /**
+     * One or more blocks nested quotes or list levels deeper than the block parser is
+     * allowed to recurse, and were kept as plain text instead of being parsed.
+     *
+     * @property maxBlockNestingDepth The configured maximum nesting depth.
+     * @property exceededDepth The deepest nesting that was found.
+     * @property guardedBlocks How many blocks were kept as plain text.
+     */
+    data class BlockNestingLimitExceeded(
+        val maxBlockNestingDepth: Int,
+        val exceededDepth: Int,
+        val guardedBlocks: Int,
+    ) : OrcaParseWarning
 }
 
 /** Fatal error that prevented the parser from producing a complete document. */
