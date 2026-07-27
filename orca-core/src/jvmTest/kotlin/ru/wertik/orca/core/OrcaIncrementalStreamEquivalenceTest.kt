@@ -60,6 +60,21 @@ class OrcaIncrementalStreamEquivalenceTest {
         )
     }
 
+    /**
+     * Shapes that 0.30.0 got wrong: an info string with backticks (or a tab-indented run)
+     * is not a fence opener, but the scanner treated it as one and inverted its fence
+     * state, which let the frozen prefix advance into the middle of a real code block.
+     */
+    @Test
+    fun invalidFenceOpenersDoNotFlipTheFenceState() {
+        listOf(
+            "``` `weird` info\n\n```\ncode\n\nmore code\n```\n\ntail\n",
+            "intro\n\n``` `x` y\n\ntext\n\n```\nreal code\n\nstill code\n```\n\ntail\n",
+            "\t```\n\ncode line\npara\n$$ inline $$\n\ntail\n",
+            "``` `x` y\n\n# H\n``` `x` y\n  ```\n\n```\ncode\n```\n\ntail\n",
+        ).forEach { document -> assertStreamMatchesFullParse(document) }
+    }
+
     @Test
     fun fenceEdgeCasesStreamIdentically() {
         listOf(
@@ -77,6 +92,21 @@ class OrcaIncrementalStreamEquivalenceTest {
             "- item\n```\ncode\n```\ntail\n",
             // Fence content that the pre-passes react to.
             "intro\n\n```md\n$$\nx\n$$\n<details>\n</details>\n```\n\ntail\n",
+        ).forEach { document -> assertStreamMatchesFullParse(document) }
+    }
+
+    /**
+     * Also wrong in 0.30.0: only the first line of a segment decided whether later content
+     * could merge into it, so `para` + list + blank + list froze after the first item and
+     * rendered two lists where a full parse produces one.
+     */
+    @Test
+    fun listsStartingInsideASegmentBlockTheBoundary() {
+        listOf(
+            "para\n- list item\n\n- second\n\ntail\n",
+            "# H\n- list item\n\n- second\n\ntail\n",
+            "| a |\n|---|\n- item\n\n- second\n\ntail\n",
+            "para\n   indented continuation\n\n  more indented\n\ntail\n",
         ).forEach { document -> assertStreamMatchesFullParse(document) }
     }
 
